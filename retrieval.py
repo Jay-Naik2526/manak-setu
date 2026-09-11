@@ -405,10 +405,17 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
                 "high_confidence": HIGH_CONFIDENCE,
             },
             "candidates": [],
-            "voltage_filter": {}, "material_filter": {}, "role_filter": {},
-            "input": {"original": lang.get("original", query), "clipped": False},
+            "voltage_filter": {"applied": False, "query_voltage_v": None},
+            "material_filter": {"applied": False, "query_materials": [],
+                                "demoted": [], "note": ""},
+            "role_filter": {"applied": False, "wanted": None,
+                            "demoted": [], "note": ""},
+            # These must carry the same shape the full path returns. An earlier
+            # version shortened them and the page stopped rendering: the trace
+            # maps over normalization.terms, which was not there.
+            "input": {"truncated": False, "characters": len(query)},
             "language": lang,
-            "normalization": {"applied": []},
+            "normalization": {"applied": False, "terms": [], "note": ""},
             "governing": None, "related": [], "allied": [],
             "certification": {"found": False},
             "clause": None,
