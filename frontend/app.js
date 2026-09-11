@@ -957,15 +957,6 @@ const DEMO = [
     },
   },
   {
-    view: 'draft', hold: 9000, spot: '#fw-gov',
-    h: 'The same question, typed in Hindi',
-    p: 'An officer writes the specification in their own language. It is translated before retrieval, the original is shown beside it, and IS numbers and units are held back from the translator so they cannot be altered. The interface stays in English here; a Hindi officer would switch it from the globe in the toolbar.',
-    run: async () => {
-      $('#fw-spec').value = '11 केवी एक्सएलपीई इंसुलेटेड आर्मर्ड पावर केबल';
-      await runForward();
-    },
-  },
-  {
     view: 'analyze', hold: 11000, spot: '#an-out',
     h: 'A published tender, audited',
     p: 'A real procurement document with the 17 IS numbers its text actually cites. The report is a list of edits: replace IS 434 (Part 1) with IS 9968 — a stored supersession, not a model guess.',
