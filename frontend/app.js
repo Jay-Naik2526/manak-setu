@@ -514,11 +514,32 @@ function renderForward(d) {
   // Show what the system actually matched when the officer wrote in another
   // language: they must be able to see the translation, not trust it blind.
   if (d.language && d.language.applied) {
-    h += `<div class="note info">${ic('check')}<div><b>Read as ${esc((d.language.source_language || '').toUpperCase())} and translated for matching.</b>
+    // Only name a language when the officer told us one. Otherwise all we know
+    // is the script, and Devanagari alone does not distinguish Marathi from
+    // Hindi — saying "Read as HI" to someone writing Marathi states a fact we
+    // do not have.
+    const L = d.language;
+    const NAMES = { hi: 'Hindi', mr: 'Marathi', bn: 'Bengali', gu: 'Gujarati', ta: 'Tamil',
+      te: 'Telugu', kn: 'Kannada', ml: 'Malayalam', pa: 'Punjabi', or: 'Odia', ur: 'Urdu',
+      as: 'Assamese', ne: 'Nepali', sa: 'Sanskrit', kok: 'Konkani', mai: 'Maithili',
+      doi: 'Dogri', brx: 'Bodo', ks: 'Kashmiri', sd: 'Sindhi' };
+    const fam = (L.script_family || []).filter(c => c !== L.source_language);
+    const head = L.language_certain
+      ? `Read as ${esc(NAMES[L.source_language] || (L.source_language || '').toUpperCase())} and translated for matching.`
+      : (fam.length
+          ? `Detected ${esc(NAMES[L.source_language] || 'this')} script and translated for matching.`
+          : `Read as ${esc(NAMES[L.source_language] || (L.source_language || '').toUpperCase())} and translated for matching.`);
+    const share = (!L.language_certain && fam.length)
+      ? `<div class="xs dimmer" style="margin-top:5px">This script is shared by
+         ${esc([NAMES[L.source_language], ...fam.map(c => NAMES[c]).filter(Boolean)].join(', '))},
+         so the language was not identified — only the script. Selecting your language in the
+         switcher tells the translator which one to use.</div>`
+      : '';
+    h += `<div class="note info">${ic('check')}<div><b>${head}</b>
       <div class="xs" style="margin-top:5px;color:var(--ink-2)">
         <span class="dimmer">you wrote</span> ${esc(d.language.original)}<br>
         <span class="dimmer">matched as</span> <b>${esc(d.language.text)}</b></div>
-      <div class="xs dimmer" style="margin-top:5px">${esc(d.language.note)}</div></div></div>`;
+      <div class="xs dimmer" style="margin-top:5px">${esc(d.language.note)}</div>${share}</div></div>`;
   } else if (d.language && d.language.source_language && d.language.note) {
     h += `<div class="note warn">${ic('alert')}<div><b>Translation unavailable.</b> ${esc(d.language.note)}</div></div>`;
   }

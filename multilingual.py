@@ -261,7 +261,15 @@ def translate_query(text: str, ui_language: str | None = None) -> dict:
     # Languages sharing the detected script, so a UI choice can refine it.
     SHARED = {"hi": {"hi", "mr", "kok", "ne", "sa", "mai", "doi", "brx"},
               "bn": {"bn", "as"}, "ur": {"ur", "ks", "sd"}}
-    if ui_language and ui_language in SHARED.get(script, set()):
+    # A script is not a language. Devanagari carries Hindi, Marathi, Konkani,
+    # Nepali and more, and nothing in the characters distinguishes them — so
+    # "Read as HI" was told to an officer writing Marathi, which is a claim we
+    # cannot support. The translator still needs one code and "hi" is the
+    # workable default for the script, but that is a routing decision, not a
+    # finding about the officer's language. `certain` says which it was.
+    certain = bool(ui_language and ui_language in SHARED.get(script, set()))
+    script_family = sorted(SHARED.get(script, {script}))
+    if certain:
         script = ui_language
 
     if len(text) > MAX_QUERY_CHARS:
@@ -278,6 +286,8 @@ def translate_query(text: str, ui_language: str | None = None) -> dict:
             "text": text,
             "original": text,
             "source_language": script,
+            "language_certain": certain,
+            "script_family": script_family,
             "note": (
                 "Could not reach the translation service, so the text was matched as "
                 "written. IS numbers and units inside it are still read correctly."
@@ -290,6 +300,8 @@ def translate_query(text: str, ui_language: str | None = None) -> dict:
         "text": english,
         "original": text,
         "source_language": script,
+        "language_certain": certain,
+        "script_family": script_family,
         "protected": kept,
         "provider": "mymemory",
         "note": (
