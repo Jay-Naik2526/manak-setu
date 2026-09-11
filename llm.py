@@ -24,6 +24,7 @@ Requires Ollama running locally. Nothing is sent off this machine.
 
 import json
 import re
+import time
 import urllib.error
 import urllib.request
 
@@ -116,6 +117,31 @@ def status() -> dict:
     return {"available": True, "model": MODEL, "installed": names}
 
 
+# How long a probe result is trusted. The answer changes only when someone starts
+# or stops Ollama, so re-probing on every query buys nothing.
+_PROBE_TTL_SECONDS = 60
+
+
+def _is_available() -> bool:
+    """Cheap, cached answer to "is there a model to call at all?".
+
+    Without this, every recommendation on a host with no Ollama — which is every
+    hosted deployment, since a 7B model does not fit a free tier — opened a
+    connection to localhost:11434 and waited. Where the port is simply closed that
+    is fast, but in a container the connection can hang until the 45-second
+    timeout, and a single query on Render took 15 seconds while retrieval itself
+    took a hundredth of one. The template answer was always going to be used; the
+    wait bought nothing.
+    """
+    now = time.monotonic()
+    hit = _state.get("probe")
+    if hit and hit[1] > now:
+        return hit[0]
+    ok = bool(status().get("available"))
+    _state["probe"] = (ok, now + _PROBE_TTL_SECONDS)
+    return ok
+
+
 def _facts_block(governing: dict, related: list[dict], cert: dict) -> str:
     """Exactly what the model is allowed to know. Nothing here is prose the model
     can reinterpret — they are retrieved field values."""
@@ -201,6 +227,9 @@ def phrase(governing: dict, related: list[dict], cert: dict, allowed: list[str],
     """Ask the model to phrase the retrieved facts. Returns the checked result,
     or a failure the caller falls back on."""
     from retrieval import subset_guard
+
+    if not _is_available():
+        return {"ok": False, "reason": "unavailable", "detail": status().get("detail", "")}
 
     prompt = (
         f"{_facts_block(governing, related, cert)}\n\n"

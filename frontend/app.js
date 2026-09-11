@@ -1421,8 +1421,12 @@ function drawBench() {
       { label: 'False positives', value: b.false_positives, sub: 'flagged, wrongly', tone: b.false_positives ? 'bad' : 'plain', icon: 'alert' },
       { label: 'False negatives', value: b.false_negatives, sub: 'missed', tone: b.false_negatives ? 'bad' : 'plain', icon: 'alert' },
     ].map(kpi).join('')}</div>
-    <div class="note warn">${ic('alert')}<div><b>Do not quote a percentage.</b> Positive class is ${b.positives_in_set} documents. Report as:
-      “caught ${b.true_positives} of ${b.positives_in_set} known dead-citation documents, ${b.false_positives} false positives across ${b.negatives_sampled} clean samples”.</div></div>
+    <div class="note warn">${ic('alert')}<div><b>Why this is shown as counts, not a percentage.</b>
+      The positive class is ${b.positives_in_set} documents. On a set that small a single miss moves a
+      percentage by ${(100 / b.positives_in_set).toFixed(0)} points, so a figure like “100% accurate” would
+      read as far stronger evidence than ${b.evaluated} documents can support. What this measures is
+      dead-citation detection on those ${b.evaluated} documents — not the accuracy of the register or of
+      standard recommendation.</div></div>
     <div class="tbl">
       <div class="toolbar"><h3 style="flex:1">Per-document results</h3><span class="xs dimmer">n = ${b.evaluated}</span></div>
       <div class="scroll"><table><thead><tr><th>Document</th><th>Ground truth</th><th>Detected</th><th>Agree</th><th>Dead citations found</th></tr></thead><tbody>

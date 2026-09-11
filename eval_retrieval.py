@@ -84,6 +84,12 @@ def main():
             }
         )
 
+    # Recall@1 is the question an officer actually asks: is the first answer the
+    # right one? Recall@10 says the right answer was somewhere in the list, which
+    # matters for the ranking but not for someone reading the top result.
+    hits_at_1 = sum(1 for r in rows if r["rank"] == 1)
+    print(f"Recall@1     : {hits_at_1}/{n}  ({hits_at_1 / n:.0%})   "
+          f"— expected standard ranked first")
     print(f"Recall@{RECALL_AT}    : {hits_at_k}/{n}  ({hits_at_k / n:.0%})   "
           f"— expected standard present in the reranked candidates")
     print(f"Precision@{PRECISION_AT}  : {prec_total / n:.3f}")
