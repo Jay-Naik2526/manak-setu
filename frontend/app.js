@@ -536,7 +536,17 @@ function renderForward(d) {
       ${esc(d.voltage_filter.note)}</div></div>`;
   }
 
-  if (d.decision === 'abstain') {
+  if (d.decision === 'abstain' && d.reason === 'translation_unavailable') {
+    // Not a retrieval result. The register is English and the text could not be
+    // brought into English, so nothing was searched — showing a threshold here
+    // would imply candidates were weighed and rejected.
+    h += `<div class="note warn">${ic('alert')}<div>
+      <b>This text could not be read.</b> The standards register is published in English, and the
+      translation service could not be reached, so no search was run. Nothing here was ruled out —
+      it was never looked at. Try again in a moment, or paste the specification in English.
+      <div class="xs dimmer" style="margin-top:5px">gate: ${esc(d.reason)}</div>
+    </div></div>`;
+  } else if (d.decision === 'abstain') {
     h += `<div class="note warn">${ic('alert')}<div>
       <b>No recommendation issued.</b> ${esc(d.message)}
       <div class="xs dimmer" style="margin-top:5px">gate: ${esc(d.reason)} · threshold ${d.thresholds.top_score} · margin ${d.thresholds.margin}</div>

@@ -386,6 +386,34 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
     lang = multilingual.translate_query(query, ui_language)
     query = lang["text"]
 
+    # Translation failed on text that is not in Latin script, so `query` is still
+    # Devanagari, Tamil, Urdu and so on. The register is English: matching it as
+    # written scores whatever Latin characters survive — for "11 केवी एक्सएलपीई
+    # ... केबल" that was the digits, which retrieved thermal-ageing test methods
+    # and coir matting at score 0.000. The gate abstained, correctly, but the
+    # trace beneath it read as though the system had genuinely considered those
+    # standards. Saying plainly that the text could not be read is honest; a
+    # ranked list of unrelated standards is not.
+    if lang.get("source_language") and not lang.get("applied"):
+        return {
+            "query": query,
+            "decision": "abstain",
+            "reason": "translation_unavailable",
+            "thresholds": {
+                "top_score": TOP_SCORE_THRESHOLD,
+                "margin": MARGIN_THRESHOLD,
+                "high_confidence": HIGH_CONFIDENCE,
+            },
+            "candidates": [],
+            "voltage_filter": {}, "material_filter": {}, "role_filter": {},
+            "input": {"original": lang.get("original", query), "clipped": False},
+            "language": lang,
+            "normalization": {"applied": []},
+            "governing": None, "related": [], "allied": [],
+            "certification": {"found": False},
+            "clause": None,
+        }
+
     query, clipped = clip_query(query)
     # Orchestration: give retrieval the register's own vocabulary before it runs.
     # The officer's words are kept; the register's are appended.

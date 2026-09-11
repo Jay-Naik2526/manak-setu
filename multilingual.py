@@ -91,16 +91,32 @@ def _restore(text: str, kept: list[str]) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
-def _mymemory(text: str, source: str) -> str | None:
+# MyMemory's anonymous quota is counted per calling IP. That is generous for one
+# officer on an office connection and useless on a shared host: the deployed
+# instance sits behind a datacentre address other tenants have already spent, so
+# every translation came back refused and Hindi text was matched as written —
+# BM25 scored the bare digits and the gate abstained on nonsense. Setting
+# MYMEMORY_EMAIL moves the quota to that address; a second provider covers the
+# case where it is spent anyway.
+GOOGLE_GTX = "https://translate.googleapis.com/translate_a/single"
+
+# Requests without a User-Agent are refused outright by both providers.
+_UA = {"User-Agent": "Mozilla/5.0 (compatible; MANAK-SETU/0.4; SIH PS 26108)"}
+
+
+def _get_json(url: str, timeout: int = TIMEOUT):
+    req = urllib.request.Request(url, headers=_UA)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read())
+
+
+def _via_mymemory(text: str, source: str) -> str | None:
     params = {"q": text, "langpair": f"{source}|en"}
     email = os.getenv("MYMEMORY_EMAIL")
     if email:
         params["de"] = email
     try:
-        with urllib.request.urlopen(
-            f"{MYMEMORY}?{urllib.parse.urlencode(params)}", timeout=TIMEOUT
-        ) as resp:
-            body = json.loads(resp.read())
+        body = _get_json(f"{MYMEMORY}?{urllib.parse.urlencode(params)}")
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
         return None
     out = (body.get("responseData") or {}).get("translatedText") or ""
@@ -108,6 +124,29 @@ def _mymemory(text: str, source: str) -> str | None:
     if body.get("responseStatus") != 200 or "MYMEMORY WARNING" in out.upper():
         return None
     return out or None
+
+
+def _via_google(text: str, source: str) -> str | None:
+    """Fallback only. Returns segments as [[["translated","original",...]],...]."""
+    params = {"client": "gtx", "sl": source, "tl": "en", "dt": "t", "q": text}
+    try:
+        body = _get_json(f"{GOOGLE_GTX}?{urllib.parse.urlencode(params)}")
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return None
+    try:
+        out = "".join(seg[0] for seg in body[0] if seg and seg[0])
+    except (IndexError, TypeError):
+        return None
+    return out.strip() or None
+
+
+def _mymemory(text: str, source: str) -> str | None:
+    """Whichever provider answers first. The name is kept so callers are unchanged."""
+    for provider in (_via_mymemory, _via_google):
+        out = provider(text, source)
+        if out:
+            return out
+    return None
 
 
 # ---------------------------------------------------------------- UI batch
