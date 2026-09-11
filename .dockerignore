@@ -1,0 +1,13 @@
+backend_venv/
+logs/
+shots/
+__pycache__/
+*.pyc
+.DS_Store
+.git/
+data/standards_collected*.csv
+data/co_citation_graph.csv
+data/coverage_gap_backlog.csv
+data/golden_queries.seed.csv
+data/certification_scheme1.csv
+data/certification_schemes.csv

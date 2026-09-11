@@ -1,0 +1,24 @@
+# Render free tier: 512 MB RAM, no credit card, permanent URL.
+#
+# The tight constraint is memory, not CPU. Two transformer encoders plus the app
+# land close to the limit, so the build installs the CPU-only torch wheel and the
+# service runs a single worker. If it dies with "Out of memory", set
+# MANAK_LIGHT=1 in the Render dashboard — retrieval then skips the cross-encoder
+# and runs on dense + BM25 + the four filters, which fits comfortably.
+
+services:
+  - type: web
+    name: manak-setu
+    runtime: python
+    plan: free
+    buildCommand: |
+      pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+      python load_db.py --allow-shrink
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: HF_HOME
+        value: /opt/render/project/.cache/huggingface
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"

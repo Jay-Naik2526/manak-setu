@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8">
+<style>
+  body { width: 264px; margin: 0; font: 13px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; color: #111C27; }
+  .h { background: #08303F; color: #fff; padding: 12px 14px; }
+  .h b { display: block; font-size: 13.5px; }
+  .h span { color: #83AEBE; font-size: 11px; }
+  .b { padding: 13px 14px; }
+  button { width: 100%; padding: 9px; background: #C25A0D; color: #fff; border: 0;
+           border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  button:disabled { background: #AEBCC9; cursor: default; }
+  .s { margin-top: 10px; font-size: 11.5px; color: #546272; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+</style>
+<div class="h"><b>MANAK-SETU</b><span>Standards check · PS 26108</span></div>
+<div class="b">
+  <button id="go">Check this page</button>
+  <div class="s" id="status"><span class="dot" style="background:#AEBCC9"></span>checking backend…</div>
+  <div class="s">Reads the visible text of this page and checks its IS numbers against your
+  local register. Nothing is uploaded.</div>
+</div>
+<script src="popup.js"></script>

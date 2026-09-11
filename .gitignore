@@ -1,0 +1,28 @@
+# Python virtualenv — 1.2 GB, rebuilt from requirements.txt:
+#   python -m venv backend_venv && backend_venv/bin/pip install -r requirements.txt
+backend_venv/
+venv/
+.venv/
+
+# Bytecode and caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# macOS
+.DS_Store
+
+# Working artefacts from development runs. The register, the embeddings and the
+# CSVs in data/ ARE committed — the app must be runnable from a clone. These are
+# not: they are the noise of producing them.
+logs/
+*.log
+shots/
+
+# Local environment
+.env
+*.db-journal
+*.db-wal
+*.db-shm
+.claude/

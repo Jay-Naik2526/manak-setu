@@ -1,0 +1,32 @@
+---
+title: MANAK-SETU
+emoji: 🌉
+colorFrom: blue
+colorTo: orange
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: Verification console for Indian Standards in government tenders
+---
+
+# MANAK-SETU · मानक-सेतु
+
+Smart India Hackathon 2026 · Problem Statement 26108 · Department of Consumer Affairs
+
+Finds the Indian Standard that governs a procurement specification, and audits a
+published tender for citations that are withdrawn, certification clauses that are
+missing, and standards comparable tenders cite but this one omits.
+
+**2,087 standards · 220 real tenders · 3,336 co-citation edges · 737 certification
+rules.** Every row traces to a BIS page or a published tender document.
+
+## On this Space
+
+The language model is not available on a free CPU Space, so composed clauses come
+from the deterministic template — the interface labels every clause with how it
+was produced. Everything else runs: hybrid retrieval, the four constraint
+filters, the confidence gate, the tender audit, the co-citation graph, and twelve
+interface languages.
+
+Run locally with Ollama and `qwen2.5:7b-instruct-q4_K_M` for the full pipeline.

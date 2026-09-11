@@ -1,0 +1,12 @@
+<!doctype html>
+<!-- Smoke test for the content script without loading the extension:
+     open this file directly with the backend running on :8000. --><meta charset="utf-8"><title>Mock tender page</title>
+<link rel="stylesheet" href="../content.css">
+<body style="font:14px system-ui;max-width:760px;margin:32px auto">
+<h1>Supply of LT Power Cables — Technical Specification</h1>
+<p>The cables shall conform to IS 1554 and conductors to IS 8130.</p>
+<p>Concrete works as per IS 8112. Earthing to IS 3043.</p>
+<p>Armouring shall comply with IS 3975.</p>
+<script src="../content.js"></script>
+<script>addEventListener("load",()=>setTimeout(()=>window.manakCheck&&window.manakCheck(),600));</script>
+</body>

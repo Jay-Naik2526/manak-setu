@@ -1,0 +1,377 @@
+Source IS,Target IS,Tenders Citing Source,Tenders Citing Target,Co-citation Count,Confidence,Lift,Evidence Statement
+IS 3975,IS 8130,8,22,8,1.0,6.091,Cited alongside IS 3975 in 8 of 8 comparable tenders
+IS 3975,IS 5831,8,20,8,1.0,6.7,Cited alongside IS 3975 in 8 of 8 comparable tenders
+IS 16105,IS 16106,9,18,9,1.0,7.444,Cited alongside IS 16105 in 9 of 9 comparable tenders
+IS 3961,IS 1554,5,14,5,1.0,9.571,Cited alongside IS 3961 in 5 of 5 comparable tenders
+IS 733,IS 1285,6,7,6,1.0,19.143,Cited alongside IS 733 in 6 of 6 comparable tenders
+IS 15885 (Part 2),IS 16106,10,18,10,1.0,7.444,Cited alongside IS 15885 (Part 2) in 10 of 10 comparable tenders
+IS 16108,IS 16106,10,18,10,1.0,7.444,Cited alongside IS 16108 in 10 of 10 comparable tenders
+IS 10810,IS 8130,8,22,8,1.0,6.091,Cited alongside IS 10810 in 8 of 8 comparable tenders
+IS 10418,IS 8130,9,22,9,1.0,6.091,Cited alongside IS 10418 in 9 of 9 comparable tenders
+IS 3975,IS 10418,8,9,8,1.0,14.889,Cited alongside IS 3975 in 8 of 8 comparable tenders
+IS 10810,IS 5831,8,20,8,1.0,6.7,Cited alongside IS 10810 in 8 of 8 comparable tenders
+IS 8112,IS 456,7,11,7,1.0,12.182,Cited alongside IS 8112 in 7 of 7 comparable tenders
+IS 1868,IS 1285,6,7,6,1.0,19.143,Cited alongside IS 1868 in 6 of 6 comparable tenders
+IS 5831,IS 8130,20,22,19,0.95,5.786,Cited alongside IS 5831 in 19 of 20 comparable tenders
+IS 16105,IS 15885 (Part 2),9,10,8,0.889,11.911,Cited alongside IS 16105 in 8 of 9 comparable tenders
+IS 16103,IS 16107,9,14,8,0.889,8.508,Cited alongside IS 16103 in 8 of 9 comparable tenders
+IS 16103,IS 16106,9,18,8,0.889,6.617,Cited alongside IS 16103 in 8 of 9 comparable tenders
+IS 10418,IS 5831,9,20,8,0.889,5.956,Cited alongside IS 10418 in 8 of 9 comparable tenders
+IS 10418,IS 3975,9,8,8,0.889,14.889,Cited alongside IS 10418 in 8 of 9 comparable tenders
+IS 16105,IS 10322,9,23,8,0.889,5.179,Cited alongside IS 16105 in 8 of 9 comparable tenders
+IS 3975,IS 7098,8,18,7,0.875,6.514,Cited alongside IS 3975 in 7 of 8 comparable tenders
+IS 1489,IS 456,8,11,7,0.875,10.659,Cited alongside IS 1489 in 7 of 8 comparable tenders
+IS 16104,IS 16106,8,18,7,0.875,6.514,Cited alongside IS 16104 in 7 of 8 comparable tenders
+IS 8130,IS 5831,22,20,19,0.864,5.786,Cited alongside IS 8130 in 19 of 22 comparable tenders
+IS 16107 (Part 2),IS 16106,7,18,6,0.857,6.381,Cited alongside IS 16107 (Part 2) in 6 of 7 comparable tenders
+IS 1285,IS 733,7,6,6,0.857,19.143,Cited alongside IS 1285 in 6 of 7 comparable tenders
+IS 16107 (Part 2),IS 10322 (Part 1),7,11,6,0.857,10.442,Cited alongside IS 16107 (Part 2) in 6 of 7 comparable tenders
+IS 9103,IS 456,7,11,6,0.857,10.442,Cited alongside IS 9103 in 6 of 7 comparable tenders
+IS 1285,IS 1868,7,6,6,0.857,19.143,Cited alongside IS 1285 in 6 of 7 comparable tenders
+IS 383,IS 456,7,11,6,0.857,10.442,Cited alongside IS 383 in 6 of 7 comparable tenders
+IS 16107 (Part 2),IS 10322 (Part 5),7,17,6,0.857,6.756,Cited alongside IS 16107 (Part 2) in 6 of 7 comparable tenders
+IS 16107 (Part 2),IS 10322,7,23,6,0.857,4.994,Cited alongside IS 16107 (Part 2) in 6 of 7 comparable tenders
+IS 16101,IS 16107,6,14,5,0.833,7.976,Cited alongside IS 16101 in 5 of 6 comparable tenders
+IS 1868,IS 733,6,6,5,0.833,18.611,Cited alongside IS 1868 in 5 of 6 comparable tenders
+IS 733,IS 1868,6,6,5,0.833,18.611,Cited alongside IS 733 in 5 of 6 comparable tenders
+IS 10322 (Part 1),IS 10322,11,23,9,0.818,4.767,Cited alongside IS 10322 (Part 1) in 9 of 11 comparable tenders
+IS 15622,IS 1285,5,7,4,0.8,15.314,Cited alongside IS 15622 in 4 of 5 comparable tenders
+IS 16108,IS 10322,10,23,8,0.8,4.661,Cited alongside IS 16108 in 8 of 10 comparable tenders
+IS 1536,IS 8329,5,9,4,0.8,11.911,Cited alongside IS 1536 in 4 of 5 comparable tenders
+IS 1536,IS 1239,5,6,4,0.8,17.867,Cited alongside IS 1536 in 4 of 5 comparable tenders
+IS 4759,IS 2062,5,11,4,0.8,9.745,Cited alongside IS 4759 in 4 of 5 comparable tenders
+IS 15622,IS 1868,5,6,4,0.8,17.867,Cited alongside IS 15622 in 4 of 5 comparable tenders
+IS 15885 (Part 2),IS 16105,10,9,8,0.8,11.911,Cited alongside IS 15885 (Part 2) in 8 of 10 comparable tenders
+IS 1536,IS 3589,5,4,4,0.8,26.8,Cited alongside IS 1536 in 4 of 5 comparable tenders
+IS 14930,IS 10322,5,23,4,0.8,4.661,Cited alongside IS 14930 in 4 of 5 comparable tenders
+IS 1536,IS 4985,5,12,4,0.8,8.933,Cited alongside IS 1536 in 4 of 5 comparable tenders
+IS 16108,IS 16107,10,14,8,0.8,7.657,Cited alongside IS 16108 in 8 of 10 comparable tenders
+IS 16107,IS 10322,14,23,11,0.786,4.578,Cited alongside IS 16107 in 11 of 14 comparable tenders
+IS 10418,IS 7098,9,18,7,0.778,5.79,Cited alongside IS 10418 in 7 of 9 comparable tenders
+IS 16103,IS 10322,9,23,7,0.778,4.531,Cited alongside IS 16103 in 7 of 9 comparable tenders
+IS 16104,IS 16108,8,10,6,0.75,10.05,Cited alongside IS 16104 in 6 of 8 comparable tenders
+IS 16104,IS 10322,8,23,6,0.75,4.37,Cited alongside IS 16104 in 6 of 8 comparable tenders
+IS 8130,IS 694,22,48,16,0.727,2.03,Cited alongside IS 8130 in 16 of 22 comparable tenders
+IS 875,IS 2062,7,11,5,0.714,8.701,Cited alongside IS 875 in 5 of 7 comparable tenders
+IS 16107 (Part 2),IS 16107,7,14,5,0.714,6.837,Cited alongside IS 16107 (Part 2) in 5 of 7 comparable tenders
+IS 16107 (Part 2),IS 16105,7,9,5,0.714,10.635,Cited alongside IS 16107 (Part 2) in 5 of 7 comparable tenders
+IS 16107 (Part 2),IS 15885 (Part 2),7,10,5,0.714,9.571,Cited alongside IS 16107 (Part 2) in 5 of 7 comparable tenders
+IS 9103,IS 1489,7,8,5,0.714,11.964,Cited alongside IS 9103 in 5 of 7 comparable tenders
+IS 16107,IS 16106,14,18,10,0.714,5.317,Cited alongside IS 16107 in 10 of 14 comparable tenders
+IS 15885 (Part 2),IS 10322,10,23,7,0.7,4.078,Cited alongside IS 15885 (Part 2) in 7 of 10 comparable tenders
+IS 5831,IS 694,20,48,14,0.7,1.954,Cited alongside IS 5831 in 14 of 20 comparable tenders
+IS 16105,IS 16107,9,14,6,0.667,6.381,Cited alongside IS 16105 in 6 of 9 comparable tenders
+IS 1239,IS 4985,6,12,4,0.667,7.444,Cited alongside IS 1239 in 4 of 6 comparable tenders
+IS 16105,IS 16108,9,10,6,0.667,8.933,Cited alongside IS 16105 in 6 of 9 comparable tenders
+IS 15885,IS 10322,6,23,4,0.667,3.884,Cited alongside IS 15885 in 4 of 6 comparable tenders
+IS 16101,IS 16106,6,18,4,0.667,4.963,Cited alongside IS 16101 in 4 of 6 comparable tenders
+IS 1868,IS 15622,6,5,4,0.667,17.867,Cited alongside IS 1868 in 4 of 6 comparable tenders
+IS 1239,IS 1536,6,5,4,0.667,17.867,Cited alongside IS 1239 in 4 of 6 comparable tenders
+IS 16103,IS 16108,9,10,6,0.667,8.933,Cited alongside IS 16103 in 6 of 9 comparable tenders
+IS 16106,IS 10322,18,23,12,0.667,3.884,Cited alongside IS 16106 in 12 of 18 comparable tenders
+IS 1554,IS 694,14,48,9,0.643,1.795,Cited alongside IS 1554 in 9 of 14 comparable tenders
+IS 456,IS 1489,11,8,7,0.636,10.659,Cited alongside IS 456 in 7 of 11 comparable tenders
+IS 456,IS 8112,11,7,7,0.636,12.182,Cited alongside IS 456 in 7 of 11 comparable tenders
+IS 10322 (Part 1),IS 16106,11,18,7,0.636,4.737,Cited alongside IS 10322 (Part 1) in 7 of 11 comparable tenders
+IS 3975,IS 1554,8,14,5,0.625,5.982,Cited alongside IS 3975 in 5 of 8 comparable tenders
+IS 1489,IS 9103,8,7,5,0.625,11.964,Cited alongside IS 1489 in 5 of 8 comparable tenders
+IS 10810,IS 7098,8,18,5,0.625,4.653,Cited alongside IS 10810 in 5 of 8 comparable tenders
+IS 3043,IS 2062,8,11,5,0.625,7.614,Cited alongside IS 3043 in 5 of 8 comparable tenders
+IS 3975,IS 10810,8,8,5,0.625,10.469,Cited alongside IS 3975 in 5 of 8 comparable tenders
+IS 16104,IS 10322 (Part 5),8,17,5,0.625,4.926,Cited alongside IS 16104 in 5 of 8 comparable tenders
+IS 10810,IS 694,8,48,5,0.625,1.745,Cited alongside IS 10810 in 5 of 8 comparable tenders
+IS 10810,IS 3975,8,8,5,0.625,10.469,Cited alongside IS 10810 in 5 of 8 comparable tenders
+IS 10810,IS 10418,8,9,5,0.625,9.306,Cited alongside IS 10810 in 5 of 8 comparable tenders
+IS 16104,IS 16107,8,14,5,0.625,5.982,Cited alongside IS 16104 in 5 of 8 comparable tenders
+IS 14930,IS 7098,5,18,3,0.6,4.467,Cited alongside IS 14930 in 3 of 5 comparable tenders
+IS 15622,IS 733,5,6,3,0.6,13.4,Cited alongside IS 15622 in 3 of 5 comparable tenders
+IS 15622,IS 2835,5,4,3,0.6,20.1,Cited alongside IS 15622 in 3 of 5 comparable tenders
+IS 3961,IS 7098,5,18,3,0.6,4.467,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 3961,IS 3975,5,8,3,0.6,10.05,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 4759,IS 10322,5,23,3,0.6,3.496,Cited alongside IS 4759 in 3 of 5 comparable tenders
+IS 3961,IS 5831,5,20,3,0.6,4.02,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 5382,IS 13592,5,8,3,0.6,10.05,Cited alongside IS 5382 in 3 of 5 comparable tenders
+IS 3961,IS 1255,5,4,3,0.6,20.1,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 3961,IS 8130,5,22,3,0.6,3.655,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 1536,IS 9523,5,4,3,0.6,20.1,Cited alongside IS 1536 in 3 of 5 comparable tenders
+IS 15885 (Part 2),IS 16108,10,10,6,0.6,8.04,Cited alongside IS 15885 (Part 2) in 6 of 10 comparable tenders
+IS 15885 (Part 2),IS 16107,10,14,6,0.6,5.743,Cited alongside IS 15885 (Part 2) in 6 of 10 comparable tenders
+IS 1536,IS 1537,5,3,3,0.6,26.8,Cited alongside IS 1536 in 3 of 5 comparable tenders
+IS 4759,IS 875,5,7,3,0.6,11.486,Cited alongside IS 4759 in 3 of 5 comparable tenders
+IS 4759,IS 2629,5,4,3,0.6,20.1,Cited alongside IS 4759 in 3 of 5 comparable tenders
+IS 16102 (Part 2),IS 16102 (Part 1),5,4,3,0.6,20.1,Cited alongside IS 16102 (Part 2) in 3 of 5 comparable tenders
+IS 14930,IS 2062,5,11,3,0.6,7.309,Cited alongside IS 14930 in 3 of 5 comparable tenders
+IS 16108,IS 16103,10,9,6,0.6,8.933,Cited alongside IS 16108 in 6 of 10 comparable tenders
+IS 16108,IS 16105,10,9,6,0.6,8.933,Cited alongside IS 16108 in 6 of 10 comparable tenders
+IS 3961,IS 6380,5,4,3,0.6,20.1,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 16108,IS 15885 (Part 2),10,10,6,0.6,8.04,Cited alongside IS 16108 in 6 of 10 comparable tenders
+IS 15885 (Part 2),IS 10322 (Part 5),10,17,6,0.6,4.729,Cited alongside IS 15885 (Part 2) in 6 of 10 comparable tenders
+IS 16102 (Part 2),IS 16106,5,18,3,0.6,4.467,Cited alongside IS 16102 (Part 2) in 3 of 5 comparable tenders
+IS 16108,IS 16104,10,8,6,0.6,10.05,Cited alongside IS 16108 in 6 of 10 comparable tenders
+IS 4759,IS 5831,5,20,3,0.6,4.02,Cited alongside IS 4759 in 3 of 5 comparable tenders
+IS 3961,IS 10418,5,9,3,0.6,8.933,Cited alongside IS 3961 in 3 of 5 comparable tenders
+IS 9103,IS 8112,7,7,4,0.571,10.939,Cited alongside IS 9103 in 4 of 7 comparable tenders
+IS 1554,IS 7098,14,18,8,0.571,4.254,Cited alongside IS 1554 in 8 of 14 comparable tenders
+IS 7098 (Part 1),IS 694,7,48,4,0.571,1.595,Cited alongside IS 7098 (Part 1) in 4 of 7 comparable tenders
+IS 383,IS 8112,7,7,4,0.571,10.939,Cited alongside IS 383 in 4 of 7 comparable tenders
+IS 1554,IS 8130,14,22,8,0.571,3.481,Cited alongside IS 1554 in 8 of 14 comparable tenders
+IS 875,IS 7098,7,18,4,0.571,4.254,Cited alongside IS 875 in 4 of 7 comparable tenders
+IS 16107 (Part 2),IS 16108,7,10,4,0.571,7.657,Cited alongside IS 16107 (Part 2) in 4 of 7 comparable tenders
+IS 383,IS 1489,7,8,4,0.571,9.571,Cited alongside IS 383 in 4 of 7 comparable tenders
+IS 16107 (Part 2),IS 16104,7,8,4,0.571,9.571,Cited alongside IS 16107 (Part 2) in 4 of 7 comparable tenders
+IS 8112,IS 516,7,4,4,0.571,19.143,Cited alongside IS 8112 in 4 of 7 comparable tenders
+IS 8112,IS 383,7,7,4,0.571,10.939,Cited alongside IS 8112 in 4 of 7 comparable tenders
+IS 16107,IS 16103,14,9,8,0.571,8.508,Cited alongside IS 16107 in 8 of 14 comparable tenders
+IS 8112,IS 1489,7,8,4,0.571,9.571,Cited alongside IS 8112 in 4 of 7 comparable tenders
+IS 16107,IS 16108,14,10,8,0.571,7.657,Cited alongside IS 16107 in 8 of 14 comparable tenders
+IS 8112,IS 9103,7,7,4,0.571,10.939,Cited alongside IS 8112 in 4 of 7 comparable tenders
+IS 16107,IS 10322 (Part 5),14,17,8,0.571,4.504,Cited alongside IS 16107 in 8 of 14 comparable tenders
+IS 1285,IS 15622,7,5,4,0.571,15.314,Cited alongside IS 1285 in 4 of 7 comparable tenders
+IS 16105,IS 16107 (Part 2),9,7,5,0.556,10.635,Cited alongside IS 16105 in 5 of 9 comparable tenders
+IS 16105,IS 10322 (Part 1),9,11,5,0.556,6.768,Cited alongside IS 16105 in 5 of 9 comparable tenders
+IS 16103,IS 10322 (Part 5),9,17,5,0.556,4.379,Cited alongside IS 16103 in 5 of 9 comparable tenders
+IS 10418,IS 10810,9,8,5,0.556,9.306,Cited alongside IS 10418 in 5 of 9 comparable tenders
+IS 16106,IS 16107,18,14,10,0.556,5.317,Cited alongside IS 16106 in 10 of 18 comparable tenders
+IS 16106,IS 16108,18,10,10,0.556,7.444,Cited alongside IS 16106 in 10 of 18 comparable tenders
+IS 16106,IS 15885 (Part 2),18,10,10,0.556,7.444,Cited alongside IS 16106 in 10 of 18 comparable tenders
+IS 10418,IS 1554,9,14,5,0.556,5.317,Cited alongside IS 10418 in 5 of 9 comparable tenders
+IS 16105,IS 10322 (Part 5),9,17,5,0.556,4.379,Cited alongside IS 16105 in 5 of 9 comparable tenders
+IS 456,IS 9103,11,7,6,0.545,10.442,Cited alongside IS 456 in 6 of 11 comparable tenders
+IS 456,IS 383,11,7,6,0.545,10.442,Cited alongside IS 456 in 6 of 11 comparable tenders
+IS 10322 (Part 1),IS 10322 (Part 5),11,17,6,0.545,4.299,Cited alongside IS 10322 (Part 1) in 6 of 11 comparable tenders
+IS 10322 (Part 1),IS 16107,11,14,6,0.545,5.221,Cited alongside IS 10322 (Part 1) in 6 of 11 comparable tenders
+IS 10322 (Part 1),IS 16107 (Part 2),11,7,6,0.545,10.442,Cited alongside IS 10322 (Part 1) in 6 of 11 comparable tenders
+IS 10322 (Part 5),IS 10322,17,23,9,0.529,3.084,Cited alongside IS 10322 (Part 5) in 9 of 17 comparable tenders
+IS 10322 (Part 5),IS 16106,17,18,9,0.529,3.941,Cited alongside IS 10322 (Part 5) in 9 of 17 comparable tenders
+IS 10322,IS 16106,23,18,12,0.522,3.884,Cited alongside IS 10322 in 12 of 23 comparable tenders
+IS 1554,IS 5831,14,20,7,0.5,3.35,Cited alongside IS 1554 in 7 of 14 comparable tenders
+IS 9968,IS 694,10,48,5,0.5,1.396,Cited alongside IS 9968 in 5 of 10 comparable tenders
+IS 15778,IS 13592,8,8,4,0.5,8.375,Cited alongside IS 15778 in 4 of 8 comparable tenders
+IS 13592,IS 15778,8,8,4,0.5,8.375,Cited alongside IS 13592 in 4 of 8 comparable tenders
+IS 15885 (Part 2),IS 16107 (Part 2),10,7,5,0.5,9.571,Cited alongside IS 15885 (Part 2) in 5 of 10 comparable tenders
+IS 1239,IS 9523,6,4,3,0.5,16.75,Cited alongside IS 1239 in 3 of 6 comparable tenders
+IS 9968,IS 7098,10,18,5,0.5,3.722,Cited alongside IS 9968 in 5 of 10 comparable tenders
+IS 15885 (Part 2),IS 10322 (Part 1),10,11,5,0.5,6.091,Cited alongside IS 15885 (Part 2) in 5 of 10 comparable tenders
+IS 16104,IS 16107 (Part 2),8,7,4,0.5,9.571,Cited alongside IS 16104 in 4 of 8 comparable tenders
+IS 16104,IS 15885 (Part 2),8,10,4,0.5,6.7,Cited alongside IS 16104 in 4 of 8 comparable tenders
+IS 16104,IS 16105,8,9,4,0.5,7.444,Cited alongside IS 16104 in 4 of 8 comparable tenders
+IS 16104,IS 10322 (Part 1),8,11,4,0.5,6.091,Cited alongside IS 16104 in 4 of 8 comparable tenders
+IS 1868,IS 612,6,3,3,0.5,22.333,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 733,IS 1489,6,8,3,0.5,8.375,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 6057,6,3,3,0.5,22.333,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 9103,6,7,3,0.5,9.571,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 612,6,3,3,0.5,22.333,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 4925,6,3,3,0.5,22.333,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 7088,6,3,3,0.5,22.333,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 456,6,11,3,0.5,6.091,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 733,IS 15622,6,5,3,0.5,13.4,Cited alongside IS 733 in 3 of 6 comparable tenders
+IS 16101,IS 16103,6,9,3,0.5,7.444,Cited alongside IS 16101 in 3 of 6 comparable tenders
+IS 16101,IS 16108,6,10,3,0.5,6.7,Cited alongside IS 16101 in 3 of 6 comparable tenders
+IS 16101,IS 10322,6,23,3,0.5,2.913,Cited alongside IS 16101 in 3 of 6 comparable tenders
+IS 1868,IS 6057,6,3,3,0.5,22.333,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 1868,IS 9103,6,7,3,0.5,9.571,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 10810,IS 1554,8,14,4,0.5,4.786,Cited alongside IS 10810 in 4 of 8 comparable tenders
+IS 1868,IS 4925,6,3,3,0.5,22.333,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 1868,IS 7088,6,3,3,0.5,22.333,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 1868,IS 456,6,11,3,0.5,6.091,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 1868,IS 1489,6,8,3,0.5,8.375,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 1868,IS 2835,6,4,3,0.5,16.75,Cited alongside IS 1868 in 3 of 6 comparable tenders
+IS 16106,IS 16105,18,9,9,0.5,7.444,Cited alongside IS 16106 in 9 of 18 comparable tenders
+IS 16108,IS 10322 (Part 1),10,11,5,0.5,6.091,Cited alongside IS 16108 in 5 of 10 comparable tenders
+IS 1489,IS 8112,8,7,4,0.5,9.571,Cited alongside IS 1489 in 4 of 8 comparable tenders
+IS 16108,IS 10322 (Part 5),10,17,5,0.5,3.941,Cited alongside IS 16108 in 5 of 10 comparable tenders
+IS 16106,IS 10322 (Part 5),18,17,9,0.5,3.941,Cited alongside IS 16106 in 9 of 18 comparable tenders
+IS 1239,IS 8329,6,9,3,0.5,7.444,Cited alongside IS 1239 in 3 of 6 comparable tenders
+IS 15885,IS 16108,6,10,3,0.5,6.7,Cited alongside IS 15885 in 3 of 6 comparable tenders
+IS 15885,IS 16106,6,18,3,0.5,3.722,Cited alongside IS 15885 in 3 of 6 comparable tenders
+IS 15885,IS 16107,6,14,3,0.5,4.786,Cited alongside IS 15885 in 3 of 6 comparable tenders
+IS 1239,IS 1537,6,3,3,0.5,22.333,Cited alongside IS 1239 in 3 of 6 comparable tenders
+IS 1239,IS 3589,6,4,3,0.5,16.75,Cited alongside IS 1239 in 3 of 6 comparable tenders
+IS 1489,IS 383,8,7,4,0.5,9.571,Cited alongside IS 1489 in 4 of 8 comparable tenders
+IS 7098,IS 8130,18,22,9,0.5,3.045,Cited alongside IS 7098 in 9 of 18 comparable tenders
+IS 10322,IS 16107,23,14,11,0.478,4.578,Cited alongside IS 10322 in 11 of 23 comparable tenders
+IS 10322 (Part 5),IS 16107,17,14,8,0.471,4.504,Cited alongside IS 10322 (Part 5) in 8 of 17 comparable tenders
+IS 2062,IS 3043,11,8,5,0.455,7.614,Cited alongside IS 2062 in 5 of 11 comparable tenders
+IS 2062,IS 8130,11,22,5,0.455,2.769,Cited alongside IS 2062 in 5 of 11 comparable tenders
+IS 2062,IS 875,11,7,5,0.455,8.701,Cited alongside IS 2062 in 5 of 11 comparable tenders
+IS 2062,IS 694,11,48,5,0.455,1.269,Cited alongside IS 2062 in 5 of 11 comparable tenders
+IS 10322 (Part 1),IS 16108,11,10,5,0.455,6.091,Cited alongside IS 10322 (Part 1) in 5 of 11 comparable tenders
+IS 10322 (Part 1),IS 15885 (Part 2),11,10,5,0.455,6.091,Cited alongside IS 10322 (Part 1) in 5 of 11 comparable tenders
+IS 10322 (Part 1),IS 16105,11,9,5,0.455,6.768,Cited alongside IS 10322 (Part 1) in 5 of 11 comparable tenders
+IS 8329,IS 456,9,11,4,0.444,5.414,Cited alongside IS 8329 in 4 of 9 comparable tenders
+IS 16105,IS 16104,9,8,4,0.444,7.444,Cited alongside IS 16105 in 4 of 9 comparable tenders
+IS 8329,IS 4985,9,12,4,0.444,4.963,Cited alongside IS 8329 in 4 of 9 comparable tenders
+IS 16103,IS 10322 (Part 1),9,11,4,0.444,5.414,Cited alongside IS 16103 in 4 of 9 comparable tenders
+IS 16103,IS 16105,9,9,4,0.444,6.617,Cited alongside IS 16103 in 4 of 9 comparable tenders
+IS 16103,IS 15885 (Part 2),9,10,4,0.444,5.956,Cited alongside IS 16103 in 4 of 9 comparable tenders
+IS 10418,IS 694,9,48,4,0.444,1.241,Cited alongside IS 10418 in 4 of 9 comparable tenders
+IS 7098,IS 1554,18,14,8,0.444,4.254,Cited alongside IS 7098 in 8 of 18 comparable tenders
+IS 7098,IS 5831,18,20,8,0.444,2.978,Cited alongside IS 7098 in 8 of 18 comparable tenders
+IS 8329,IS 1536,9,5,4,0.444,11.911,Cited alongside IS 8329 in 4 of 9 comparable tenders
+IS 16106,IS 16103,18,9,8,0.444,6.617,Cited alongside IS 16106 in 8 of 18 comparable tenders
+IS 8329,IS 3589,9,4,4,0.444,14.889,Cited alongside IS 8329 in 4 of 9 comparable tenders
+IS 16105,IS 16103,9,9,4,0.444,6.617,Cited alongside IS 16105 in 4 of 9 comparable tenders
+IS 8112,IS 1199,7,4,3,0.429,14.357,Cited alongside IS 8112 in 3 of 7 comparable tenders
+IS 875,IS 2629,7,4,3,0.429,14.357,Cited alongside IS 875 in 3 of 7 comparable tenders
+IS 1285,IS 2835,7,4,3,0.429,14.357,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 875,IS 4759,7,5,3,0.429,11.486,Cited alongside IS 875 in 3 of 7 comparable tenders
+IS 9103,IS 1285,7,7,3,0.429,8.204,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 9103,IS 612,7,3,3,0.429,19.143,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 9103,IS 733,7,6,3,0.429,9.571,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 9103,IS 6057,7,3,3,0.429,19.143,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 9103,IS 1199,7,4,3,0.429,14.357,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 1285,IS 7088,7,3,3,0.429,19.143,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 9103,IS 516,7,4,3,0.429,14.357,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 1285,IS 4925,7,3,3,0.429,19.143,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 9103,IS 4925,7,3,3,0.429,19.143,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 9103,IS 1868,7,6,3,0.429,9.571,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 1285,IS 456,7,11,3,0.429,5.221,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 1285,IS 9103,7,7,3,0.429,8.204,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 1285,IS 1489,7,8,3,0.429,7.179,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 8112,IS 1038,7,3,3,0.429,19.143,Cited alongside IS 8112 in 3 of 7 comparable tenders
+IS 16107,IS 15885 (Part 2),14,10,6,0.429,5.743,Cited alongside IS 16107 in 6 of 14 comparable tenders
+IS 16107,IS 10322 (Part 1),14,11,6,0.429,5.221,Cited alongside IS 16107 in 6 of 14 comparable tenders
+IS 8112,IS 2190,7,3,3,0.429,19.143,Cited alongside IS 8112 in 3 of 7 comparable tenders
+IS 1285,IS 612,7,3,3,0.429,19.143,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 1285,IS 6057,7,3,3,0.429,19.143,Cited alongside IS 1285 in 3 of 7 comparable tenders
+IS 875,IS 456,7,11,3,0.429,5.221,Cited alongside IS 875 in 3 of 7 comparable tenders
+IS 16107 (Part 2),IS 16103,7,9,3,0.429,6.381,Cited alongside IS 16107 (Part 2) in 3 of 7 comparable tenders
+IS 16107,IS 16105,14,9,6,0.429,6.381,Cited alongside IS 16107 in 6 of 14 comparable tenders
+IS 8112,IS 2386,7,3,3,0.429,19.143,Cited alongside IS 8112 in 3 of 7 comparable tenders
+IS 9103,IS 7088,7,3,3,0.429,19.143,Cited alongside IS 9103 in 3 of 7 comparable tenders
+IS 8130,IS 7098,22,18,9,0.409,3.045,Cited alongside IS 8130 in 9 of 22 comparable tenders
+IS 8130,IS 10418,22,9,9,0.409,6.091,Cited alongside IS 8130 in 9 of 22 comparable tenders
+IS 5831,IS 10418,20,9,8,0.4,5.956,Cited alongside IS 5831 in 8 of 20 comparable tenders
+IS 5831,IS 3975,20,8,8,0.4,6.7,Cited alongside IS 5831 in 8 of 20 comparable tenders
+IS 16108,IS 16107 (Part 2),10,7,4,0.4,7.657,Cited alongside IS 16108 in 4 of 10 comparable tenders
+IS 9968,IS 1554,10,14,4,0.4,3.829,Cited alongside IS 9968 in 4 of 10 comparable tenders
+IS 5831,IS 7098,20,18,8,0.4,2.978,Cited alongside IS 5831 in 8 of 20 comparable tenders
+IS 5831,IS 10810,20,8,8,0.4,6.7,Cited alongside IS 5831 in 8 of 20 comparable tenders
+IS 9968,IS 8130,10,22,4,0.4,2.436,Cited alongside IS 9968 in 4 of 10 comparable tenders
+IS 15885 (Part 2),IS 16103,10,9,4,0.4,5.956,Cited alongside IS 15885 (Part 2) in 4 of 10 comparable tenders
+IS 15885 (Part 2),IS 16104,10,8,4,0.4,6.7,Cited alongside IS 15885 (Part 2) in 4 of 10 comparable tenders
+IS 10322,IS 10322 (Part 5),23,17,9,0.391,3.084,Cited alongside IS 10322 in 9 of 23 comparable tenders
+IS 10322,IS 10322 (Part 1),23,11,9,0.391,4.767,Cited alongside IS 10322 in 9 of 23 comparable tenders
+IS 7098,IS 694,18,48,7,0.389,1.086,Cited alongside IS 7098 in 7 of 18 comparable tenders
+IS 16106,IS 10322 (Part 1),18,11,7,0.389,4.737,Cited alongside IS 16106 in 7 of 18 comparable tenders
+IS 7098,IS 10418,18,9,7,0.389,5.79,Cited alongside IS 7098 in 7 of 18 comparable tenders
+IS 7098,IS 3975,18,8,7,0.389,6.514,Cited alongside IS 7098 in 7 of 18 comparable tenders
+IS 16106,IS 16104,18,8,7,0.389,6.514,Cited alongside IS 16106 in 7 of 18 comparable tenders
+IS 16102,IS 10322 (Part 5),13,17,5,0.385,3.032,Cited alongside IS 16102 in 5 of 13 comparable tenders
+IS 16102,IS 16106,13,18,5,0.385,2.863,Cited alongside IS 16102 in 5 of 13 comparable tenders
+IS 10810,IS 4905,8,4,3,0.375,12.562,Cited alongside IS 10810 in 3 of 8 comparable tenders
+IS 1489,IS 7088,8,3,3,0.375,16.75,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 1489,IS 1868,8,6,3,0.375,8.375,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 1489,IS 4925,8,3,3,0.375,16.75,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 3043,IS 1554,8,14,3,0.375,3.589,Cited alongside IS 3043 in 3 of 8 comparable tenders
+IS 3975,IS 1255,8,4,3,0.375,12.562,Cited alongside IS 3975 in 3 of 8 comparable tenders
+IS 1489,IS 733,8,6,3,0.375,8.375,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 1489,IS 612,8,3,3,0.375,16.75,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 10810,IS 9968,8,10,3,0.375,5.025,Cited alongside IS 10810 in 3 of 8 comparable tenders
+IS 16104,IS 16102,8,13,3,0.375,3.865,Cited alongside IS 16104 in 3 of 8 comparable tenders
+IS 3975,IS 694,8,48,3,0.375,1.047,Cited alongside IS 3975 in 3 of 8 comparable tenders
+IS 16104,IS 16103,8,9,3,0.375,5.583,Cited alongside IS 16104 in 3 of 8 comparable tenders
+IS 3975,IS 4905,8,4,3,0.375,12.562,Cited alongside IS 3975 in 3 of 8 comparable tenders
+IS 3043,IS 4985,8,12,3,0.375,4.188,Cited alongside IS 3043 in 3 of 8 comparable tenders
+IS 13592,IS 277,8,4,3,0.375,12.562,Cited alongside IS 13592 in 3 of 8 comparable tenders
+IS 13592,IS 694,8,48,3,0.375,1.047,Cited alongside IS 13592 in 3 of 8 comparable tenders
+IS 13592,IS 12701,8,3,3,0.375,16.75,Cited alongside IS 13592 in 3 of 8 comparable tenders
+IS 3043,IS 8130,8,22,3,0.375,2.284,Cited alongside IS 3043 in 3 of 8 comparable tenders
+IS 3975,IS 3961,8,5,3,0.375,10.05,Cited alongside IS 3975 in 3 of 8 comparable tenders
+IS 13592,IS 5382,8,5,3,0.375,10.05,Cited alongside IS 13592 in 3 of 8 comparable tenders
+IS 1489,IS 1285,8,7,3,0.375,7.179,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 1489,IS 6057,8,3,3,0.375,16.75,Cited alongside IS 1489 in 3 of 8 comparable tenders
+IS 456,IS 4985,11,12,4,0.364,4.061,Cited alongside IS 456 in 4 of 11 comparable tenders
+IS 10322 (Part 1),IS 16104,11,8,4,0.364,6.091,Cited alongside IS 10322 (Part 1) in 4 of 11 comparable tenders
+IS 456,IS 516,11,4,4,0.364,12.182,Cited alongside IS 456 in 4 of 11 comparable tenders
+IS 2062,IS 7098,11,18,4,0.364,2.707,Cited alongside IS 2062 in 4 of 11 comparable tenders
+IS 8130,IS 1554,22,14,8,0.364,3.481,Cited alongside IS 8130 in 8 of 22 comparable tenders
+IS 2062,IS 1554,11,14,4,0.364,3.481,Cited alongside IS 2062 in 4 of 11 comparable tenders
+IS 10322 (Part 1),IS 16103,11,9,4,0.364,5.414,Cited alongside IS 10322 (Part 1) in 4 of 11 comparable tenders
+IS 2062,IS 4759,11,5,4,0.364,9.745,Cited alongside IS 2062 in 4 of 11 comparable tenders
+IS 2062,IS 2629,11,4,4,0.364,12.182,Cited alongside IS 2062 in 4 of 11 comparable tenders
+IS 456,IS 8329,11,9,4,0.364,5.414,Cited alongside IS 456 in 4 of 11 comparable tenders
+IS 8130,IS 3975,22,8,8,0.364,6.091,Cited alongside IS 8130 in 8 of 22 comparable tenders
+IS 8130,IS 10810,22,8,8,0.364,6.091,Cited alongside IS 8130 in 8 of 22 comparable tenders
+IS 456,IS 1199,11,4,4,0.364,12.182,Cited alongside IS 456 in 4 of 11 comparable tenders
+IS 2062,IS 10322,11,23,4,0.364,2.119,Cited alongside IS 2062 in 4 of 11 comparable tenders
+IS 1554,IS 10418,14,9,5,0.357,5.317,Cited alongside IS 1554 in 5 of 14 comparable tenders
+IS 1554,IS 3961,14,5,5,0.357,9.571,Cited alongside IS 1554 in 5 of 14 comparable tenders
+IS 16107,IS 16107 (Part 2),14,7,5,0.357,6.837,Cited alongside IS 16107 in 5 of 14 comparable tenders
+IS 1554,IS 3975,14,8,5,0.357,5.982,Cited alongside IS 1554 in 5 of 14 comparable tenders
+IS 16107,IS 16104,14,8,5,0.357,5.982,Cited alongside IS 16107 in 5 of 14 comparable tenders
+IS 16107,IS 16101,14,6,5,0.357,7.976,Cited alongside IS 16107 in 5 of 14 comparable tenders
+IS 10322 (Part 5),IS 16107 (Part 2),17,7,6,0.353,6.756,Cited alongside IS 10322 (Part 5) in 6 of 17 comparable tenders
+IS 10322 (Part 5),IS 10322 (Part 1),17,11,6,0.353,4.299,Cited alongside IS 10322 (Part 5) in 6 of 17 comparable tenders
+IS 10322 (Part 5),IS 15885 (Part 2),17,10,6,0.353,4.729,Cited alongside IS 10322 (Part 5) in 6 of 17 comparable tenders
+IS 5831,IS 1554,20,14,7,0.35,3.35,Cited alongside IS 5831 in 7 of 20 comparable tenders
+IS 10322,IS 16105,23,9,8,0.348,5.179,Cited alongside IS 10322 in 8 of 23 comparable tenders
+IS 10322,IS 16108,23,10,8,0.348,4.661,Cited alongside IS 10322 in 8 of 23 comparable tenders
+IS 10418,IS 2062,9,11,3,0.333,4.061,Cited alongside IS 10418 in 3 of 9 comparable tenders
+IS 10418,IS 10322,9,23,3,0.333,1.942,Cited alongside IS 10418 in 3 of 9 comparable tenders
+IS 8329,IS 1239,9,6,3,0.333,7.444,Cited alongside IS 8329 in 3 of 9 comparable tenders
+IS 10418,IS 4905,9,4,3,0.333,11.167,Cited alongside IS 10418 in 3 of 9 comparable tenders
+IS 4985,IS 1536,12,5,4,0.333,8.933,Cited alongside IS 4985 in 4 of 12 comparable tenders
+IS 10418,IS 1255,9,4,3,0.333,11.167,Cited alongside IS 10418 in 3 of 9 comparable tenders
+IS 8329,IS 9523,9,4,3,0.333,11.167,Cited alongside IS 8329 in 3 of 9 comparable tenders
+IS 16106,IS 16107 (Part 2),18,7,6,0.333,6.381,Cited alongside IS 16106 in 6 of 18 comparable tenders
+IS 16103,IS 16101,9,6,3,0.333,7.444,Cited alongside IS 16103 in 3 of 9 comparable tenders
+IS 16103,IS 16102,9,13,3,0.333,3.436,Cited alongside IS 16103 in 3 of 9 comparable tenders
+IS 16103,IS 16104,9,8,3,0.333,5.583,Cited alongside IS 16103 in 3 of 9 comparable tenders
+IS 4985,IS 8329,12,9,4,0.333,4.963,Cited alongside IS 4985 in 4 of 12 comparable tenders
+IS 4985,IS 456,12,11,4,0.333,4.061,Cited alongside IS 4985 in 4 of 12 comparable tenders
+IS 4985,IS 1239,12,6,4,0.333,7.444,Cited alongside IS 4985 in 4 of 12 comparable tenders
+IS 10418,IS 3961,9,5,3,0.333,8.933,Cited alongside IS 10418 in 3 of 9 comparable tenders
+IS 694,IS 8130,48,22,16,0.333,2.03,Cited alongside IS 694 in 16 of 48 comparable tenders
+IS 16103,IS 16107 (Part 2),9,7,3,0.333,6.381,Cited alongside IS 16103 in 3 of 9 comparable tenders
+IS 16102,IS 16107,13,14,4,0.308,2.945,Cited alongside IS 16102 in 4 of 13 comparable tenders
+IS 10322,IS 15885 (Part 2),23,10,7,0.304,4.078,Cited alongside IS 10322 in 7 of 23 comparable tenders
+IS 10322,IS 16103,23,9,7,0.304,4.531,Cited alongside IS 10322 in 7 of 23 comparable tenders
+IS 16108,IS 16102 (Part 1),10,4,3,0.3,10.05,Cited alongside IS 16108 in 3 of 10 comparable tenders
+IS 15885 (Part 2),IS 16102 (Part 1),10,4,3,0.3,10.05,Cited alongside IS 15885 (Part 2) in 3 of 10 comparable tenders
+IS 9968,IS 5831,10,20,3,0.3,2.01,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 9968,IS 11329,10,3,3,0.3,13.4,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 9968,IS 10617,10,3,3,0.3,13.4,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 9968,IS 10810,10,8,3,0.3,5.025,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 9968,IS 2993,10,3,3,0.3,13.4,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 9968,IS 12615,10,3,3,0.3,13.4,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 9968,IS 1391 (Part II),10,3,3,0.3,13.4,Cited alongside IS 9968 in 3 of 10 comparable tenders
+IS 16108,IS 15885,10,6,3,0.3,6.7,Cited alongside IS 16108 in 3 of 10 comparable tenders
+IS 16108,IS 16101,10,6,3,0.3,6.7,Cited alongside IS 16108 in 3 of 10 comparable tenders
+IS 16108,IS 16102,10,13,3,0.3,3.092,Cited alongside IS 16108 in 3 of 10 comparable tenders
+IS 10322 (Part 5),IS 16105,17,9,5,0.294,4.379,Cited alongside IS 10322 (Part 5) in 5 of 17 comparable tenders
+IS 10322 (Part 5),IS 16103,17,9,5,0.294,4.379,Cited alongside IS 10322 (Part 5) in 5 of 17 comparable tenders
+IS 10322 (Part 5),IS 16102,17,13,5,0.294,3.032,Cited alongside IS 10322 (Part 5) in 5 of 17 comparable tenders
+IS 10322 (Part 5),IS 16104,17,8,5,0.294,4.926,Cited alongside IS 10322 (Part 5) in 5 of 17 comparable tenders
+IS 10322 (Part 5),IS 16108,17,10,5,0.294,3.941,Cited alongside IS 10322 (Part 5) in 5 of 17 comparable tenders
+IS 694,IS 5831,48,20,14,0.292,1.954,Cited alongside IS 694 in 14 of 48 comparable tenders
+IS 1554,IS 6380,14,4,4,0.286,9.571,Cited alongside IS 1554 in 4 of 14 comparable tenders
+IS 1554,IS 10810,14,8,4,0.286,4.786,Cited alongside IS 1554 in 4 of 14 comparable tenders
+IS 1554,IS 9968,14,10,4,0.286,3.829,Cited alongside IS 1554 in 4 of 14 comparable tenders
+IS 1554,IS 2062,14,11,4,0.286,3.481,Cited alongside IS 1554 in 4 of 14 comparable tenders
+IS 16107,IS 16102,14,13,4,0.286,2.945,Cited alongside IS 16107 in 4 of 14 comparable tenders
+IS 7098,IS 9968,18,10,5,0.278,3.722,Cited alongside IS 7098 in 5 of 18 comparable tenders
+IS 7098,IS 10810,18,8,5,0.278,4.653,Cited alongside IS 7098 in 5 of 18 comparable tenders
+IS 16106,IS 16102,18,13,5,0.278,2.863,Cited alongside IS 16106 in 5 of 18 comparable tenders
+IS 456,IS 1868,11,6,3,0.273,6.091,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 612,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 1285,11,7,3,0.273,5.221,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 6057,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 4925,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 7088,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 2062,IS 14930,11,5,3,0.273,7.309,Cited alongside IS 2062 in 3 of 11 comparable tenders
+IS 2062,IS 10418,11,9,3,0.273,4.061,Cited alongside IS 2062 in 3 of 11 comparable tenders
+IS 456,IS 733,11,6,3,0.273,6.091,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 875,11,7,3,0.273,5.221,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 1038,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 2190,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 1786,11,4,3,0.273,9.136,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 2062,IS 5831,11,20,3,0.273,1.827,Cited alongside IS 2062 in 3 of 11 comparable tenders
+IS 456,IS 2386,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 456,IS 3370,11,3,3,0.273,12.182,Cited alongside IS 456 in 3 of 11 comparable tenders
+IS 10322,IS 16107 (Part 2),23,7,6,0.261,4.994,Cited alongside IS 10322 in 6 of 23 comparable tenders
+IS 10322,IS 16104,23,8,6,0.261,4.37,Cited alongside IS 10322 in 6 of 23 comparable tenders
+IS 4985,IS 9523,12,4,3,0.25,8.375,Cited alongside IS 4985 in 3 of 12 comparable tenders
+IS 4985,IS 3043,12,8,3,0.25,4.188,Cited alongside IS 4985 in 3 of 12 comparable tenders
+IS 4985,IS 3370,12,3,3,0.25,11.167,Cited alongside IS 4985 in 3 of 12 comparable tenders
+IS 4985,IS 3589,12,4,3,0.25,8.375,Cited alongside IS 4985 in 3 of 12 comparable tenders

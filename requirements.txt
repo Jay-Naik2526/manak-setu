@@ -1,0 +1,25 @@
+# MANAK-SETU backend. Python 3.14, macOS/Linux.
+#   python -m venv backend_venv && backend_venv/bin/pip install -r requirements.txt
+#
+# The LLM is optional and is NOT a Python dependency: install Ollama separately
+# and `ollama pull qwen2.5:7b-instruct-q4_K_M`. Without it, clauses come from the
+# deterministic template and the UI says so.
+
+# api
+fastapi>=0.141
+uvicorn[standard]>=0.52
+pydantic>=2.13
+python-multipart>=0.0.9
+
+# data
+pandas>=2.0
+numpy>=2.0
+
+# retrieval: dense + lexical + rerank
+sentence-transformers>=3.0
+rank-bm25>=0.2.2
+
+# document extraction
+pdfplumber>=0.11
+python-docx>=1.1
+pypdf>=5.0

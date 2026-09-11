@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "MANAK-SETU — Standards Check",
+  "version": "0.4",
+  "description": "Checks Indian Standards cited on a procurement page against the BIS register, the certification rules and the co-citation graph.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://localhost:8000/*", "http://127.0.0.1:8000/*"],
+  "action": { "default_popup": "popup.html", "default_title": "Check standards on this page" },
+  "content_scripts": [
+    {
+      "matches": ["https://*.gem.gov.in/*", "https://*.eprocure.gov.in/*", "https://*.nprocure.com/*", "http://localhost/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
