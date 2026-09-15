@@ -258,25 +258,148 @@ def _missing_connected(conn, cited: list[str]) -> list[dict]:
     return ranked[:SUGGEST_MAX_TOTAL]
 
 
+def _one_edit_apart(a: str, b: str) -> bool:
+    """Damerau-Levenshtein distance of exactly one, on digit strings.
+
+    One substitution, insertion, deletion, or transposition of adjacent digits —
+    the four ways a number gets mistyped or misread off a scanned page."""
+    if a == b:
+        return False
+    la, lb = len(a), len(b)
+    if abs(la - lb) > 1:
+        return False
+    if la == lb:
+        diff = [i for i in range(la) if a[i] != b[i]]
+        if len(diff) == 1:
+            return True                                   # substitution
+        if len(diff) == 2 and diff[1] == diff[0] + 1:
+            i, j = diff
+            return a[i] == b[j] and a[j] == b[i]          # transposition
+        return False
+    # One insertion or deletion: the shorter must be the longer minus one digit.
+    short, long = (a, b) if la < lb else (b, a)
+    i = j = 0
+    skipped = False
+    while i < len(short) and j < len(long):
+        if short[i] == long[j]:
+            i += 1
+            j += 1
+        elif skipped:
+            return False
+        else:
+            skipped = True
+            j += 1
+    return True
+
+
+def _did_you_mean(conn, citation: str, resolved_bases: set[str]) -> dict | None:
+    """A standard that exists, is one digit away, and the rest of this document
+    already cites its neighbours.
+
+    An IS number absent from the catalogue is usually not a standard we failed to
+    collect — it is a typo, or a digit lost to a bad scan. Distance alone is far
+    too weak a signal to act on: "IS 456" is one edit from IS 156, IS 458, IS 4566
+    and a dozen others. What separates a slip from a coincidence is the rest of
+    the document. A cement tender citing IS 4699 alongside IS 383 and IS 269 is
+    almost certainly reaching for IS 4699's neighbour, and the co-citation graph
+    knows which standards keep that company.
+
+    So a candidate is only offered when the graph links it to something else this
+    same tender cites. Returned as a question with its evidence, never as a
+    correction: the officer is told what was found and decides."""
+    digits = _digits(citation)
+    if not digits or len(digits) < 3:
+        return None
+
+    candidates = []
+    for (number, base, title, status) in conn.execute(
+        'SELECT "IS Number", "IS Base", "Full Title", "Status" FROM standards'
+    ):
+        cand_digits = _digits(str(base or number))
+        if not cand_digits or not _one_edit_apart(digits, cand_digits):
+            continue
+        candidates.append({"is_number": number, "base": str(base or number),
+                           "title": title, "status": status})
+    if not candidates:
+        return None
+
+    # Rank by how strongly the graph ties the candidate to this document's other
+    # citations. No tie, no suggestion.
+    others = {b for b in resolved_bases if b != _base(citation)}
+    best = None
+    for cand in candidates:
+        links = []
+        for other in others:
+            row = conn.execute(
+                'SELECT "Co-citation Count" FROM co_citation '
+                'WHERE ("Source IS" = ? AND "Target IS" = ?) OR ("Source IS" = ? AND "Target IS" = ?) '
+                'ORDER BY "Co-citation Count" DESC LIMIT 1',
+                (cand["base"], other, other, cand["base"]),
+            ).fetchone()
+            if row and row[0]:
+                links.append((other, int(row[0])))
+        if not links:
+            continue
+        strength = sum(n for _, n in links)
+        if best is None or strength > best["strength"]:
+            links.sort(key=lambda kv: -kv[1])
+            best = {**cand, "links": links, "strength": strength}
+    if best is None:
+        return None
+
+    named = ", ".join(n for n, _ in best["links"][:3])
+    return {
+        "is_number": best["is_number"],
+        "title": best["title"],
+        "status": best["status"],
+        "shares_citations_with": [n for n, _ in best["links"]],
+        "evidence": (
+            f"{best['is_number']} is co-cited with {named} in other tenders, and this "
+            f"document cites {'them' if len(best['links']) > 1 else 'it'} too."
+        ),
+    }
+
+
 def _unresolved(conn, cited: list[str]) -> list[dict]:
     """Cited but absent from the register. Reported, never invented."""
+    resolved_bases = set()
+    for citation in cited:
+        row, _ = _resolve(conn, citation)
+        if row is not None:
+            resolved_bases.add(_base(citation))
+
     out = []
     for citation in cited:
         row, _ = _resolve(conn, citation)
         if row is not None:
             continue
+        guess = _did_you_mean(conn, citation, resolved_bases)
+        detail = (
+            f"{citation} appears in this tender but has no record in the standards "
+            "register, so its status and supersession cannot be checked. It is logged "
+            "to the coverage backlog rather than assumed valid."
+        )
+        if guess:
+            detail += (
+                f" It is one digit from {guess['is_number']}, which does exist. "
+                + guess["evidence"]
+                + " Confirm against the source document before changing anything."
+            )
         out.append(
             {
                 "kind": "not_in_register",
                 "severity": "low",
                 "is_number": citation,
-                "headline": f"{citation} is not in the register",
-                "detail": (
-                    f"{citation} appears in this tender but has no record in the standards "
-                    "register, so its status and supersession cannot be checked. It is logged "
-                    "to the coverage backlog rather than assumed valid."
+                "headline": (
+                    f"{citation} is not in the register — possibly a slip for {guess['is_number']}"
+                    if guess else f"{citation} is not in the register"
                 ),
-                "action": f"Collect the BIS catalogue record for {citation}.",
+                "detail": detail,
+                "action": (
+                    f"Check whether {citation} was meant to be {guess['is_number']}."
+                    if guess else f"Collect the BIS catalogue record for {citation}."
+                ),
+                "did_you_mean": guess,
                 "evidence": {"source": "coverage gap", "row": None},
             }
         )
@@ -406,7 +529,8 @@ def _suggestions(findings: list[dict]) -> dict:
                 "evidence": f.get("evidence"),
             })
         elif f["kind"] == "not_in_register":
-            unresolved.append({"cite": f["is_number"]})
+            unresolved.append({"cite": f["is_number"],
+                               "did_you_mean": f.get("did_you_mean")})
 
     return {
         "replace": replace,

@@ -183,6 +183,28 @@ def main():
     s, b = call("POST", "/decision", {"officer": "QA", "decision": "banana"})
     check("an unknown decision verb is refused", s == 400, f"status {s}")
 
+    section("Phantom citations")
+
+    # A number one digit from a real standard, in a document whose other
+    # citations the graph ties to that standard.
+    s, b = call("POST", "/audit-text", {"text":
+        "Cables shall conform to IS 6994. Conductors as per IS 8130 and insulation IS 5831."})
+    hit = next((f for f in (b.get("findings") or [])
+                if f.get("kind") == "not_in_register"), None)
+    guess = (hit or {}).get("did_you_mean")
+    check("a one-digit slip is offered as a question, with graph evidence",
+          s == 200 and guess is not None and guess.get("is_number") == "IS 694"
+          and bool(guess.get("shares_citations_with")),
+          f"status {s} · suggested {(guess or {}).get('is_number')}")
+
+    # No neighbours, no suggestion: distance alone must never be enough.
+    s, b = call("POST", "/audit-text", {"text": "Material shall conform to IS 99999."})
+    hit = next((f for f in (b.get("findings") or [])
+                if f.get("kind") == "not_in_register"), None)
+    check("a number with no graph support gets no suggestion",
+          s == 200 and hit is not None and hit.get("did_you_mean") is None,
+          f"status {s}")
+
     # ---------------------------------------------------------------- summary
     print(f"\n{len(PASS)} passed · {len(FAIL)} failed")
     if FAIL:

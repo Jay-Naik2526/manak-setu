@@ -2077,7 +2077,12 @@ function renderFindings(a) {
     h += `<div class="card" style="margin-top:14px"><div class="hd">${ic('pie','sm')}
       <h3>Not in the register</h3><span class="pill mute">${S.unresolved.length}</span></div>
       <div class="in"><div class="xs" style="color:var(--ink-2)">
-      ${S.unresolved.map(u => `<span class="mono">${esc(u.cite)}</span>`).join(' · ')}
+      ${S.unresolved.map(u => u.did_you_mean
+        ? `<div style="margin-bottom:7px"><span class="mono">${esc(u.cite)}</span>
+             <span class="dimmer">— not in the catalogue. Possibly a slip for</span>
+             <span class="mono jump" data-go="${esc(u.did_you_mean.is_number)}">${esc(u.did_you_mean.is_number)}</span>
+             <div class="xs dimmer" style="margin-top:2px">${esc(u.did_you_mean.evidence)} Confirm against the source document before changing anything.</div></div>`
+        : `<span class="mono">${esc(u.cite)}</span>`).join(' · ')}
       <div class="xs dimmer" style="margin-top:6px">Cited by this tender and not held, so status and
       certification cannot be checked. Logged as a collection gap rather than assumed valid.</div>
       </div></div></div>`;
