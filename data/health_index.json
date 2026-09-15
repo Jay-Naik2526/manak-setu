@@ -1,16 +1,16 @@
 {
   "generated": "2026-09-16",
   "corpus": {
-    "documents_collected": 2170,
-    "documents_measured": 535,
-    "citations_read": 3138,
+    "documents_collected": 3824,
+    "documents_measured": 932,
+    "citations_read": 4862,
     "note": "Counts over the tender documents in this corpus whose text could be read (Usability='Usable'). A sample of Indian public procurement, not a census — these are not national rates."
   },
   "headline": {
-    "documents_with_a_dead_citation": 186,
-    "of_documents": 535,
-    "documents_citing_a_standard_not_in_the_register": 43,
-    "distinct_dead_standards_in_circulation": 225
+    "documents_with_a_dead_citation": 327,
+    "of_documents": 932,
+    "documents_citing_a_standard_not_in_the_register": 73,
+    "distinct_dead_standards_in_circulation": 306
   },
   "by_year": [
     {
@@ -30,18 +30,18 @@
     },
     {
       "year": "2024",
-      "documents": 85,
-      "with_dead_citation": 26
+      "documents": 155,
+      "with_dead_citation": 47
     },
     {
       "year": "2025",
-      "documents": 184,
-      "with_dead_citation": 60
+      "documents": 389,
+      "with_dead_citation": 135
     },
     {
       "year": "2026",
-      "documents": 134,
-      "with_dead_citation": 44
+      "documents": 256,
+      "with_dead_citation": 89
     },
     {
       "year": "unknown",
@@ -51,92 +51,82 @@
   ],
   "by_family": [
     {
-      "family": "Electrical cables and wiring",
-      "documents": 89,
-      "with_dead_citation": 34
+      "family": "MTD — Metallurgical Engineering Department",
+      "documents": 198,
+      "with_dead_citation": 64
     },
     {
       "family": "CED — Civil Engineering Department",
-      "documents": 56,
-      "with_dead_citation": 33
+      "documents": 107,
+      "with_dead_citation": 57
     },
     {
       "family": "ETD — Electrotechnical Department",
-      "documents": 51,
-      "with_dead_citation": 24
+      "documents": 99,
+      "with_dead_citation": 56
     },
     {
-      "family": "MTD — Metallurgical Engineering Department",
-      "documents": 98,
-      "with_dead_citation": 24
+      "family": "Electrical cables and wiring",
+      "documents": 112,
+      "with_dead_citation": 42
     },
     {
       "family": "Unclassified",
-      "documents": 88,
-      "with_dead_citation": 23
+      "documents": 189,
+      "with_dead_citation": 38
     },
     {
       "family": "Pipes (PVC and GI)",
-      "documents": 33,
+      "documents": 34,
       "with_dead_citation": 14
     },
     {
       "family": "CHD — Chemical Department",
-      "documents": 24,
-      "with_dead_citation": 9
+      "documents": 41,
+      "with_dead_citation": 14
     },
     {
       "family": "MED — Mechanical Engineering Department",
-      "documents": 16,
-      "with_dead_citation": 7
+      "documents": 30,
+      "with_dead_citation": 11
     },
     {
       "family": "LED lighting",
-      "documents": 36,
-      "with_dead_citation": 6
+      "documents": 43,
+      "with_dead_citation": 7
     },
     {
       "family": "PGD — Production And General Engineering Department",
-      "documents": 19,
-      "with_dead_citation": 4
+      "documents": 33,
+      "with_dead_citation": 7
     },
     {
       "family": "TXD — Textile Department",
-      "documents": 10,
-      "with_dead_citation": 4
+      "documents": 18,
+      "with_dead_citation": 6
     },
     {
       "family": "PCD — Petroleum, Coal And Related Products Department",
-      "documents": 11,
+      "documents": 15,
+      "with_dead_citation": 4
+    },
+    {
+      "family": "FAD — Food And Agriculture Department",
+      "documents": 5,
+      "with_dead_citation": 3
+    },
+    {
+      "family": "MSD — Management System Department",
+      "documents": 4,
       "with_dead_citation": 3
     },
     {
       "family": "TED — Transport Engineering Department",
       "documents": 2,
       "with_dead_citation": 1
-    },
-    {
-      "family": "FAD — Food And Agriculture Department",
-      "documents": 1,
-      "with_dead_citation": 0
-    },
-    {
-      "family": "LITD — Electronics And Information Technology Department",
-      "documents": 1,
-      "with_dead_citation": 0
     }
   ],
   "dead_standards_still_cited": [
-    {
-      "is_number": "IS 8112",
-      "title": "Ordinary Portland Cement, 43 Grade",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 15,
-      "of": 535
-    },
     {
       "is_number": "IS 14246",
       "title": "CONTINUOUSLY PRE-PAINTED GALVANIZED STEEL SHEETS AND STRIPS - SPECIFICATION  (Second Revision) Amendment - 1",
@@ -144,8 +134,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2031-02-06",
       "overdue": "No",
-      "documents": 14,
-      "of": 535
+      "documents": 24,
+      "of": 932
     },
     {
       "is_number": "IS 303",
@@ -154,8 +144,18 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2031-03-20",
       "overdue": "No",
-      "documents": 14,
-      "of": 535
+      "documents": 23,
+      "of": 932
+    },
+    {
+      "is_number": "IS 8112",
+      "title": "Ordinary Portland Cement, 43 Grade",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
+      "documents": 22,
+      "of": 932
     },
     {
       "is_number": "IS 325",
@@ -164,38 +164,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "",
       "overdue": "",
-      "documents": 13,
-      "of": 535
-    },
-    {
-      "is_number": "IS 1391 (Part 1)",
-      "title": "Room Air Conditioners  Specification Part 1 Unitary Air Conditioners Fourth Revision  ",
-      "status": "Superseded",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2031-05-15",
-      "overdue": "No",
-      "documents": 9,
-      "of": 535
-    },
-    {
-      "is_number": "IS 13983",
-      "title": "Stainless steel sinks for domestic purposes - Specification",
-      "status": "Superseded",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2031-01-31",
-      "overdue": "No",
-      "documents": 9,
-      "of": 535
-    },
-    {
-      "is_number": "IS 4379",
-      "title": "Identification of the Contents of Industrial Gas Cylinders (Second Revision) Amendment - 1",
-      "status": "Superseded",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2030-10-30",
-      "overdue": "No",
-      "documents": 9,
-      "of": 535
+      "documents": 21,
+      "of": 932
     },
     {
       "is_number": "IS 13489",
@@ -204,38 +174,18 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-04-30",
       "overdue": "",
-      "documents": 9,
-      "of": 535
+      "documents": 17,
+      "of": 932
     },
     {
-      "is_number": "IS 13947",
-      "title": "Low-voltage Switchgear and Controlgear - Part 1 : General Rules",
-      "status": "Withdrawn",
+      "is_number": "IS 13983",
+      "title": "Stainless steel sinks for domestic purposes - Specification",
+      "status": "Superseded",
       "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 8,
-      "of": 535
-    },
-    {
-      "is_number": "IS 4077",
-      "title": "Copper-nickel Shot",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 8,
-      "of": 535
-    },
-    {
-      "is_number": "IS 2209",
-      "title": "Mortice Locks (vertical Type)",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 8,
-      "of": 535
+      "review_due": "2031-01-31",
+      "overdue": "No",
+      "documents": 16,
+      "of": 932
     },
     {
       "is_number": "IS 1000",
@@ -244,8 +194,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-12-15",
       "overdue": "No",
-      "documents": 8,
-      "of": 535
+      "documents": 16,
+      "of": 932
     },
     {
       "is_number": "IS 373",
@@ -254,18 +204,68 @@
       "replaced_by": "UNKNOWN",
       "review_due": "",
       "overdue": "",
-      "documents": 8,
-      "of": 535
+      "documents": 15,
+      "of": 932
     },
     {
-      "is_number": "IS 1285",
-      "title": "Wrought aluminium and aluminium alloys - Extruded round tube and hollow sections for general engineering purposes - Specification (Third Revision)",
+      "is_number": "IS 13947",
+      "title": "Low-voltage Switchgear and Controlgear - Part 1 : General Rules",
       "status": "Withdrawn",
       "replaced_by": "UNKNOWN",
-      "review_due": "2027-03-31",
+      "review_due": "",
+      "overdue": "",
+      "documents": 14,
+      "of": 932
+    },
+    {
+      "is_number": "IS 2209",
+      "title": "Mortice Locks (vertical Type)",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
+      "documents": 14,
+      "of": 932
+    },
+    {
+      "is_number": "IS 4759",
+      "title": "Hot - Dip zinc coatings on structural steel and other allied products - Specification (Third Revision)",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2026-03-31",
+      "overdue": "Yes",
+      "documents": 13,
+      "of": 932
+    },
+    {
+      "is_number": "IS 4379",
+      "title": "Identification of the Contents of Industrial Gas Cylinders (Second Revision) Amendment - 1",
+      "status": "Superseded",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2030-10-30",
       "overdue": "No",
-      "documents": 7,
-      "of": 535
+      "documents": 13,
+      "of": 932
+    },
+    {
+      "is_number": "IS 1391 (Part 1)",
+      "title": "Room Air Conditioners  Specification Part 1 Unitary Air Conditioners Fourth Revision  ",
+      "status": "Superseded",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2031-05-15",
+      "overdue": "No",
+      "documents": 12,
+      "of": 932
+    },
+    {
+      "is_number": "IS 1570 (Part 1)",
+      "title": "Schedules for wrought steels: Part 1 steels specifed by tensile and/or yield properties (First Revision)",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2029-04-30",
+      "overdue": "No",
+      "documents": 12,
+      "of": 932
     },
     {
       "is_number": "IS 2705",
@@ -274,21 +274,11 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2022-03-31",
       "overdue": "Yes",
-      "documents": 7,
-      "of": 535
+      "documents": 12,
+      "of": 932
     }
   ],
   "most_cited_standards": [
-    {
-      "is_number": "IS 694",
-      "title": "Polyvinyl chloride insulated unsheathed and sheathed cables/cords with rigid and flexible conductor for rated voltages up to and including 1 100 V (Fourth Revision)",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2025-01-01",
-      "overdue": "Yes",
-      "documents": 63,
-      "of": 535
-    },
     {
       "is_number": "IS 2062",
       "title": "Structural Steel - Part 1 - Hot Rolled Medium and High tensile  Steel",
@@ -296,8 +286,18 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-12-29",
       "overdue": "No",
-      "documents": 63,
-      "of": 535
+      "documents": 117,
+      "of": 932
+    },
+    {
+      "is_number": "IS 694",
+      "title": "Polyvinyl chloride insulated unsheathed and sheathed cables/cords with rigid and flexible conductor for rated voltages up to and including 1 100 V (Fourth Revision)",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2025-01-01",
+      "overdue": "Yes",
+      "documents": 84,
+      "of": 932
     },
     {
       "is_number": "IS 7098 (Part 1)",
@@ -306,8 +306,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-11-24",
       "overdue": "No",
-      "documents": 39,
-      "of": 535
+      "documents": 50,
+      "of": 932
     },
     {
       "is_number": "IS 10322 (Part 1)",
@@ -316,8 +316,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-01-31",
       "overdue": "No",
-      "documents": 35,
-      "of": 535
+      "documents": 41,
+      "of": 932
     },
     {
       "is_number": "IS 8130",
@@ -326,8 +326,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-11-24",
       "overdue": "No",
-      "documents": 33,
-      "of": 535
+      "documents": 40,
+      "of": 932
     },
     {
       "is_number": "IS 5831",
@@ -336,8 +336,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2026-11-30",
       "overdue": "No",
-      "documents": 29,
-      "of": 535
+      "documents": 36,
+      "of": 932
     },
     {
       "is_number": "IS 1554 (Part 1)",
@@ -346,8 +346,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2025-02-01",
       "overdue": "Yes",
-      "documents": 28,
-      "of": 535
+      "documents": 36,
+      "of": 932
     },
     {
       "is_number": "IS 1239",
@@ -356,8 +356,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2029-06-30",
       "overdue": "No",
-      "documents": 25,
-      "of": 535
+      "documents": 35,
+      "of": 932
     },
     {
       "is_number": "IS 277",
@@ -366,8 +366,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2031-03-18",
       "overdue": "No",
-      "documents": 23,
-      "of": 535
+      "documents": 34,
+      "of": 932
     },
     {
       "is_number": "IS 875",
@@ -376,18 +376,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2028-05-31",
       "overdue": "No",
-      "documents": 21,
-      "of": 535
-    },
-    {
-      "is_number": "IS 16106",
-      "title": "Method of electrical and photometric measurements of solid state lighting (LED) products",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2029-12-31",
-      "overdue": "No",
-      "documents": 20,
-      "of": 535
+      "documents": 32,
+      "of": 932
     },
     {
       "is_number": "IS 3043",
@@ -396,28 +386,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2023-11-30",
       "overdue": "Yes",
-      "documents": 19,
-      "of": 535
-    },
-    {
-      "is_number": "IS 16107 (Part 1)",
-      "title": "Luminaires performance, Part 1: General requirements",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2029-05-31",
-      "overdue": "No",
-      "documents": 18,
-      "of": 535
-    },
-    {
-      "is_number": "IS 15885 (Part 1)",
-      "title": "Safety of lamp controlgear, Part 1: General requirements",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2026-05-01",
-      "overdue": "Yes",
-      "documents": 18,
-      "of": 535
+      "documents": 26,
+      "of": 932
     },
     {
       "is_number": "IS 13592",
@@ -426,8 +396,38 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2028-05-30",
       "overdue": "No",
-      "documents": 17,
-      "of": 535
+      "documents": 25,
+      "of": 932
+    },
+    {
+      "is_number": "IS 14246",
+      "title": "CONTINUOUSLY PRE-PAINTED GALVANIZED STEEL SHEETS AND STRIPS - SPECIFICATION  (Second Revision) Amendment - 1",
+      "status": "Superseded",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2031-02-06",
+      "overdue": "No",
+      "documents": 24,
+      "of": 932
+    },
+    {
+      "is_number": "IS 1367",
+      "title": "Technical supply conditions for threaded steel fasteners: Part 1 general requirements for bolts, screws, studs and nuts (Fourth Revision)",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2029-04-30",
+      "overdue": "No",
+      "documents": 24,
+      "of": 932
+    },
+    {
+      "is_number": "IS 1608 (Part 1)",
+      "title": "Metallic materials - Tensile testing - Part 1 : Method of test at room temperature ( Fifth Revision)",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2027-03-31",
+      "overdue": "No",
+      "documents": 24,
+      "of": 932
     }
   ]
 }

@@ -15,6 +15,13 @@ import sqlite3
 
 import pandas as pd
 
+# The same matcher the coverage figure uses. Keeping a second copy here is how
+# the backlog and the coverage percentage came to disagree about four citations:
+# this file stripped punctuation naively, so "IS 02" stayed "02" and missed
+# IS 2, while engine stripped the leading zero and matched it. Two numbers for
+# one fact is the failure this project exists to avoid.
+from engine import _is_base, _is_digits
+
 DB_PATH = "manak_setu.db"
 OUT = "data/coverage_gap_backlog_current.csv"
 
@@ -41,10 +48,11 @@ def main():
         for is_number in cited:
             demand[is_number] = demand.get(is_number, 0) + 1
 
-    digits = lambda s: re.sub(r"[^0-9]", "", base(s))
     missing = {
         k: v for k, v in demand.items()
-        if k not in held_exact and base(k) not in held_base and digits(k) not in held_digits
+        if k not in held_exact
+        and _is_base(k) not in held_base
+        and _is_digits(k) not in held_digits
     }
     out = pd.DataFrame(
         sorted(({"Tenders Citing": v, "IS Number": k} for k, v in missing.items()),
