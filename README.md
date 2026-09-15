@@ -8,7 +8,7 @@ co-cited related standards.
 The CSVs in `./data/` are the only source of truth. Nothing is generated,
 inferred, or synthesised — if a lookup finds nothing, it returns `found: false`
 (or a "Low - route to BIS office" confidence) instead of guessing. The semantic
-matcher ranks the 2,087 real standards by embedding similarity; it is structurally
+matcher ranks the 27,687 real standards by embedding similarity; it is structurally
 incapable of emitting an IS number that is not in the master list.
 
 ## How to run
@@ -60,17 +60,17 @@ python benchmark.py     # dead-citation detector vs. tender ground truth
 ## Frontend
 
 `frontend/` is a dependency-free app (`index.html` / `styles.css` / `app.js`) —
-no build step, no framework. Eight pages:
+no build step, no framework. Ten pages:
 
 | Page | What it does |
 |---|---|
 | **Dashboard** | Live corpus aggregates — status donut, coverage meter, decade histogram, family/degree/gap bars. Recomputed from SQLite on every load. |
 | **Analyze Tender** | Drag-drop a tender PDF (parsed server-side by pdfplumber), paste spec text, or enter IS numbers. One-click presets load real corpus examples. Severity-sorted findings. |
-| **Tender Corpus** | Browse and filter all 220 real tenders; click any row to run a live compliance check on its actual citations. |
-| **Knowledge Graph** | Animated force-directed graph of the 193 co-cited standards / 3,336 edges. Family filter, confidence threshold, node drill-down with real evidence statements. |
-| **Standards** | All 2,087 rows, searchable/filterable, with a detail drawer (record + certification + co-citations). |
-| **Certifications** | All 77 QCO/CRS rules. |
-| **Coverage & Gaps** | The 99.0% coverage figure with its exact denominator, and the 5-row remaining collection backlog. |
+| **Tender Corpus** | Browse and filter all 2,170 real tenders; click any row to run a live compliance check on its actual citations. |
+| **Knowledge Graph** | Animated force-directed graph of the 285 co-cited standards / 4,831 edges. Family filter, confidence threshold, node drill-down with real evidence statements. |
+| **Standards** | All 27,687 rows, searchable/filterable, with a detail drawer (record + certification + co-citations). |
+| **Certifications** | All 737 rules across ISI Mark Scheme I, CRS, QCO and Hallmarking. |
+| **Coverage & Gaps** | The 99.3% coverage figure with its exact denominator, and the 10-row remaining collection backlog. |
 | **Benchmark** | Runs the golden benchmark live and shows the confusion matrix, with an explicit warning against quoting a bare accuracy percentage. |
 
 Also: dark mode, ⌘K command palette, and a print stylesheet (⎙ exports the
@@ -145,7 +145,7 @@ specs like "PVC insulated cable" score High, e.g. matching `IS 5831` at 0.77).
 `GET /health` returns row counts per table, e.g.:
 
 ```json
-{"status": "ok", "row_counts": {"standards": 2087, "tenders": 220, "co_citation": 3336, "certification_rules": 737, "coverage_gap_backlog": 5}}
+{"status": "ok", "row_counts": {"standards": 27687, "tenders": 2170, "co_citation": 4831, "certification_rules": 737, "coverage_gap_backlog": 10}}
 ```
 
 ## Known Data Gaps
@@ -153,21 +153,21 @@ specs like "PVC insulated cable" score High, e.g. matching `IS 5831` at 0.77).
 These are real, disclosed limitations of the current dataset — not implementation
 bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
 
-- **Standards coverage**: 2,087 standards in `standards_master_extended.csv`. Of the 220
-  tender rows, only **134 are `Usability = Usable`** (the rest —
-  `Not extractable` / `Multi-scope` / `Extraction failed` — are excluded from
-  every coverage/accuracy stat). Those 134 usable tenders cite **488 distinct
-  IS numbers**, of which **483 (99.0%)** are present in the register. The figure
-  was 84 (17%) at the start of the project and 182 (37.3%) before the full
-  harvest: `collect_missing_standards.py --all` collected 1,126 catalogue records
-  from the BIS Standards Portal's own public search endpoint (1,181 targets, 55
-  with no catalogue match).
-  The remaining **5** correctly return `found: false` from
-  `check_dead_citation` / `check_certification`, and are the 5 rows in
-  `coverage_gap_backlog_current.csv` (`rebuild_backlog.py`). That gap is closed
-  by collection, never by writing synthetic rows into the CSVs.
-- **Review dates**: 1,844 of 2,087 standards carry BIS's own `validUpto`
-  review date, collected by `collect_review_dates.py`. **121 are overdue** — the
+- **Standards coverage**: 27,687 standards in `standards_master_extended.csv`,
+  collected from the BIS catalogue's own public search endpoint by
+  `collect_catalogue.py` (34,884 records swept, 29,939 new). Of the 2,170 tender
+  rows, **535 are `Usability = Usable`** — the rest are service bids, scans, or
+  specifications naming no standard, and are excluded from every coverage and
+  accuracy statistic. Those 535 usable tenders cite **1,237 distinct IS
+  numbers**, of which **1,228 (99.3%)** are present in the register. The figure
+  was 84 (17%) at the start of the project, 483 of 488 (99.0%) against the
+  2,087-row register, and fell to 891 of 1,237 (72.0%) when the corpus grew
+  before the catalogue harvest closed it again. The remaining **10** correctly
+  return `found: false` and are the rows in `coverage_gap_backlog_current.csv`
+  (`rebuild_backlog.py`). That gap is closed by collection, never by writing
+  synthetic rows into the CSVs.
+- **Review dates**: 23,403 of 27,687 standards carry BIS's own `validUpto`
+  review date. **121 are overdue** — the
   edition is past the date BIS set for its review, so the citation should be
   confirmed before publication. This is *not* an amendment number: BIS does not
   publish those through any endpoint this system could reach, and the interface
@@ -188,13 +188,20 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   product families — e.g. LED lighting — currently have **zero** certification
   rows. `check_certification` correctly returns `found: false` for these;
   there is no certification data to report, not missing logic.
-- **Supersession coverage**: of 2,087 standards, 1,595 are `Current`, 95 are
-  `Superseded`, and 397 are `Withdrawn`. `pipeline.py --only versions` verified
+- **Supersession coverage**: of 27,687 standards, 20,115 are `Current`, 277 are
+  `Superseded`, and 7,295 are `Withdrawn`. `pipeline.py --only versions` verified
   all 549 reachable pre-harvest rows against the BIS portal and found **99
-  amendments** — 52 status changes (43 of them standards recorded as Current that BIS
-  has since withdrawn or superseded, 40 of those withdrawn outright) and 47 edition-year corrections. All 99 were applied
-  and are stamped in `Provenance`.
-  Only **10** standards carry a recorded successor; the rest have
-  `Replaced By = "UNKNOWN"`
-  (no recorded successor); `check_dead_citation` surfaces that value as-is
-  rather than inventing a replacement.
+  amendments** — 52 status changes (43 of them standards recorded as Current that
+  BIS has since withdrawn or superseded, 40 of those withdrawn outright) and 47
+  edition-year corrections. All 99 were applied and are stamped in `Provenance`.
+  Only a small number of standards carry a recorded successor; the rest have
+  `Replaced By = "UNKNOWN"` (no recorded successor), and `check_dead_citation`
+  surfaces that value as-is rather than inventing a replacement.
+- **Citation extraction**: citations are read literally from document text, and
+  the pattern has been narrowed twice against real documents. It no longer reads
+  the English word "is" followed by a number ("purchase preference is 20%"), nor
+  a table row number after the boilerplate "as per relevant IS", nor a match
+  inside a longer word such as THIS or BASIS. Re-extracting the collected
+  corpus from the saved attachments removed 3,341 citations the earlier pattern
+  had invented. Anything the pattern still reads is present verbatim in the
+  document.
