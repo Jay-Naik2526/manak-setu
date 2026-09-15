@@ -308,9 +308,17 @@ def list_tenders() -> list[dict]:
         out = []
         for row in rows:
             d = {k: _display(row[k]) for k in row.keys()}
-            name = display_title(row["Tender ID"], row["Product Family"])
-            d["Title"] = name["title"]
-            d["title_derived"] = name["derived"]
+            # GeM bids carry their own product line ("Item Category") as the
+            # portal prints it. That is the document's real name, so it is used
+            # as-is; a filename-derived title is the fallback for the rest.
+            category = (row["Item Category"] if "Item Category" in row.keys() else "") or ""
+            if str(category).strip() and str(category).strip().lower() != "nan":
+                d["Title"] = str(category).strip()
+                d["title_derived"] = True
+            else:
+                name = display_title(row["Tender ID"], row["Product Family"])
+                d["Title"] = name["title"]
+                d["title_derived"] = name["derived"]
             out.append(d)
         return out
     finally:
@@ -435,6 +443,9 @@ def corpus_stats() -> dict:
             "certs_by_mandatory": _count_by(conn, "certification_rules", "Certification Mandatory"),
             "coverage": {
                 "usable_tenders": len(usable_rows),
+                "any_outdated": conn.execute(
+                    'SELECT COUNT(*) FROM tenders WHERE "Any Outdated" = ?', ("Yes",)
+                ).fetchone()[0],
                 "distinct_cited": len(cited),
                 "matched": len(matched),
                 "unmatched": len(cited) - len(matched),

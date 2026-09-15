@@ -300,6 +300,13 @@ async function health() {
     if ($('#graph-meta')) $('#graph-meta').textContent =
       `${cc.toLocaleString()} edges · thresholds 5+ co-citations / 40%+ confidence / source cited in 8+ tenders`;
     $$('[data-ct]').forEach(e => { e.textContent = h.row_counts[e.dataset.ct] ?? ''; });
+    // Coverage figures (usable documents, dead-citation count) live in /stats.
+    // Fetched here too so the tenders header and the footer are right on any
+    // first screen, not only after the overview has loaded.
+    api('/stats').then(s => {
+      S.stats = s;
+      $$('[data-cv]').forEach(e => { e.textContent = s.coverage[e.dataset.cv] ?? ''; });
+    }).catch(() => {});
   } catch (_) {
     $('#conn').innerHTML = `<span class="dot down"></span>backend offline`;
   }
@@ -940,12 +947,14 @@ const DEMO = [
   {
     view: 'overview', hold: 9000, spot: '#hero',
     h: 'What the console holds',
-    p: '2,087 Indian Standards, 220 real government tenders, 3,336 co-citation edges, 737 certification rules. Every figure is recomputed from the database on load — nothing on this page is typed in.',
+    p: () => { const r = (S.stats || {}).row_counts || {}; const g = (S.stats || {}).graph || {};
+      return `${(r.standards || 2087).toLocaleString()} Indian Standards, ${r.tenders || 220} real government tenders, ${(g.edges || 3336).toLocaleString()} co-citation edges, ${r.certification_rules || 737} certification rules. Every figure is recomputed from the database on load — nothing on this page is typed in.`; },
   },
   {
     view: 'overview', hold: 9000, spot: '#ov-cov',
     h: 'And what it does not',
-    p: '99% of the standards real tenders cite are in the register — 483 of 488. It was 17% when we started. We collected the rest from the BIS catalogue rather than inventing them, and the last 5 stay on the front page as a declared gap.',
+    p: () => { const c = (S.stats || {}).coverage || {};
+      return `${c.pct || 99}% of the standards real tenders cite are in the register — ${c.matched || 483} of ${c.distinct_cited || 488}. It was 17% when we started. We collected the rest from the BIS catalogue rather than inventing them, and the last ${c.unmatched ?? 5} stay on the front page as a declared gap.`; },
   },
   {
     view: 'draft', hold: 10000, spot: '#fw-gov',
@@ -974,13 +983,16 @@ const DEMO = [
   {
     view: 'graph', hold: 10000, spot: '#gwrap',
     h: 'Where "related" comes from',
-    p: '193 standards joined by 3,336 edges, each edge a count of two standards appearing in the same published tender. Colour is BIS department. The clusters are procurement practice, not a layout choice.',
+    p: () => { const g = (S.stats || {}).graph || {};
+      return `${g.nodes || 193} standards joined by ${(g.edges || 3336).toLocaleString()} edges, each edge a count of two standards appearing in the same published tender. Colour is BIS department. The clusters are procurement practice, not a layout choice.`; },
     run: async () => { await wait(1200); },
   },
   {
     view: 'benchmark', hold: 11000, spot: '#bm-out',
     h: 'Measured, and stated carefully',
-    p: 'All 4 known dead-citation documents caught, 0 false positives across 20 sampled clean ones. Retrieval scores 92% Recall@10 on 71 queries labelled by BIS Quality Control Orders. The positive class here is 4 — too small for an accuracy claim, so we never make one.',
+    p: () => { const b = S.bench || {};
+      const pos = b.positives_in_set ?? 4, tp = b.true_positives ?? 4, fp = b.false_positives ?? 0, neg = b.negatives_sampled ?? 20;
+      return `${tp} of ${pos} known dead-citation documents caught, ${fp} false positive${fp === 1 ? '' : 's'} across ${neg} sampled clean ones. Retrieval ranks the right standard first on 58 of 71 labelled queries and within the top ten on 65. The positive class here is ${pos} — too small for an accuracy claim, so we never make one.`; },
   },
 ];
 
@@ -1004,7 +1016,7 @@ function demoPaint() {
   const s = DEMO[D.i];
   $('#demo-step').textContent = `${D.i + 1} / ${DEMO.length}`;
   $('#demo-h').textContent = s.h;
-  $('#demo-p').textContent = s.p;
+  $('#demo-p').textContent = typeof s.p === 'function' ? s.p() : s.p;
   $('#demo-play').innerHTML = D.paused
     ? '<svg class="i sm" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>'
     : '<svg class="i sm" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>';
@@ -2077,7 +2089,7 @@ async function loadEvidence(isNumber) {
       <div class="ft">Citations were extracted literally from each document's text. A tender appears here only if its own words contain this IS number.</div>
     </div>`
     : blank(`No tender in the corpus cites ${q}`,
-        'The corpus is 220 collected documents, not the whole of Indian procurement — absence here is a gap in our collection, not evidence the standard is unused.');
+        `The corpus is ${(S.stats && S.stats.row_counts.tenders) || 220} collected documents, not the whole of Indian procurement — absence here is a gap in our collection, not evidence the standard is unused.`);
 
   out.innerHTML = h;
   runCounts();

@@ -26,3 +26,8 @@ shots/
 *.db-wal
 *.db-shm
 .claude/
+
+# Tender PDFs fetched by collect_gem_tenders.py: public documents, but the repo
+# carries citations and source links, not copies.
+data/tenders/
+data/tender_collected_gem.progress.jsonl

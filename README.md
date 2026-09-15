@@ -24,14 +24,31 @@ python build_embeddings.py # builds standards_embeddings.npy (run once)
 uvicorn main:app --reload
 ```
 
-Then serve the frontend (a separate origin keeps CORS honest):
+FastAPI serves `frontend/` itself, so open <http://127.0.0.1:8000>. The header
+reads "connected · 5 tables" when the database loaded.
+
+### Growing the tender corpus
+
+The tender rows come from public procurement documents, and the largest
+scriptable source is GeM. Every bid has a public bid document at
+`bidplus.gem.gov.in/showbidDocument/<id>`, and that document links to the
+buyer's specification attachments — which is where the IS numbers are written.
+`collect_gem_tenders.py` samples bid ids across 2024–2026, follows those links,
+and records only citations literally present in the attachments:
 
 ```bash
-cd frontend && python3 -m http.server 5500
+python collect_gem_tenders.py --sample 2000 --seed 3   # resumable; ~1 bid/s
+python merge_gem_tenders.py                            # dry run: what would change
+python merge_gem_tenders.py --write                    # additive merge
+python rebuild_graph.py && python rebuild_backlog.py && python load_db.py
 ```
 
-Open <http://127.0.0.1:5500>. The sidebar status reads "backend online" when the
-two are talking.
+Service bids are skipped (they carry scopes of work, not specifications), bids
+whose attachments are scans are kept as `Not extractable`, and each row's
+`Product Family` is the majority family of its citations *as resolved in the
+register* — never guessed from the document's wording. The fetched PDFs stay
+under `data/tenders/` and are not committed; the repo carries citations and
+source links, not copies of public documents.
 
 To run the correctness checks:
 
