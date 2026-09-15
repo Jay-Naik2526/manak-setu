@@ -207,6 +207,24 @@ def main():
           s == 200 and hit is not None and hit.get("did_you_mean") is None,
           f"status {s}")
 
+    section("Peer citations")
+
+    s, b = call("GET", "/peers?text=11%20kV%20XLPE%20cable%20joint")
+    cites = (b or {}).get("citations") or []
+    check("a real item finds a peer group and tallies its citations",
+          s == 200 and b.get("found") and b.get("matched_documents", 0) >= 3
+          and all(c["documents"] <= c["of"] for c in cites),
+          f"status {s} · {b.get('matched_documents')} bids")
+
+    # One weak word-overlap is not a peer group; saying nothing beats a corpus
+    # average dressed up as a recommendation.
+    s, b = call("GET", "/peers?text=banana")
+    check("an item with no comparable bids returns nothing, not the corpus average",
+          s == 200 and not b.get("found"), f"status {s} · found={b.get('found')}")
+
+    s, b = call("GET", "/peers?text=")
+    check("/peers with empty text is rejected", s == 400, f"status {s}")
+
     # ---------------------------------------------------------------- summary
     print(f"\n{len(PASS)} passed · {len(FAIL)} failed")
     if FAIL:

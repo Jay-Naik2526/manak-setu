@@ -250,6 +250,20 @@ def stats():
     return corpus_stats()
 
 
+@app.get("/peers")
+def peers(text: str):
+    """What other government buyers of a similar item cited.
+
+    A tally over the corpus, not a recommendation — the wording of the response
+    says so, and withdrawn standards are returned with their status rather than
+    filtered out, because peers citing something dead is worth seeing."""
+    from engine import peer_citations
+
+    if not (text or "").strip():
+        raise HTTPException(status_code=400, detail="text is required")
+    return peer_citations(text)
+
+
 @app.get("/health-index")
 def health_index():
     """How healthy are the standards government buyers actually cite?

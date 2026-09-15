@@ -581,6 +581,7 @@ function renderForward(d) {
       <div class="xs dimmer" style="margin-top:5px">gate: ${esc(d.reason)} · threshold ${d.thresholds.top_score} · margin ${d.thresholds.margin}</div>
     </div></div>`;
   } else {
+    drawPeers(d.input && d.input.original ? d.input.original : d.query);
     const g = d.governing;
     h += `<div class="card" id="fw-gov" style="border-color:var(--ok)">
       <div class="hd"><span class="eyebrow">Governing standard</span><h3></h3>
@@ -1475,6 +1476,46 @@ function drawBench() {
   runCounts();
 }
 
+
+
+/* ── peer citations ─────────────────────────────────────────────────────────
+   The one answer here that is not derived from the register. It is a tally of
+   what other buyers of the same kind of item actually cited, so it is useful
+   exactly where the register is silent — and when peers are citing something
+   withdrawn, that shows too, because a common practice being wrong is worth
+   seeing. */
+
+async function drawPeers(query) {
+  const el = $('#fw-peers');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!query) return;
+  let d;
+  try { d = await api('/peers?text=' + encodeURIComponent(query)); }
+  catch (_) { return; }
+  if (!d.found || !d.citations.length) return;
+
+  el.innerHTML = `
+    <div class="card" id="fw-peer-card" style="margin-top:14px">
+      <div class="hd"><span class="eyebrow">What other buyers cited</span>
+        <h3></h3><span class="pill mute">${d.matched_documents} comparable bids</span></div>
+      <div class="in">
+        <div class="tbl"><div class="scroll"><table>
+          <thead><tr><th>IS</th><th>Title</th><th>Status</th>
+            <th style="text-align:right">Bids citing it</th></tr></thead>
+          <tbody>${d.citations.map(c => `<tr>
+            <td class="mono ${c.in_register ? 'jump' : ''}"${c.in_register
+              ? ` data-go="${esc(c.is_number)}"` : ''}>${esc(c.is_number)}</td>
+            <td class="std-title">${esc(String(c.title || '—').slice(0, 62))}</td>
+            <td>${c.status ? statusPill(c.status) : '<span class="pill mute">not in register</span>'}</td>
+            <td class="mono" style="text-align:right">${c.documents}
+              <span class="dimmer">of ${c.of}</span></td></tr>`).join('')}
+          </tbody></table></div></div>
+        <p class="xs dimmer" style="margin-top:9px">${esc(d.note)}</p>
+        <p class="xs dimmer">Similar bids include: ${d.examples.map(e => esc(e)).join(' · ')}</p>
+      </div>
+    </div>`;
+}
 
 /* ── procurement standards health ──────────────────────────────────────────
    Not a measure of this system. A measure of the procurement documents it

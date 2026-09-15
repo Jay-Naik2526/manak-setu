@@ -582,6 +582,123 @@ IS_CITATION_PATTERN = (
 )
 
 
+def peer_citations(text: str, documents: int = 30, limit: int = 12) -> dict:
+    """What other government buyers of a similar item actually cited.
+
+    Every other answer this system gives is derived from the register: what BIS
+    publishes, what supersedes what, which standards co-occur. This one is not
+    derived at all — it is a tally of what real procurement officers wrote when
+    buying the same kind of thing, taken from the item category GeM prints on
+    each bid.
+
+    It is useful precisely where the register is silent. A buyer purchasing an
+    11 kV cable joint has no way to know that most comparable bids also cite the
+    conductor and insulation standards; the corpus does. And when peers are
+    citing something withdrawn, that shows too, because a common practice being
+    wrong is worth seeing.
+
+    Matching is BM25 over the category text, so it is a similarity over words the
+    buyers themselves used. A query with no similar bids returns nothing rather
+    than the most-cited standards overall, which would be a corpus average
+    dressed up as a recommendation.
+    """
+    state = _peer_index()
+    if not state["rows"]:
+        return {"found": False, "reason": "no categorised documents in the corpus"}
+    tokens = _peer_tokens(text)
+    if not tokens:
+        return {"found": False, "reason": "no usable words in the query"}
+
+    scores = state["bm25"].get_scores(tokens)
+    order = np.argsort(scores)[::-1][:documents]
+    best = float(scores[order[0]]) if len(order) else 0.0
+    # A single weak match is not a peer group. "photocopier paper" shares one
+    # common word with a substation bid and would otherwise come back holding
+    # earthquake and transformer standards, which is worse than saying nothing.
+    matched = [state["rows"][i] for i in order
+               if scores[i] > 0 and scores[i] >= best * PEER_SCORE_FLOOR]
+    if len(matched) < PEER_MIN_DOCUMENTS:
+        return {"found": False,
+                "reason": f"fewer than {PEER_MIN_DOCUMENTS} comparable bids in the corpus"}
+
+    # Tally by the standard each citation resolves to, not by how it was spelled.
+    # "IS 10322", "IS 10322 (Part 1)" and "IS 10322 (Part-1)" are one standard,
+    # and listing them separately splits its count three ways.
+    conn = _get_conn()
+    try:
+        tally: dict[str, dict] = {}
+        for row in matched:
+            seen = set()
+            for citation in {c.strip() for c in str(row["cited"] or "").split(";") if c.strip()}:
+                hit, _ = _resolve_standard(conn, citation)
+                key = hit["IS Number"] if hit is not None else citation
+                if key in seen:
+                    continue
+                seen.add(key)
+                entry = tally.setdefault(key, {
+                    "is_number": key,
+                    "title": hit["Full Title"] if hit is not None else None,
+                    "status": hit["Status"] if hit is not None else None,
+                    "in_register": hit is not None,
+                    "documents": 0,
+                    "of": len(matched),
+                })
+                entry["documents"] += 1
+        out = sorted(tally.values(), key=lambda e: (-e["documents"], e["is_number"]))[:limit]
+    finally:
+        conn.close()
+
+    return {
+        "found": True,
+        "matched_documents": len(matched),
+        "examples": [r["category"][:110] for r in matched[:4]],
+        "citations": out,
+        "note": (
+            f"Counted across {len(matched)} bid documents in this corpus whose item "
+            "category is textually similar to the query. A tally of what buyers "
+            "cited, not advice about what to cite."
+        ),
+    }
+
+
+# A peer group needs more than one document, and the documents in it have to be
+# comparably similar — not merely the least dissimilar thing in the corpus.
+PEER_MIN_DOCUMENTS = 3
+PEER_SCORE_FLOOR = 0.35
+
+
+def _peer_tokens(text: str) -> list[str]:
+    return _re_module.findall(r"[a-z0-9]+", str(text or "").lower())
+
+
+_PEER: dict = {}
+
+
+def _peer_index() -> dict:
+    """BM25 over the item categories of usable, categorised documents."""
+    if _PEER:
+        return _PEER
+    from rank_bm25 import BM25Okapi
+
+    conn = _get_conn()
+    try:
+        rows = [
+            {"category": str(r["Item Category"]), "cited": r["IS Numbers Cited"]}
+            for r in conn.execute(
+                'SELECT "Item Category", "IS Numbers Cited" FROM tenders '
+                'WHERE "Usability" = ? AND TRIM(COALESCE("Item Category", "")) <> ""',
+                ("Usable",),
+            )
+        ]
+    finally:
+        conn.close()
+    _PEER.update(
+        rows=rows,
+        bm25=BM25Okapi([_peer_tokens(r["category"]) for r in rows]) if rows else None,
+    )
+    return _PEER
+
+
 def extract_citations(text: str) -> list[str]:
     """Literal substring extraction of IS-number citations from supplied text.
     Nothing is inferred — a citation only appears if it is written in the text.
