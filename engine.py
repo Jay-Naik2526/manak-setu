@@ -537,7 +537,15 @@ def run_benchmark(sample_size: int = 20, seed: int = 42) -> dict:
     }
 
 
-IS_CITATION_PATTERN = r"IS[:\s]*(\d{2,6})(?:\s*\(([^)]{0,40})\))?"
+# "as per relevant IS" is tender boilerplate meaning "whichever Indian Standard
+# applies" — it names nothing. In a table it is followed by the next row's
+# number, and a pattern that reads "conforming to relevant IS 10." as a citation
+# of IS 10 invents one. In one real GeM specification 59 of 97 matches were this,
+# numbered consecutively 10 through 21: row numbers, not standards. Short IS
+# numbers cannot simply be dropped — IS 10 through IS 25 are real BIS standards —
+# so the generic phrase itself is what is excluded.
+GENERIC_IS_PHRASE = r"(?<!\brelevant )(?<!\bapplicable )(?<!\brespective )(?<!\bappropriate )(?<!\bany other )"
+IS_CITATION_PATTERN = GENERIC_IS_PHRASE + r"IS[:\s]*(\d{2,6})(?:\s*\(([^)]{0,40})\))?"
 
 
 def extract_citations(text: str) -> list[str]:

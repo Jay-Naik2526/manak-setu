@@ -296,7 +296,62 @@ def main():
     ap.add_argument("--ids", type=int, nargs="*", help="specific bid ids")
     ap.add_argument("--rederive", action="store_true",
                     help="recompute Item Category for collected rows from the saved bid forms")
+    ap.add_argument("--recite", action="store_true",
+                    help="re-extract citations for collected rows from the saved attachments")
     args = ap.parse_args()
+
+    if args.recite:
+        # The citation pattern changed, so the stored lists were produced by the
+        # old one. The attachments were kept for exactly this: re-reading them
+        # costs no round trip to the portal and no re-download.
+        import glob
+
+        import pdfplumber
+
+        from engine import MAX_PAGES, extract_citations
+
+        reg, _ = register()
+        df = pd.read_csv(OUT, encoding="utf-8-sig")
+        changed = dropped = 0
+        for i, bid in enumerate(df["GeM Bid Id"]):
+            paths = [q for q in sorted(glob.glob(os.path.join(PDF_DIR, f"{int(bid)}-*.pdf")))
+                     if not q.endswith("-bid.pdf")]
+            if not paths:
+                continue
+            citations: list[str] = []
+            for path in paths:
+                try:
+                    with pdfplumber.open(path) as pdf:
+                        text = "\n".join((pg.extract_text() or "") for pg in pdf.pages[:MAX_PAGES])
+                except Exception:                            # noqa: BLE001
+                    continue
+                for c in extract_citations(text):
+                    if c not in citations:
+                        citations.append(c)
+            before = str(df.at[i, "IS Numbers Cited"] or "")
+            after = "; ".join(citations)
+            if after == before:
+                continue
+            changed += 1
+            dropped += max(0, len([x for x in before.split(";") if x.strip()]) - len(citations))
+            family, outdated, unmatched = classify(citations, reg)
+            df.at[i, "IS Numbers Cited"] = after
+            df.at[i, "Count"] = len(citations)
+            df.at[i, "Product Family"] = family
+            df.at[i, "Outdated Citations"] = "; ".join(outdated)
+            df.at[i, "Any Outdated"] = ("Yes" if outdated else "No") if citations else "Not checked"
+            df.at[i, "Unmatched Citations"] = "; ".join(unmatched)
+            if not citations and df.at[i, "Usability"] == "Usable":
+                df.at[i, "Usability"] = "Not extractable"
+                df.at[i, "Document Type"] = "Text PDF"
+            if (i + 1) % 200 == 0:
+                df.to_csv(OUT, index=False)
+                print(f"  {i + 1}/{len(df)} · {changed} rows changed", flush=True)
+        df.to_csv(OUT, index=False)
+        usable = int((df["Usability"] == "Usable").sum())
+        print(f"re-extracted {len(df)} rows · {changed} changed · "
+              f"{dropped} citations dropped · {usable} usable")
+        return
 
     if args.rederive:
         df = pd.read_csv(OUT, encoding="utf-8-sig")
