@@ -1,3 +1,4 @@
+import re as _re_module
 import sqlite3
 
 import numpy as np
@@ -39,12 +40,28 @@ def _is_base(is_number: str) -> str:
     return is_number.split("(")[0].strip()
 
 
+# A well-formed designation: the prefix, then the number, and nothing odd in
+# between. "IS -1" is not one — stripping its punctuation would leave "1", and
+# a register that holds IS 1 would then resolve malformed input to a real
+# standard. The fallback is for spelling variants, not for repairing garbage.
+_DESIGNATION = _re_module.compile(
+    r"^\s*IS(?:/(?:IEC|ISO))?\s*[:\s]?\s*0*(\d{1,6})\s*$", _re_module.I
+)
+
+
 def _is_digits(is_number: str) -> str:
     """The bare number, prefix and edition stripped: 'IS/IEC 60947 (Part 1):2020'
-    and 'IS 60947' are the same standard and must resolve to the same row."""
-    import re as _re
+    and 'IS 60947' are the same standard and must resolve to the same row.
 
-    return _re.sub(r"[^0-9]", "", str(is_number).split("(")[0].split(":")[0])
+    Returns "" when the text is not a designation at all, so the number fallback
+    declines rather than guessing."""
+    # Strip the edition year only where one is actually written: splitting on
+    # every colon turns "IS:694", which is how half of Indian tenders write it,
+    # into "IS".
+    head = str(is_number).split("(")[0]
+    head = _re_module.sub(r":\s*(?:19|20)\d{2}\s*$", "", head)
+    m = _DESIGNATION.match(head)
+    return m.group(1) if m else ""
 
 
 def _resolve_standard(conn, is_number: str):

@@ -26,6 +26,11 @@ MASTER_COLUMNS = [
     "IS Number", "Full Title", "Year", "Status", "Replaced By", "Supersedes",
     "Product Family", "Priority", "Source Link", "IS Base", "Is IS Standard",
     "Flag", "Provenance",
+    # Both published by BIS and both carried through the catalogue sweep. The
+    # Hindi title is what makes Hindi retrieval possible without a translation
+    # service; the review date is the edition's next BIS review, never an
+    # amendment.
+    "Title (Hindi)", "Review Due",
 ]
 
 

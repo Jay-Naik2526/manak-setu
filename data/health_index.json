@@ -7,10 +7,10 @@
     "note": "Counts over the tender documents in this corpus whose text could be read (Usability='Usable'). A sample of Indian public procurement, not a census — these are not national rates."
   },
   "headline": {
-    "documents_with_a_dead_citation": 148,
+    "documents_with_a_dead_citation": 186,
     "of_documents": 535,
-    "documents_citing_a_standard_not_in_the_register": 217,
-    "distinct_dead_standards_in_circulation": 159
+    "documents_citing_a_standard_not_in_the_register": 43,
+    "distinct_dead_standards_in_circulation": 225
   },
   "by_year": [
     {
@@ -31,17 +31,17 @@
     {
       "year": "2024",
       "documents": 85,
-      "with_dead_citation": 21
+      "with_dead_citation": 26
     },
     {
       "year": "2025",
       "documents": 184,
-      "with_dead_citation": 43
+      "with_dead_citation": 60
     },
     {
       "year": "2026",
       "documents": 134,
-      "with_dead_citation": 28
+      "with_dead_citation": 44
     },
     {
       "year": "unknown",
@@ -51,14 +51,14 @@
   ],
   "by_family": [
     {
+      "family": "Electrical cables and wiring",
+      "documents": 89,
+      "with_dead_citation": 34
+    },
+    {
       "family": "CED — Civil Engineering Department",
       "documents": 56,
       "with_dead_citation": 33
-    },
-    {
-      "family": "Electrical cables and wiring",
-      "documents": 89,
-      "with_dead_citation": 32
     },
     {
       "family": "ETD — Electrotechnical Department",
@@ -68,12 +68,22 @@
     {
       "family": "MTD — Metallurgical Engineering Department",
       "documents": 98,
-      "with_dead_citation": 15
+      "with_dead_citation": 24
+    },
+    {
+      "family": "Unclassified",
+      "documents": 88,
+      "with_dead_citation": 23
     },
     {
       "family": "Pipes (PVC and GI)",
       "documents": 33,
       "with_dead_citation": 14
+    },
+    {
+      "family": "CHD — Chemical Department",
+      "documents": 24,
+      "with_dead_citation": 9
     },
     {
       "family": "MED — Mechanical Engineering Department",
@@ -86,14 +96,14 @@
       "with_dead_citation": 6
     },
     {
-      "family": "CHD — Chemical Department",
-      "documents": 24,
-      "with_dead_citation": 6
+      "family": "PGD — Production And General Engineering Department",
+      "documents": 19,
+      "with_dead_citation": 4
     },
     {
-      "family": "Unclassified",
-      "documents": 88,
-      "with_dead_citation": 5
+      "family": "TXD — Textile Department",
+      "documents": 10,
+      "with_dead_citation": 4
     },
     {
       "family": "PCD — Petroleum, Coal And Related Products Department",
@@ -101,13 +111,8 @@
       "with_dead_citation": 3
     },
     {
-      "family": "PGD — Production And General Engineering Department",
-      "documents": 19,
-      "with_dead_citation": 2
-    },
-    {
-      "family": "TXD — Textile Department",
-      "documents": 10,
+      "family": "TED — Transport Engineering Department",
+      "documents": 2,
       "with_dead_citation": 1
     },
     {
@@ -118,11 +123,6 @@
     {
       "family": "LITD — Electronics And Information Technology Department",
       "documents": 1,
-      "with_dead_citation": 0
-    },
-    {
-      "family": "TED — Transport Engineering Department",
-      "documents": 2,
       "with_dead_citation": 0
     }
   ],
@@ -198,8 +198,38 @@
       "of": 535
     },
     {
+      "is_number": "IS 13489",
+      "title": "Textiles Bed Mattress Specification (Second Revision)",
+      "status": "Superseded",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2030-04-30",
+      "overdue": "",
+      "documents": 9,
+      "of": 535
+    },
+    {
       "is_number": "IS 13947",
       "title": "Low-voltage Switchgear and Controlgear - Part 1 : General Rules",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
+      "documents": 8,
+      "of": 535
+    },
+    {
+      "is_number": "IS 4077",
+      "title": "Copper-nickel Shot",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
+      "documents": 8,
+      "of": 535
+    },
+    {
+      "is_number": "IS 2209",
+      "title": "Mortice Locks (vertical Type)",
       "status": "Withdrawn",
       "replaced_by": "UNKNOWN",
       "review_due": "",
@@ -214,6 +244,16 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-12-15",
       "overdue": "No",
+      "documents": 8,
+      "of": 535
+    },
+    {
+      "is_number": "IS 373",
+      "title": "Manganese Ore Metallurgical Grade (tentative)",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
       "documents": 8,
       "of": 535
     },
@@ -235,46 +275,6 @@
       "review_due": "2022-03-31",
       "overdue": "Yes",
       "documents": 7,
-      "of": 535
-    },
-    {
-      "is_number": "IS 2099",
-      "title": "Bushings for alternating voltages above 1 000 Volts",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 6,
-      "of": 535
-    },
-    {
-      "is_number": "IS 4759",
-      "title": "Hot - Dip zinc coatings on structural steel and other allied products - Specification (Third Revision)",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2026-03-31",
-      "overdue": "Yes",
-      "documents": 6,
-      "of": 535
-    },
-    {
-      "is_number": "IS 15622",
-      "title": "Pressed Ceramic Tiles - Specification (First Revision) Amendment - 2",
-      "status": "Superseded",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2030-12-29",
-      "overdue": "No",
-      "documents": 6,
-      "of": 535
-    },
-    {
-      "is_number": "IS 2544",
-      "title": "Porcelain post insulators for systems with nominal voltage greater than 1000 V olts",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 6,
       "of": 535
     }
   ],

@@ -186,14 +186,16 @@ def main():
     section("Phantom citations")
 
     # A number one digit from a real standard, in a document whose other
-    # citations the graph ties to that standard.
+    # citations the graph ties to that standard. 81304 is absent from the
+    # catalogue; IS 6994 was used here until the harvest made it a real standard.
     s, b = call("POST", "/audit-text", {"text":
-        "Cables shall conform to IS 6994. Conductors as per IS 8130 and insulation IS 5831."})
+        "Cables shall conform to IS 81304. Conductors as per IS 8130 and insulation IS 5831."})
     hit = next((f for f in (b.get("findings") or [])
                 if f.get("kind") == "not_in_register"), None)
     guess = (hit or {}).get("did_you_mean")
     check("a one-digit slip is offered as a question, with graph evidence",
-          s == 200 and guess is not None and guess.get("is_number") == "IS 694"
+          s == 200 and guess is not None
+          and str(guess.get("is_number", "")).startswith("IS 8130")
           and bool(guess.get("shares_citations_with")),
           f"status {s} · suggested {(guess or {}).get('is_number')}")
 
