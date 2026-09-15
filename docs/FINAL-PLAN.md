@@ -47,11 +47,39 @@ Local run: `backend_venv/bin/uvicorn main:app --port 8000` (serves API + fronten
 | Adversarial suite (`qa_adversarial.py`) | 23/23 |
 | Deploy | Render free (512 MB), full mode, no Ollama, translation provider refuses the datacentre IP |
 
-**A GeM sweep is running detached on the Mac** (started 16 Sep):
-`collect_gem_tenders.py --sample 15000 --seed 5`, 8 workers. It resumes from
+### Standing target: 1,000 usable tender documents
+
+The user asked for a corpus of **1,000 `Usability = Usable` documents**. The
+corpus held 134 before collection started. Measured yield is **2.5% Usable per
+bid id tried**, so ~35,000 more ids are needed. The collector is the way to get
+there and it runs detached; keep it alive across the whole plan.
+
+**Never fake this number.** If the collector cannot reach 1,000 in the time
+available, report the real count with its denominator (e.g. "612 usable of
+1,431 documents collected from 24,500 bid ids") and say plainly that the target
+was not met. A smaller honest corpus beats a padded one, and padding it would
+break hard rule 1.
+
+Keep-alive check — run this at the start of every phase, and relaunch if dead:
+
+```bash
+pgrep -f collect_gem_tenders.py >/dev/null || \
+  (MANAK_GEM_WORKERS=8 nohup backend_venv/bin/python collect_gem_tenders.py \
+     --sample 60000 --seed 5 > /tmp/gem_collect.log 2>&1 &)
+```
+
+The collector is resumable and idempotent: it skips every id already in the
+progress log, so relaunching never re-reads work and never duplicates a row.
+`--sample 60000` draws from the same seeded range; already-tried ids are
+filtered out, so the effective new work is what remains.
+
+**The collector runs detached on the Mac** (started 16 Sep):
+`collect_gem_tenders.py`, 8 workers. It resumes from
 `data/tender_collected_gem.progress.jsonl`; rows accumulate in
 `data/tender_collected_gem.csv`; PDFs under `data/tenders/gem/` (gitignored).
-Observed yield ≈ 3% Usable + 5% Not extractable per bid tried. Check:
+Observed outcome mix per bid id tried: 2.5% Usable · 5.5% Not extractable ·
+~30% id does not exist · ~30% no spec attachment · ~12% service bid ·
+~8% spec cites no IS. Check:
 
 ```bash
 pgrep -f collect_gem_tenders.py && python3 -c "
@@ -60,8 +88,9 @@ L=[json.loads(l) for l in open('data/tender_collected_gem.progress.jsonl') if l.
 c=collections.Counter(x['outcome'] for x in L); print(len(L),'tried', dict(c))"
 ```
 
-If it is not running and fewer than ~12,000 ids are in the progress log, relaunch
-exactly: `(MANAK_GEM_WORKERS=8 nohup backend_venv/bin/python collect_gem_tenders.py --sample 15000 --seed 5 > /tmp/gem_sweep.log 2>&1 &)`.
+If it is not running, relaunch with the keep-alive command above. Do not stop it
+to run other phases — it uses a different host from the BIS catalogue API and the
+two can run together.
 
 Key files: `retrieval.py` (hybrid retrieval, filters, gate), `engine.py`
 (lookups, stats, extraction), `audit.py` (tender audit + suggestions), `llm.py`
@@ -96,7 +125,7 @@ official sources through the existing scripts.
 
 ---
 
-## Phase 0 — Merge the GeM sweep (when it finishes, or on the user's word)
+## Phase 0 — Merge collected tenders (re-runnable; merge again as more arrive)
 
 ```bash
 backend_venv/bin/python collect_gem_tenders.py --rederive      # titles from saved bid forms
@@ -114,6 +143,11 @@ data/co_citation_graph_full.csv data/coverage_gap_backlog_current.csv
 data/tender_collected_gem.csv` and push. Record before/after in the commit body.
 
 Note: the backlog (cited-but-not-held) will grow — that is P1's job, not a bug.
+
+Merging is additive and repeatable. Run this phase again whenever the collector
+has added a few hundred rows; each pass picks up only what is new. Re-run
+Phase 3 (health index) and Phase 4 (peers) after any later merge so their
+figures match the corpus.
 
 ---
 
