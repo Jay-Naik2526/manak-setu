@@ -1,16 +1,16 @@
 {
   "generated": "2026-09-16",
   "corpus": {
-    "documents_collected": 220,
-    "documents_measured": 134,
-    "citations_read": 1104,
+    "documents_collected": 2170,
+    "documents_measured": 535,
+    "citations_read": 3138,
     "note": "Counts over the tender documents in this corpus whose text could be read (Usability='Usable'). A sample of Indian public procurement, not a census — these are not national rates."
   },
   "headline": {
-    "documents_with_a_dead_citation": 57,
-    "of_documents": 134,
-    "documents_citing_a_standard_not_in_the_register": 15,
-    "distinct_dead_standards_in_circulation": 103
+    "documents_with_a_dead_citation": 148,
+    "of_documents": 535,
+    "documents_citing_a_standard_not_in_the_register": 217,
+    "distinct_dead_standards_in_circulation": 159
   },
   "by_year": [
     {
@@ -30,58 +30,103 @@
     },
     {
       "year": "2024",
-      "documents": 1,
-      "with_dead_citation": 1
+      "documents": 85,
+      "with_dead_citation": 21
     },
     {
       "year": "2025",
-      "documents": 1,
-      "with_dead_citation": 1
+      "documents": 184,
+      "with_dead_citation": 43
     },
     {
       "year": "2026",
-      "documents": 1,
-      "with_dead_citation": 0
+      "documents": 134,
+      "with_dead_citation": 28
     },
     {
       "year": "unknown",
-      "documents": 123,
-      "with_dead_citation": 51
+      "documents": 124,
+      "with_dead_citation": 52
     }
   ],
   "by_family": [
     {
+      "family": "CED — Civil Engineering Department",
+      "documents": 56,
+      "with_dead_citation": 33
+    },
+    {
       "family": "Electrical cables and wiring",
-      "documents": 64,
+      "documents": 89,
       "with_dead_citation": 32
     },
     {
+      "family": "ETD — Electrotechnical Department",
+      "documents": 51,
+      "with_dead_citation": 24
+    },
+    {
+      "family": "MTD — Metallurgical Engineering Department",
+      "documents": 98,
+      "with_dead_citation": 15
+    },
+    {
       "family": "Pipes (PVC and GI)",
-      "documents": 29,
+      "documents": 33,
       "with_dead_citation": 14
     },
     {
+      "family": "MED — Mechanical Engineering Department",
+      "documents": 16,
+      "with_dead_citation": 7
+    },
+    {
       "family": "LED lighting",
-      "documents": 33,
+      "documents": 36,
+      "with_dead_citation": 6
+    },
+    {
+      "family": "CHD — Chemical Department",
+      "documents": 24,
       "with_dead_citation": 6
     },
     {
       "family": "Unclassified",
-      "documents": 8,
+      "documents": 88,
       "with_dead_citation": 5
+    },
+    {
+      "family": "PCD — Petroleum, Coal And Related Products Department",
+      "documents": 11,
+      "with_dead_citation": 3
+    },
+    {
+      "family": "PGD — Production And General Engineering Department",
+      "documents": 19,
+      "with_dead_citation": 2
+    },
+    {
+      "family": "TXD — Textile Department",
+      "documents": 10,
+      "with_dead_citation": 1
+    },
+    {
+      "family": "FAD — Food And Agriculture Department",
+      "documents": 1,
+      "with_dead_citation": 0
+    },
+    {
+      "family": "LITD — Electronics And Information Technology Department",
+      "documents": 1,
+      "with_dead_citation": 0
+    },
+    {
+      "family": "TED — Transport Engineering Department",
+      "documents": 2,
+      "with_dead_citation": 0
     }
   ],
   "dead_standards_still_cited": [
-    {
-      "is_number": "IS 1285",
-      "title": "Wrought aluminium and aluminium alloys - Extruded round tube and hollow sections for general engineering purposes - Specification (Third Revision)",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2027-03-31",
-      "overdue": "No",
-      "documents": 7,
-      "of": 134
-    },
     {
       "is_number": "IS 8112",
       "title": "Ordinary Portland Cement, 43 Grade",
@@ -89,28 +134,38 @@
       "replaced_by": "UNKNOWN",
       "review_due": "",
       "overdue": "",
-      "documents": 7,
-      "of": 134
+      "documents": 15,
+      "of": 535
     },
     {
-      "is_number": "IS 4759",
-      "title": "Hot - Dip zinc coatings on structural steel and other allied products - Specification (Third Revision)",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2026-03-31",
-      "overdue": "Yes",
-      "documents": 5,
-      "of": 134
-    },
-    {
-      "is_number": "IS 15622",
-      "title": "Pressed Ceramic Tiles - Specification (First Revision) Amendment - 2",
+      "is_number": "IS 14246",
+      "title": "CONTINUOUSLY PRE-PAINTED GALVANIZED STEEL SHEETS AND STRIPS - SPECIFICATION  (Second Revision) Amendment - 1",
       "status": "Superseded",
       "replaced_by": "UNKNOWN",
-      "review_due": "2030-12-29",
+      "review_due": "2031-02-06",
       "overdue": "No",
-      "documents": 5,
-      "of": 134
+      "documents": 14,
+      "of": 535
+    },
+    {
+      "is_number": "IS 303",
+      "title": "IS 303: 2024 Plywood for General Purposes - Specification (fourth revision)  ( Draft Second Amendment of IS 303:2024)  ( ICS 79.060.10)",
+      "status": "Superseded",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2031-03-20",
+      "overdue": "No",
+      "documents": 14,
+      "of": 535
+    },
+    {
+      "is_number": "IS 325",
+      "title": "Three-phase Induction Motors",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
+      "documents": 13,
+      "of": 535
     },
     {
       "is_number": "IS 1391 (Part 1)",
@@ -119,108 +174,108 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2031-05-15",
       "overdue": "No",
-      "documents": 4,
-      "of": 134
+      "documents": 9,
+      "of": 535
     },
     {
-      "is_number": "IS 9523",
-      "title": "Ductile iron fittings for pressure pipes for water, gas and sewage - Specification (First Revision) Amendment - 7",
+      "is_number": "IS 13983",
+      "title": "Stainless steel sinks for domestic purposes - Specification",
       "status": "Superseded",
       "replaced_by": "UNKNOWN",
-      "review_due": "2031-01-22",
+      "review_due": "2031-01-31",
       "overdue": "No",
-      "documents": 4,
-      "of": 134
+      "documents": 9,
+      "of": 535
     },
     {
-      "is_number": "IS 1341",
-      "title": "Steel Butt Hinges - Specification (Sixth Revision) ",
+      "is_number": "IS 4379",
+      "title": "Identification of the Contents of Industrial Gas Cylinders (Second Revision) Amendment - 1",
       "status": "Superseded",
       "replaced_by": "UNKNOWN",
-      "review_due": "2030-12-24",
+      "review_due": "2030-10-30",
       "overdue": "No",
-      "documents": 3,
-      "of": 134
+      "documents": 9,
+      "of": 535
     },
     {
-      "is_number": "IS 13849",
-      "title": "Specification for portable fire extinguisher dry powder type (constant pressure)",
+      "is_number": "IS 13947",
+      "title": "Low-voltage Switchgear and Controlgear - Part 1 : General Rules",
       "status": "Withdrawn",
       "replaced_by": "UNKNOWN",
       "review_due": "",
       "overdue": "",
-      "documents": 3,
-      "of": 134
+      "documents": 8,
+      "of": 535
     },
     {
-      "is_number": "IS 14609",
-      "title": "Dry chemical powder for fighting a,b,c, class fires specification",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 3,
-      "of": 134
-    },
-    {
-      "is_number": "IS 11329",
-      "title": "Finned type heat exchanger for room air conditioner (First Revision) ",
+      "is_number": "IS 1000",
+      "title": "Edible Lactose  —  Specification (Second Revision)",
       "status": "Superseded",
       "replaced_by": "UNKNOWN",
-      "review_due": "2030-11-06",
+      "review_due": "2030-12-15",
       "overdue": "No",
-      "documents": 3,
-      "of": 134
+      "documents": 8,
+      "of": 535
     },
     {
-      "is_number": "IS 100",
-      "title": "Oil Paste for Paints for General Purposes, Black",
+      "is_number": "IS 1285",
+      "title": "Wrought aluminium and aluminium alloys - Extruded round tube and hollow sections for general engineering purposes - Specification (Third Revision)",
       "status": "Withdrawn",
       "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 3,
-      "of": 134
-    },
-    {
-      "is_number": "IS 1537",
-      "title": "Specification for vertically cast iron pressure pipes for water, gas and sewage (First Revision)",
-      "status": "Withdrawn",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2030-02-28",
+      "review_due": "2027-03-31",
       "overdue": "No",
-      "documents": 3,
-      "of": 134
+      "documents": 7,
+      "of": 535
     },
     {
-      "is_number": "IS 2878",
-      "title": "Fire Extinguisher, Carbon Dioxide Type (Portable and Trolley Mounted) -Specification",
+      "is_number": "IS 2705",
+      "title": "Current transformers - Specification: Part 1 general requirements (Second Revision)",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2022-03-31",
+      "overdue": "Yes",
+      "documents": 7,
+      "of": 535
+    },
+    {
+      "is_number": "IS 2099",
+      "title": "Bushings for alternating voltages above 1 000 Volts",
       "status": "Withdrawn",
       "replaced_by": "UNKNOWN",
       "review_due": "",
       "overdue": "",
-      "documents": 2,
-      "of": 134
+      "documents": 6,
+      "of": 535
     },
     {
-      "is_number": "IS 10204",
-      "title": "Specification for  portable fire extinguisher mechanical foam type",
+      "is_number": "IS 4759",
+      "title": "Hot - Dip zinc coatings on structural steel and other allied products - Specification (Third Revision)",
       "status": "Withdrawn",
       "replaced_by": "UNKNOWN",
-      "review_due": "",
-      "overdue": "",
-      "documents": 2,
-      "of": 134
+      "review_due": "2026-03-31",
+      "overdue": "Yes",
+      "documents": 6,
+      "of": 535
     },
     {
-      "is_number": "IS 702",
-      "title": "Industrial bitumen - Specification (Third Revision) ",
+      "is_number": "IS 15622",
+      "title": "Pressed Ceramic Tiles - Specification (First Revision) Amendment - 2",
       "status": "Superseded",
       "replaced_by": "UNKNOWN",
-      "review_due": "2031-03-12",
+      "review_due": "2030-12-29",
       "overdue": "No",
-      "documents": 2,
-      "of": 134
+      "documents": 6,
+      "of": 535
+    },
+    {
+      "is_number": "IS 2544",
+      "title": "Porcelain post insulators for systems with nominal voltage greater than 1000 V olts",
+      "status": "Withdrawn",
+      "replaced_by": "UNKNOWN",
+      "review_due": "",
+      "overdue": "",
+      "documents": 6,
+      "of": 535
     }
   ],
   "most_cited_standards": [
@@ -231,118 +286,8 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2025-01-01",
       "overdue": "Yes",
-      "documents": 49,
-      "of": 134
-    },
-    {
-      "is_number": "IS 10322 (Part 1)",
-      "title": "Luminaires, Part 1: General requirements",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2030-01-31",
-      "overdue": "No",
-      "documents": 32,
-      "of": 134
-    },
-    {
-      "is_number": "IS 7098 (Part 1)",
-      "title": "Crosslinked polyethylene insulated PVC sheathed cables, Part 1: For working voltage up to and including 1 100 V",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2030-11-24",
-      "overdue": "No",
-      "documents": 23,
-      "of": 134
-    },
-    {
-      "is_number": "IS 8130",
-      "title": "Conductors for insulated electric cables and flexible cords",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2030-11-24",
-      "overdue": "No",
-      "documents": 22,
-      "of": 134
-    },
-    {
-      "is_number": "IS 5831",
-      "title": "PVC insulation and sheath of electric cables",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2026-11-30",
-      "overdue": "No",
-      "documents": 20,
-      "of": 134
-    },
-    {
-      "is_number": "IS 16106",
-      "title": "Method of electrical and photometric measurements of solid state lighting (LED) products",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2029-12-31",
-      "overdue": "No",
-      "documents": 18,
-      "of": 134
-    },
-    {
-      "is_number": "IS 1554 (Part 1)",
-      "title": "PVC insulated (heavy duty) electric cables, Part 1: For working voltages up to and including 1 100 V",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2025-02-01",
-      "overdue": "Yes",
-      "documents": 16,
-      "of": 134
-    },
-    {
-      "is_number": "IS 16102 (Part 1)",
-      "title": "Self-ballasted LED lamps for general lighting services, Part 1: Safety requirements",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2029-05-31",
-      "overdue": "No",
-      "documents": 16,
-      "of": 134
-    },
-    {
-      "is_number": "IS 16107 (Part 1)",
-      "title": "Luminaires performance, Part 1: General requirements",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2029-05-31",
-      "overdue": "No",
-      "documents": 16,
-      "of": 134
-    },
-    {
-      "is_number": "IS 15885 (Part 1)",
-      "title": "Safety of lamp controlgear, Part 1: General requirements",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2026-05-01",
-      "overdue": "Yes",
-      "documents": 15,
-      "of": 134
-    },
-    {
-      "is_number": "IS 9968 (Part 2)",
-      "title": "Elastomer-insulated cables, Part 2: For working voltages from 3.3 kV up to and including 33 kV",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2031-03-18",
-      "overdue": "No",
-      "documents": 13,
-      "of": 134
-    },
-    {
-      "is_number": "IS 4985",
-      "title": "Unplasticized PVC pipes for potable water supplies - Specification",
-      "status": "Current",
-      "replaced_by": "UNKNOWN",
-      "review_due": "2031-03-31",
-      "overdue": "No",
-      "documents": 12,
-      "of": 134
+      "documents": 63,
+      "of": 535
     },
     {
       "is_number": "IS 2062",
@@ -351,28 +296,138 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-12-29",
       "overdue": "No",
-      "documents": 11,
-      "of": 134
+      "documents": 63,
+      "of": 535
     },
     {
-      "is_number": "IS 456",
-      "title": "Plain and reinforced concrete - Code of practice (Fourth Revision)",
+      "is_number": "IS 7098 (Part 1)",
+      "title": "Crosslinked polyethylene insulated PVC sheathed cables, Part 1: For working voltage up to and including 1 100 V",
       "status": "Current",
       "replaced_by": "UNKNOWN",
-      "review_due": "2030-07-12",
+      "review_due": "2030-11-24",
       "overdue": "No",
-      "documents": 11,
-      "of": 134
+      "documents": 39,
+      "of": 535
     },
     {
-      "is_number": "IS 16103 (Part 1)",
-      "title": "LED modules for general lighting, Part 1: Safety requirements",
+      "is_number": "IS 10322 (Part 1)",
+      "title": "Luminaires, Part 1: General requirements",
       "status": "Current",
       "replaced_by": "UNKNOWN",
-      "review_due": "2030-08-31",
+      "review_due": "2030-01-31",
       "overdue": "No",
-      "documents": 11,
-      "of": 134
+      "documents": 35,
+      "of": 535
+    },
+    {
+      "is_number": "IS 8130",
+      "title": "Conductors for insulated electric cables and flexible cords",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2030-11-24",
+      "overdue": "No",
+      "documents": 33,
+      "of": 535
+    },
+    {
+      "is_number": "IS 5831",
+      "title": "PVC insulation and sheath of electric cables",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2026-11-30",
+      "overdue": "No",
+      "documents": 29,
+      "of": 535
+    },
+    {
+      "is_number": "IS 1554 (Part 1)",
+      "title": "PVC insulated (heavy duty) electric cables, Part 1: For working voltages up to and including 1 100 V",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2025-02-01",
+      "overdue": "Yes",
+      "documents": 28,
+      "of": 535
+    },
+    {
+      "is_number": "IS 1239",
+      "title": "Steel Tubes, Tubulars and Other Wrought Steel Fittings   : Part 1  Steel Tubes (BI-LINGUAL)",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2029-06-30",
+      "overdue": "No",
+      "documents": 25,
+      "of": 535
+    },
+    {
+      "is_number": "IS 277",
+      "title": "Galvanized steel strips and sheets (Plain And Corrugated) - Specification (Seventh Revision)",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2031-03-18",
+      "overdue": "No",
+      "documents": 23,
+      "of": 535
+    },
+    {
+      "is_number": "IS 875",
+      "title": "Code of practice for design loads (Other Than Earthquake) for buildings and structures: Part 1 dead loads - Unit weights of building materials and stored materials (Second Revision)",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2028-05-31",
+      "overdue": "No",
+      "documents": 21,
+      "of": 535
+    },
+    {
+      "is_number": "IS 16106",
+      "title": "Method of electrical and photometric measurements of solid state lighting (LED) products",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2029-12-31",
+      "overdue": "No",
+      "documents": 20,
+      "of": 535
+    },
+    {
+      "is_number": "IS 3043",
+      "title": "Code of practice for earthing",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2023-11-30",
+      "overdue": "Yes",
+      "documents": 19,
+      "of": 535
+    },
+    {
+      "is_number": "IS 16107 (Part 1)",
+      "title": "Luminaires performance, Part 1: General requirements",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2029-05-31",
+      "overdue": "No",
+      "documents": 18,
+      "of": 535
+    },
+    {
+      "is_number": "IS 15885 (Part 1)",
+      "title": "Safety of lamp controlgear, Part 1: General requirements",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2026-05-01",
+      "overdue": "Yes",
+      "documents": 18,
+      "of": 535
+    },
+    {
+      "is_number": "IS 13592",
+      "title": "Unplasticized polyvinyl chloride (PVC-U) pipes for soil and waste discharge systems inside buildings including ventilation and rainwater system",
+      "status": "Current",
+      "replaced_by": "UNKNOWN",
+      "review_due": "2028-05-30",
+      "overdue": "No",
+      "documents": 17,
+      "of": 535
     }
   ]
 }
