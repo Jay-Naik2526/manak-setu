@@ -174,6 +174,16 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   says so rather than implying otherwise. The endpoints tried, and the contract
   recovered for one of them, are documented at the top of `stage_versions` in
   `pipeline.py`.
+- **Hindi titles**: 1,949 of 27,687 standards (7.0%) carry the Hindi title BIS
+  publishes for them, collected by `collect_catalogue.py` from the same
+  catalogue endpoint as the English one. Those are indexed directly, so a Hindi
+  query can be matched without a translation service — which matters because
+  the free translation providers refuse the shared datacentre addresses a hosted
+  deployment sits behind. Coverage is narrow and skewed to recently published
+  standards: **1 of the 71 golden-set standards carries one**, so this path
+  complements translation rather than replacing it. Where BIS has not named a
+  standard in Hindi, nothing is invented and the query falls back to
+  translation.
 - **Certification gaps**: `certification_rules_all.csv` has 737 rows across four schemes — BIS Product Certification (ISI Mark, Scheme I) 628, Quality Control Orders 77, CRS (Scheme II) 30, Hallmarking 2. Some
   product families — e.g. LED lighting — currently have **zero** certification
   rows. `check_certification` correctly returns `found: false` for these;

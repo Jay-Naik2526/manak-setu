@@ -76,15 +76,54 @@ def _load():
         f"{r['IS Number']} — {r.get('Full Title') or ''} — {r.get('Product Family') or ''}"
         for r in corpus
     ]
+
+    # BIS publishes a Hindi title for part of the catalogue, and it is the
+    # authority on its own standards' names. Indexing those titles directly lets
+    # a Hindi query be matched without a translation service in the loop — which
+    # matters, because the free providers refuse the shared datacentre addresses
+    # a hosted deployment sits behind, and a machine translation of a technical
+    # title is a worse key than BIS's own wording either way.
+    #
+    # Only the standards that actually carry one are indexed. The rest are not
+    # invented, so a Hindi query for a standard BIS has not named in Hindi
+    # simply finds nothing here and falls back to translation.
+    hindi_docs, hindi_index = [], []
+    for i, r in enumerate(corpus):
+        title = str(r.get("Title (Hindi)") or "").strip()
+        if title:
+            hindi_docs.append(_hindi_tokens(f"{title} {r['IS Number']}"))
+            hindi_index.append(i)
+
     _state.update(
         corpus=corpus,
         blobs=blobs,
         vectors=np.load(EMBEDDINGS_PATH),
         bm25=BM25Okapi([_tokens(b) for b in blobs]),
+        hindi_bm25=BM25Okapi(hindi_docs) if hindi_docs else None,
+        hindi_index=hindi_index,
         bi=None,
         cross=None,
     )
     return _state
+
+
+def _hindi_tokens(text: str) -> list[str]:
+    """Devanagari runs, Latin words and digits. Devanagari has no case and its
+    word boundaries are spaces, so splitting on non-word characters is enough."""
+    return re.findall(r"[\u0900-\u097F]+|[a-z0-9]+", (text or "").lower())
+
+
+def hindi_ranking(query: str, depth: int = FUSE_DEPTH) -> list[int]:
+    """Corpus positions for the best matches on BIS's own Hindi titles."""
+    s = _load()
+    if not s.get("hindi_bm25"):
+        return []
+    tokens = _hindi_tokens(query)
+    if not tokens:
+        return []
+    scores = s["hindi_bm25"].get_scores(tokens)
+    order = np.argsort(scores)[::-1][:depth]
+    return [s["hindi_index"][j] for j in order if scores[j] > 0]
 
 
 def _bi():
@@ -158,7 +197,9 @@ def clip_query(query: str) -> tuple[str, dict]:
     }
 
 
-def search(query: str, boost: str | None = None) -> list[dict]:
+def search(query: str, boost: str | None = None,
+           extra_rankings: list[list[int]] | None = None,
+           rerank: bool = True, english: bool = True) -> list[dict]:
     """Fused, reranked candidates. Highest calibrated relevance first.
 
     `boost` is the register's own vocabulary for any abbreviation in the query.
@@ -169,15 +210,25 @@ def search(query: str, boost: str | None = None) -> list[dict]:
     s = _load()
     corpus, vectors = s["corpus"], s["vectors"]
 
-    qv = _bi().encode([query], normalize_embeddings=True)[0]
-    dense_scores = vectors @ qv
-    dense_rank = list(np.argsort(dense_scores)[::-1][:FUSE_DEPTH])
-
-    bm_scores = s["bm25"].get_scores(_tokens(query))
-    bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
-
-    rankings = [dense_rank, bm_rank]
-    if boost:
+    # `english=False` means the query never reached English — translation was
+    # unavailable and the text is still in its own script. The dense and lexical
+    # indexes are built over English titles, so on that input they return noise,
+    # and noise fused with a good ranking outvotes it: two bad rankings against
+    # one good one put the same irrelevant standard on top of every query.
+    dense_rank: list[int] = []
+    bm_rank: list[int] = []
+    rankings = []
+    if english:
+        qv = _bi().encode([query], normalize_embeddings=True)[0]
+        dense_scores = vectors @ qv
+        dense_rank = list(np.argsort(dense_scores)[::-1][:FUSE_DEPTH])
+        bm_scores = s["bm25"].get_scores(_tokens(query))
+        bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
+        rankings = [dense_rank, bm_rank]
+    # A ranking computed elsewhere — today, BIS's Hindi titles — gets a vote in
+    # the fusion rather than a veto, exactly like the vocabulary expansion.
+    rankings += [r for r in (extra_rankings or []) if r]
+    if boost and english:
         bv = _bi().encode([boost], normalize_embeddings=True)[0]
         rankings.append(list(np.argsort(vectors @ bv)[::-1][:FUSE_DEPTH]))
         rankings.append(list(np.argsort(s["bm25"].get_scores(_tokens(boost)))[::-1][:FUSE_DEPTH]))
@@ -185,7 +236,13 @@ def search(query: str, boost: str | None = None) -> list[dict]:
     fused = _rrf(rankings)
     shortlist = sorted(fused, key=fused.get, reverse=True)[:RERANK_DEPTH]
 
-    cross = _cross()
+    # The cross-encoder reads the query and an English title together. Handed a
+    # query still in Devanagari — which is what happens when translation is
+    # unreachable and the Hindi titles are carrying the search — it scores noise
+    # against noise, and the confidence gate then abstains on a match the Hindi
+    # index had found correctly. The fused rank stands in, as it does in light
+    # mode.
+    cross = _cross() if rerank else None
     if cross is None:
         # Fused rank stands in for a reranked score, normalised to 0-1 so the
         # confidence gate keeps working on the same scale.
@@ -383,8 +440,24 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
     # Multilingual input: a spec written in an Indian language is translated to
     # English first, because the register is published in English. The original
     # is kept and returned so the officer can see what was actually matched.
+    original = query
     lang = multilingual.translate_query(query, ui_language)
     query = lang["text"]
+
+    # BIS's own Hindi titles, searched on the text as the officer wrote it. This
+    # runs whether or not translation succeeded: where BIS has named a standard
+    # in Hindi, its own wording is a better key than a machine translation of it.
+    hindi_rank = []
+    if lang.get("source_language") == "hi" or (ui_language or "").startswith("hi"):
+        hindi_rank = hindi_ranking(original)
+    if hindi_rank:
+        lang = {**lang, "hindi_titles_searched": True, "hindi_title_hits": len(hindi_rank)}
+        if not lang.get("applied"):
+            lang["note"] = (
+                "The translation service could not be reached, so this was matched "
+                "against the Hindi titles BIS publishes for its own standards. "
+                "Standards BIS has not named in Hindi cannot be found this way."
+            )
 
     # Translation failed on text that is not in Latin script, so `query` is still
     # Devanagari, Tamil, Urdu and so on. The register is English: matching it as
@@ -394,7 +467,7 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
     # trace beneath it read as though the system had genuinely considered those
     # standards. Saying plainly that the text could not be read is honest; a
     # ranked list of unrelated standards is not.
-    if lang.get("source_language") and not lang.get("applied"):
+    if lang.get("source_language") and not lang.get("applied") and not hindi_rank:
         return {
             "query": query,
             "decision": "abstain",
@@ -429,7 +502,12 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
     # still scored against the original wording, so expansion-found candidates
     # were retrieved and then immediately discarded.
     expanded, applied = normalize.expand(query)
-    candidates = search(expanded)
+    # Translation failed and the Hindi titles are the only usable signal, so the
+    # query reaching the English encoders is still Devanagari.
+    hindi_only = bool(hindi_rank) and not lang.get("applied") and lang.get("source_language")
+    candidates = search(expanded,
+                        extra_rankings=[hindi_rank] if hindi_rank else None,
+                        rerank=not hindi_only, english=not hindi_only)
     candidates, voltage_filter = _apply_voltage_filter(query, candidates)
     candidates, material_filter = _apply_material_filter(query, candidates)
     candidates, role_filter = _apply_role_filter(query, candidates)
