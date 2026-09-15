@@ -545,7 +545,24 @@ def run_benchmark(sample_size: int = 20, seed: int = 42) -> dict:
 # numbers cannot simply be dropped — IS 10 through IS 25 are real BIS standards —
 # so the generic phrase itself is what is excluded.
 GENERIC_IS_PHRASE = r"(?<!\brelevant )(?<!\bapplicable )(?<!\brespective )(?<!\bappropriate )(?<!\bany other )"
-IS_CITATION_PATTERN = GENERIC_IS_PHRASE + r"IS[:\s]*(\d{2,6})(?:\s*\(([^)]{0,40})\))?"
+# The designation is always capitalised: BIS writes "IS 4985", never "is 4985".
+# Matching case-insensitively made the pattern match the English verb, and tender
+# documents are full of it — "to prove that he is 11 satisfying the eligibility
+# criteria" became a citation of IS 11, and "the margin of purchase preference is
+# 20%" became IS 20. Across the corpus that made IS 20 look like one of the most
+# cited standards in Indian procurement.
+#
+# The word boundaries matter for the same reason: without them THIS 20, BASIS 12
+# and AXIS 400 all contain a match. (?<![A-Za-z]) rather than \b because the
+# character before must not be a letter specifically — a full stop or a bracket
+# is fine.
+# IS/IEC and IS/ISO are how BIS designates adopted international texts, and
+# tenders cite them that way. Neither was ever matched before; the number is the
+# same one the register holds, so the prefix is consumed and the digits kept.
+IS_CITATION_PATTERN = (
+    GENERIC_IS_PHRASE
+    + r"(?<![A-Za-z])IS(?:/(?:IEC|ISO))?(?![A-Za-z])[:\s]*(\d{2,6})(?:\s*\(([^)]{0,40})\))?"
+)
 
 
 def extract_citations(text: str) -> list[str]:
@@ -557,7 +574,8 @@ def extract_citations(text: str) -> list[str]:
 
     found = []
     seen = set()
-    for match in re.finditer(IS_CITATION_PATTERN, text, flags=re.IGNORECASE):
+    # Deliberately case-sensitive: see IS_CITATION_PATTERN.
+    for match in re.finditer(IS_CITATION_PATTERN, text):
         number = match.group(1)
         raw_part = re.sub(r"\s+", " ", match.group(2)).strip() if match.group(2) else ""
         citation = f"IS {number} ({raw_part})" if raw_part else f"IS {number}"
