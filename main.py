@@ -250,6 +250,17 @@ def stats():
     return corpus_stats()
 
 
+@app.get("/health-index")
+def health_index():
+    """How healthy are the standards government buyers actually cite?
+
+    Computed live from the tender corpus joined to BIS status, so it tracks the
+    corpus as it grows rather than being a figure written down once."""
+    from health_index import build
+
+    return build()
+
+
 @app.get("/benchmark")
 def benchmark():
     return run_benchmark()

@@ -352,6 +352,7 @@ async function loadOverview(force) {
   catch (e) { $('#ov-cov').innerHTML = offline(e.message); return; }
   ready.add('overview');
   const st = S.stats, cv = st.coverage;
+  drawHealthIndex();
 
 
   $('#ov-cov').innerHTML = unitChart(cv.matched, cv.distinct_cited) + `
@@ -1472,6 +1473,58 @@ function drawBench() {
         <td class="mono xs">${r.dead_hits.map(h => `${esc(h.is_number)} (${esc(h.status)})`).join(', ') || '—'}</td></tr>`).join('')}
       </tbody></table></div></div>`;
   runCounts();
+}
+
+
+/* ── procurement standards health ──────────────────────────────────────────
+   Not a measure of this system. A measure of the procurement documents it
+   reads: how many real government bids cite a standard BIS has already
+   withdrawn. Every figure carries the count it was taken from, because the
+   corpus is a sample of Indian procurement and not a census of it. */
+
+async function drawHealthIndex() {
+  const el = $('#ov-health');
+  if (!el) return;
+  let d;
+  try { d = S.healthIndex || (S.healthIndex = await api('/health-index')); }
+  catch (e) { el.innerHTML = offline(e.message); return; }
+
+  const h = d.headline, c = d.corpus;
+  const share = h.of_documents ? Math.round(100 * h.documents_with_a_dead_citation / h.of_documents) : 0;
+  const dead = d.dead_standards_still_cited.slice(0, 6);
+  const demand = d.most_cited_standards.slice(0, 6);
+
+  const row = r => `<tr>
+    <td class="mono jump" data-go="${esc(r.is_number)}">${esc(r.is_number)}</td>
+    <td class="std-title">${esc(String(r.title || '—').slice(0, 58))}</td>
+    <td>${r.status ? statusPill(r.status) : ''}${String(r.overdue).toLowerCase() === 'yes'
+        ? '<span class="pill warn" title="Past the review date BIS set for this edition">review overdue</span>' : ''}</td>
+    <td class="mono" style="text-align:right">${r.documents} <span class="dimmer">of ${r.of}</span></td></tr>`;
+
+  el.innerHTML = `
+    <div class="kpis">${[
+      { label: 'Cite a dead standard', value: `${h.documents_with_a_dead_citation}`,
+        sub: `of ${h.of_documents} documents read · ${share}%`,
+        tone: h.documents_with_a_dead_citation ? 'bad' : 'ok', icon: 'alert' },
+      { label: 'Dead standards in use', value: `${h.distinct_dead_standards_in_circulation}`,
+        sub: 'distinct withdrawn or superseded', tone: 'plain', icon: 'alert' },
+      { label: 'Citations read', value: `${c.citations_read}`,
+        sub: `across ${c.documents_measured} documents`, tone: 'plain', icon: 'check' },
+    ].map(kpi).join('')}</div>
+
+    <div class="grid c2" style="margin-top:14px">
+      <div class="tbl"><div class="toolbar"><h3 style="flex:1">Withdrawn or superseded, still cited</h3></div>
+        <div class="scroll"><table><thead><tr><th>IS</th><th>Title</th><th>Status</th>
+          <th style="text-align:right">Documents</th></tr></thead>
+          <tbody>${dead.map(row).join('') || '<tr><td colspan="4" class="dimmer">none found</td></tr>'}</tbody>
+        </table></div></div>
+      <div class="tbl"><div class="toolbar"><h3 style="flex:1">Most-cited standards</h3>
+          <span class="xs dimmer">what procurement depends on</span></div>
+        <div class="scroll"><table><thead><tr><th>IS</th><th>Title</th><th></th>
+          <th style="text-align:right">Documents</th></tr></thead>
+          <tbody>${demand.map(row).join('')}</tbody></table></div></div>
+    </div>
+    <p class="xs dimmer" style="margin-top:11px">${esc(c.note)}</p>`;
 }
 
 /* ── graph ─────────────────────────────────────────────────────────────── */
