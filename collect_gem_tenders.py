@@ -71,7 +71,14 @@ ATTACHMENT_RE = re.compile(
     r"\S+", re.I,
 )
 BID_NUMBER_RE = re.compile(r"\bGEM/20\d\d/B/\d{6,8}\b")
-CATEGORY_RE = re.compile(r"Item Category\s*/\s*(.{0,220}?)(?:\s+(?:Consignee|Bid |Total Quantity|Minimum Average|OEM|MSE|Estimated|Evaluation|Item\s|Quantity)|\n{2,}|$)", re.S)
+# A label line in the bid form's two-column table: "/Item Category", "Total
+# Quantity/ 10000", "Item Category/ ". Values wrap around the label, so the
+# category is the run of non-label lines on either side of it.
+LABEL_LINE_RE = re.compile(
+    r"^\s*/|/\s*$|^[A-Z][A-Za-z() ]{2,45}/\s*\S"
+    # Labels whose slash fell on the next line still start with a known phrase.
+    r"|^(?:MSE |Minimum |Turnover|Past |Bid |OEM |Consignee|Estimated |Evaluation|Startup |Years |Document|Total )"
+)
 # The bid form is bilingual and its Hindi font leaves glyph ids in the text
 # layer: "Item Category/मद (cid:18)(cid:18) testing weather proof PVC…". Those,
 # and the Devanagari itself, are stripped so only the English line remains.
@@ -147,6 +154,52 @@ def classify(citations: list[str], reg: dict[str, dict]) -> tuple[str, list[str]
     return family, outdated, unmatched
 
 
+def extract_category(bid_text: str) -> str:
+    """The bid's "Item Category" as GeM prints it.
+
+    The text layer of the form is a two-column table read row by row, so a long
+    value wraps around its own label:
+
+        XLPE Cable, Working Voltage from 3.3 kV up to and
+         /Item Category
+        including 33 kV (V2) ISI Marked to IS 7098 (Part 2) (Q2)
+
+    The value is therefore the non-label lines immediately before and after the
+    label, bounded by the neighbouring labels. Glyph ids from the Hindi font and
+    the Devanagari itself are stripped first."""
+    lines = [ln.strip() for ln in CID_RE.sub(" ", bid_text).splitlines()]
+    lines = [re.sub(r"\s+", " ", ln) for ln in lines]
+    idx = next((i for i, ln in enumerate(lines) if "Item Category" in ln), None)
+    if idx is None:
+        return ""
+    label = lines[idx]
+    parts: list[str] = []
+    # Text sharing the label's own line, on either side of it:
+    # "Item Category/ SLIDE TRACK ..." or "JOINTS FOR 11kV XLPE CABLE /Item Category".
+    lead, _, tail = label.partition("Item Category")
+    same = " ".join(x for x in (lead.strip(" /"), tail.strip(" /")) if x)
+    before: list[str] = []
+    for ln in reversed(lines[max(0, idx - 2):idx]):
+        if not ln or LABEL_LINE_RE.search(ln):
+            break
+        before.insert(0, ln)
+    after: list[str] = []
+    for ln in lines[idx + 1:idx + 4]:
+        if not ln or LABEL_LINE_RE.search(ln):
+            break
+        after.append(ln)
+    parts = before + ([same] if same else []) + after
+    category = " ".join(parts)
+    # GeM prefixes catalogue items it could not match with "Custom-"; the words
+    # after it are the buyer's own name for the item, so only the tag is dropped.
+    category = re.sub(r"\bCustom(?:-|\s+Bid\s+for\s+Goods)?\s*", "", category)
+    category = re.split(r"\s*Total\s+\d", category, maxsplit=1)[0]
+    category = re.sub(r"\s*,\s*", " , ", category).strip(" ,")
+    # Stripping the Devanagari leaves its brackets behind: "(Q2) ((33 ))" → "(Q2)".
+    category = re.sub(r"\s*\(\(.*$", "", category)
+    return category.strip(" :/-,")[:140]
+
+
 def collect_bid(bid: int, reg: dict[str, dict]) -> dict | None:
     """One bid → one row, or None with a reason in the progress log."""
     pdf = fetch(BID_URL.format(bid))
@@ -158,13 +211,7 @@ def collect_bid(bid: int, reg: dict[str, dict]) -> dict | None:
 
     bid_text = extract_document(pdf, f"{bid}.pdf").get("text", "")
     number = (BID_NUMBER_RE.search(bid_text) or [None])[0] if BID_NUMBER_RE.search(bid_text) else f"GEM-bid-{bid}"
-    category = ""
-    m = CATEGORY_RE.search(CID_RE.sub(" ", bid_text))
-    if m:
-        category = re.sub(r"\s+", " ", m.group(1))
-        # The line runs on into the bid's quantity block and GeM's "Custom" tag.
-        category = re.split(r"\s*,?\s*\bCustom\b|\s*Total\s+\d", category, maxsplit=1)[0]
-        category = category.strip(" :/-,")[:120]
+    category = extract_category(bid_text)
     if category and SERVICE_RE.search(category):
         return {"bid": bid, "outcome": "service bid", "category": category}
 
@@ -172,6 +219,10 @@ def collect_bid(bid: int, reg: dict[str, dict]) -> dict | None:
     foreign: list[str] = []
     scanned_docs, text_docs, source = 0, 0, ""
     os.makedirs(PDF_DIR, exist_ok=True)
+    # The bid form is kept too, so a title can be re-derived offline if the
+    # category heuristic improves — without another round trip to the portal.
+    with open(os.path.join(PDF_DIR, f"{bid}-bid.pdf"), "wb") as fh:
+        fh.write(pdf)
     for i, url in enumerate(links):
         time.sleep(DELAY_SECONDS)
         doc = fetch(url)
@@ -243,7 +294,26 @@ def main():
     ap.add_argument("--sample", type=int, default=0, help="how many bid ids to sample")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--ids", type=int, nargs="*", help="specific bid ids")
+    ap.add_argument("--rederive", action="store_true",
+                    help="recompute Item Category for collected rows from the saved bid forms")
     args = ap.parse_args()
+
+    if args.rederive:
+        df = pd.read_csv(OUT, encoding="utf-8-sig")
+        changed = 0
+        for i, bid in enumerate(df["GeM Bid Id"]):
+            path = os.path.join(PDF_DIR, f"{int(bid)}-bid.pdf")
+            if not os.path.exists(path):
+                continue
+            with open(path, "rb") as fh:
+                cat = extract_category(extract_document(fh.read(), path).get("text", ""))
+            if cat and cat != str(df.at[i, "Item Category"]):
+                df.at[i, "Item Category"] = cat
+                changed += 1
+        df.to_csv(OUT, index=False)
+        titled = int(df["Item Category"].fillna("").astype(str).str.strip().astype(bool).sum())
+        print(f"re-derived {changed} titles from saved bid forms; {titled}/{len(df)} rows now carry one")
+        return
 
     rng = random.Random(args.seed)
     ids = list(args.ids or [])
