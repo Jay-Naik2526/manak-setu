@@ -67,11 +67,12 @@ properly on 621 queries.
 | How to be sure it never gives an incorrect answer | **C** (+ D's baseline) |
 | USPs that reach top 5 | **B, C, D, E, F** — each is a claim no other team can make |
 | Value to the Ministry of Consumer Affairs, Food & Public Distribution | **B**, **E** |
-| Better UI | **A, E, H** |
+| Better UI — animations, layout, something new | **H** (full specification), with A and E |
 
-Phase order by leverage: **A → B → C → D → E → H → F → G**. A is mandatory. B–E
-are independent of each other after A and can be done in any order if credits
-run short. F and G are stretch: do them last and only with the measurement.
+Phase order by leverage: **A → H → B → C → D → E → F → G**. A and H are what a
+judge sees; do them first. B–E are independent of each other and can be done in
+any order if credits run short. F and G are stretch: last, and only with the
+measurement.
 
 ---
 
@@ -297,23 +298,184 @@ unresolved.
 
 ---
 
-## Phase H — UI, in the order a judge notices  (~2 h)
+## Phase H — The interface: evidence made visible  (~6 h, second in the order)
 
-1. Graph (Phase A) — the thing that visibly lags today.
-2. Loading skeletons on Graph and Standards; never a blank white area.
-3. **"How this was decided"** — under every recommendation, three plain
-   sentences generated from the trace: which retriever found it, which filter
-   demoted the runner-up and why, and what the gate compared. The data is
-   already in the response; this is wording.
-4. Ministry section on the health card (B3); Pipelines table and calibration
-   bars on Benchmark (C2, D3); Verify-on-BIS in the drawer (C3); Export button
-   on Audit (E).
-5. Keyboard: `/` focuses search, `Esc` closes drawer and palette, arrow keys
-   move through result rows. Check focus rings in both themes.
-6. Empty states say what to do next, not "no data".
-7. Re-run the Run-demo end to end; keep it under 100 s; captions are live.
+**Thesis.** Every other team's UI will look like an AI product: gradients, glow,
+a chat box. Ours should look like an instrument — and every piece of motion
+must *show where an answer came from*. The system's honesty is the brand, so
+the animations are the retrieval trace, the filters, the gate and the
+provenance becoming visible in sequence. Nothing decorative. Nothing that
+implies work the system did not do (no "thinking" spinner that outlasts the
+real latency, no shimmering "AI" badges).
 
----
+**Constraints.** Palette unchanged (petrol `--pet-*`, amber `--amber`,
+semantic `--ok/--bad/--info`, family colours `--k1…--k8`). Vanilla HTML/CSS/JS,
+no framework, no build step. Fonts stay Merriweather (display) and JetBrains
+Mono (numbers); add **Inter Tight** or **IBM Plex Sans** from Google Fonts for
+UI text only if the system stack looks weak after H1 — one face, one weight
+range, nothing else. Everything respects the existing
+`@media (prefers-reduced-motion: reduce)` block (styles.css:741): motion
+becomes instant state, never a missing state.
+
+### H0 — Motion tokens (write these first, in `styles.css`)
+
+```css
+:root{
+  --t-fast:120ms; --t-base:200ms; --t-slow:320ms; --t-reveal:600ms;
+  --ease-out:cubic-bezier(.2,.7,.2,1); --ease-in-out:cubic-bezier(.65,0,.35,1);
+  --stagger:40ms; --rise:8px;
+}
+```
+Rules, enforced by review: animate **transform and opacity only**; enter
+animations run **once** (IntersectionObserver, `{threshold:.2}`, unobserve
+after firing) — never on every scroll; no motion on any table longer than 60
+rows; `will-change` only on the element currently animating; anything with
+more than ~200 elements is drawn on Canvas, not the DOM. Reuse the existing
+`rise`, `pop`, `fadeUp`, `tin`, `pin` keyframes; retime them to the tokens.
+
+### H1 — Layout: instrument, not dashboard
+
+- **Left rail navigation** (72 px, icons with labels on hover/expand; expands
+  to 220 px on ≥1440 px screens) replacing the top tab strip; the top bar
+  becomes a slim status line: connection dot, register snapshot date
+  (`/health.register_snapshot_date`, Phase C3), ⌘K, theme, role. The rail's
+  active item carries a 3 px amber bar — the only amber in the chrome.
+- **Content column** max 1280 px; cards lose their uniform border-and-shadow —
+  spend `--sh-2` and `--r-3` only on the one card that is the answer
+  (`#fw-gov`, the audit ledger, the health headline); supporting cards get a
+  hairline `--line` and no shadow. Hierarchy comes from that difference.
+- **Draft screen on ≥1200 px becomes two columns**: the query (spec text,
+  presets, language) on the left and **sticky**; results on the right. The
+  officer never scrolls away from what they typed.
+- Type scale, set once: 34/26/20/16/14/12 with Merriweather at 900 for h1–h2
+  only; UI text 14/1.5; numbers always `.mono` with `tabular-nums`. Uppercase
+  eyebrows get `letter-spacing:.08em`.
+
+### H2 — The signature moment: the retrieval-trace rail (Draft screen)
+
+When `runForward()` receives a response, before the answer card appears,
+render a horizontal **rail** at the top of `#fw-out`:
+
+`Query → Dense (20) ∥ BM25 (20) → Fused (10) → Rerank → Filters → Gate → Answer`
+
+Each node is a small pill; they light up left to right with a `--stagger`
+delay (total ≈ 700 ms), and **every number on the rail is read from the
+response**: `candidates[].dense_rank/bm25_rank` (how many came from each
+retriever), the fused shortlist length, `voltage_filter/material_filter/
+role_filter.applied` (a filter pill lights amber only if it demoted something,
+and shows what: "voltage · 2 demoted"), and the gate's `decision` and `reason`.
+If the decision is `abstain`, the rail ends at a **red stop** labelled with the
+reason and the answer card is replaced by the existing abstention note — the
+animation must make declining look deliberate, not like a failure. For the
+Hindi-title path (`language.hindi_titles_searched`), the Dense/BM25 pills read
+"BIS Hindi titles" so the rail never lies about which index answered.
+
+Then the **answer card** enters (`pop`, `--t-slow`) and the runner-up
+candidates slide into the trace table beneath with a 40 ms stagger; a
+candidate demoted by a filter carries a small tag naming the filter. Clicking
+any rail node scrolls to and highlights the corresponding rows.
+
+### H3 — Confidence, drawn
+
+Replace the score pill on `#fw-gov` with a **confidence arc** (inline SVG,
+120 px): a 270° track with the two thresholds marked at 0.45 and 0.80 and
+labelled "declines below / high above"; the needle sweeps from 0 to the score
+over `--t-reveal` with `--ease-out`. Under it, one line from Phase C2's
+calibration file: *"At this confidence the system was right N of M times"* —
+with the real N and M for that bucket, or nothing if C2 has not run. The arc
+colour is `--ok` above 0.80, `--amber` between, `--bad` below.
+
+### H4 — Audit: the document x-ray
+
+`runAudit()` today returns a list. Add the document itself: render the pasted
+text in a reading pane and, as findings arrive, **underline each citation in
+place** — `--ok` solid for Current, `--amber` for Superseded, `--bad` for
+Withdrawn, dotted `--ink-3` for unresolved with a small "did you mean IS 694?"
+chip from Phase D3's phantom detector. Underlines appear in reading order at
+`--stagger` intervals; the findings **ledger** on the right builds row by row
+in the same order, and its count-up uses the existing counter. Click an
+underline → the ledger row highlights; click a row → the pane scrolls to the
+citation. A slim summary bar above both: "17 citations · 3 withdrawn · 1
+superseded · 2 unresolved" — from the response, never typed in.
+
+### H5 — The health index as a picture
+
+On `#ov-health` (and the Ministry section from B3): horizontal bars per
+ministry, width = documents, fill = dead-citation share as a darker segment,
+each bar grows from zero on enter (`transform: scaleX`, `--t-reveal`, staggered)
+with the count printed at the end of the bar — never a bare percentage. The
+"dead standards still cited" list gets a small inline bar per row. The year
+row becomes a compact column chart with the same treatment. All CSS transforms
+on ≤ 40 elements; no library.
+
+### H6 — The graph: cinematic once, then still
+
+On top of Phase A's Canvas renderer: nodes **fade in by family cluster**
+(eight groups, 60 ms apart), edges reveal with a single `lineDashOffset` sweep
+over `--t-reveal` — once — then the scene is static. Hover: the hovered
+neighbourhood at full strength, everything else at 25 % alpha, tooltip shows
+the real evidence sentence ("cited alongside IS 5831 in 46 of 51 comparable
+tenders"). Click: the camera **eases** to the node (tween the transform matrix
+over `--t-slow`) and opens the drawer. A **focus mode** toggle hides edges
+below the confidence slider's value with a 200 ms fade. Reduced motion: no
+entry sweep, no camera tween.
+
+### H7 — Page and theme transitions
+
+Use the **View Transitions API** in `go(v, entity)` when
+`document.startViewTransition` exists: outgoing view fades 40 % and slides
+−6 px, incoming rises 6 px, `--t-base`, `--ease-in-out`. The theme toggle
+becomes a **radial wipe** from the toggle button (a `clip-path: circle()`
+animation on `::view-transition-new(root)`, 400 ms) — the one flourish that
+earns its place because it is instant to understand. Both feature-detected;
+both disabled under reduced motion.
+
+### H8 — Micro-interactions and states
+
+- **Provenance ribbon** on every answer card: a hairline footer "BIS catalogue
+  record · collected <date> · Verify ↗" (Phase C3). Ink-3, mono, 11.5 px. This
+  is the honesty brand made visible on every screen.
+- Status pills tick into place (`pop`, `--t-fast`); copy buttons morph to a
+  check for 900 ms; toasts slide from bottom-right and stack.
+- Skeletons keep the `sh` shimmer; under reduced motion they are flat.
+- Empty states: a 48 px inline SVG in `--pet-400` line art and a sentence that
+  names the next action ("Paste a specification or pick a preset").
+- Error states name the cause and the fix, never "something went wrong".
+- Keyboard: `/` focuses search, `Esc` closes drawer and palette, `↑↓` walk
+  result rows, `Enter` opens the drawer; visible focus rings in both themes
+  (`outline: 2px solid var(--amber); outline-offset: 2px`).
+- Dark theme: audit every new element against `--surface-*` and `--ink-*`;
+  canvas colours read tokens via `getComputedStyle` at draw time.
+
+### H9 — Run demo, rebuilt as a film
+
+Keep the seven steps and the sub-100 s budget. Add a **progress rail** at the
+bottom (seven dots, the active one filled amber, elapsed time in mono); a
+dimmed backdrop with a soft spotlight that **eases** between targets rather
+than jumping; captions appear with a typewriter (35 ms/char, skipped under
+reduced motion, and skippable with Space). The Draft step lets the trace rail
+(H2) play in full — it is the demo's best 10 seconds.
+
+### What not to build
+
+No gradients or glow, no purple, no confetti, no particle backgrounds, no
+parallax that costs a frame, no motion on the Standards table, no fake
+progress bars, no sound. If an animation cannot say what data drives it, cut
+it.
+
+### Performance budget and acceptance
+
+- Added JS ≤ 30 KB, added CSS ≤ 12 KB; no new runtime dependencies.
+- Lighthouse Performance ≥ 90 and CLS < 0.05 on Overview, Draft, Audit, Graph
+  (run it in Chrome, paste the four scores into the commit).
+- 60 fps during the trace rail and the graph entry sweep (DevTools performance
+  panel); first paint of the Graph view unchanged from Phase A.
+- Reduced motion verified: toggle the OS setting and walk every screen — no
+  missing content, no stuck states.
+- Every animation in H2–H6 is listed in the commit with the response field
+  that drives it. If one is decorative, remove it before committing.
+- Run-demo end to end under 100 s, captions live, no console errors.
+- `qa_adversarial.py` 28/28 after each sub-phase; nothing in the API changes.
 
 ## Phase F — Template propagation (stretch, measurement-first)  (~3 h)
 
@@ -371,8 +533,8 @@ Keep the 11 kV → IS 7098 (Part 2) opener. Fix the idea PPT's 405 / 226 / 3,718
 
 ## Order of execution and credit economy
 
-A first — it is the only thing a judge will visibly see failing. Then B, C, D,
-E in any order; they are independent. H interleaves. F and G last, and only
-with measurement. Push after each phase. If credits run short, a finished
-A + B + C is worth more than a half-finished everything: the graph works, the
-ministry has its number, and the correctness story is mechanical.
+A first — it is the only thing a judge will visibly see failing — then H, the
+interface. Then B, C, D, E in any order; they are independent. F and G last, and
+only with measurement. Push after each phase. If credits run short, a finished
+A + H + B is worth more than a half-finished everything: the graph works, the
+interface is the one they remember, and the ministry has its number.
