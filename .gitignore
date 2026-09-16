@@ -31,3 +31,6 @@ shots/
 # carries citations and source links, not copies.
 data/tenders/
 data/tender_collected_gem.progress.jsonl
+
+# Working log of the catalogue sweep, like the tender collector's.
+data/standards_collected_catalogue.progress.jsonl
