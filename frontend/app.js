@@ -521,6 +521,66 @@ const provRow = c => `<tr class="hit" data-go="${esc(c.is_number)}">
    not get a pill, and when the gate declines the rail ends at a red stop, so
    an abstention reads as a decision rather than a failure. */
 
+/* The score, drawn against the thresholds that decide what happens to it.
+   A bare "0.721" tells an officer nothing: they cannot know whether that is
+   good. The arc puts the two numbers the gate actually compares against on the
+   dial — below 0.45 the system declines, above 0.80 it calls the match high —
+   so the score is read in the terms the system used. Where calibration has
+   been measured, the line beneath says how often a score in this band was
+   right, with the count it was measured on. */
+
+function confidenceArc(score, thresholds) {
+  const lo = thresholds.top_score, hi = thresholds.high_confidence;
+  const R = 46, CX = 60, CY = 56, SWEEP = 250, START = 145;
+  const pt = (frac, r) => {
+    const a = (START + SWEEP * frac) * Math.PI / 180;
+    return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
+  };
+  const arcPath = (from, to, r) => {
+    const [x1, y1] = pt(from, r), [x2, y2] = pt(to, r);
+    return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 ${(to - from) * SWEEP > 180 ? 1 : 0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+  };
+  const tone = score >= hi ? 'var(--ok)' : score >= lo ? 'var(--amber)' : 'var(--bad)';
+  const tick = frac => {
+    const [x1, y1] = pt(frac, R - 7), [x2, y2] = pt(frac, R + 6);
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+      stroke="var(--ink-3)" stroke-width="1.5"/>`;
+  };
+  const band = calibrationFor(score);
+  return `<div class="carc">
+    <svg viewBox="0 0 120 86" role="img"
+         aria-label="confidence ${score.toFixed(3)} of 1, declines below ${lo}, high above ${hi}">
+      <path d="${arcPath(0, 1, R)}" fill="none" stroke="var(--line-hard)" stroke-width="7" stroke-linecap="round"/>
+      <path d="${arcPath(0, Math.max(score, 0.001), R)}" fill="none" stroke="${tone}" stroke-width="7"
+            stroke-linecap="round" class="carc-fill" style="--arc-len:${(SWEEP / 360) * 2 * Math.PI * R}"/>
+      ${tick(lo)}${tick(hi)}
+      <text x="60" y="52" text-anchor="middle" class="carc-n">${score.toFixed(3)}</text>
+      <text x="60" y="66" text-anchor="middle" class="carc-l">confidence</text>
+    </svg>
+    <div class="carc-key">
+      <div><span class="sw" style="background:var(--bad)"></span>below ${lo} · declines</div>
+      <div><span class="sw" style="background:var(--ok)"></span>above ${hi} · high</div>
+      ${band ? `<div class="carc-cal">In testing, a score in ${band.from}–${band.to}
+        was the expected standard <b>${band.correct} of ${band.queries}</b> times.</div>` : ''}
+    </div></div>`;
+}
+
+/* Calibration is read from the file eval_retrieval writes. If it has not been
+   measured, the arc says nothing about it rather than implying a number. */
+// A bucket needs enough queries to say anything. Measured on the golden set,
+// 92% of queries land in 0.9-1.0 and the rest are spread one to nine at a time
+// — quoting "1 of 9" as a calibration figure would dress noise as evidence.
+// Same rule the project applies to every other small positive class.
+const CALIBRATION_MIN = 30;
+
+function calibrationFor(score) {
+  const c = S.calibration;
+  if (!c || !c.buckets) return null;
+  const band = c.buckets.find(b => score >= b.from && score < b.to)
+            || (score >= 1 ? c.buckets[c.buckets.length - 1] : null);
+  return band && band.queries >= CALIBRATION_MIN ? band : null;
+}
+
 function traceRail(d) {
   const r = d.retrieval || {};
   const hindi = d.language && d.language.hindi_titles_searched;
@@ -646,8 +706,9 @@ function renderForward(d) {
     const g = d.governing;
     h += `<div class="card" id="fw-gov" style="border-color:var(--ok)">
       <div class="hd"><span class="eyebrow">Governing standard</span><h3></h3>
-        <span class="pill ok">score ${g.score.toFixed(3)}</span></div>
-      <div class="in">
+        </div>
+      <div class="in gov-grid">
+        <div class="gov-main">
         <div style="display:flex;align-items:baseline;gap:11px;flex-wrap:wrap">
           <span class="mono jump" style="font-size:20px;font-weight:600" data-go="${esc(g.is_number)}">${esc(g.is_number)}</span>
           ${statusPill(g.status)}
@@ -669,6 +730,8 @@ function renderForward(d) {
             ? ` via ${g.matched_on.terms.slice(0,6).map(t => `<span class="mono">${esc(t)}</span>`).join(', ')}` : ''}
           · dense rank ${g.dense_rank ?? '—'} · bm25 rank ${g.bm25_rank ?? '—'} · rrf ${g.rrf}
         </div>
+        </div>
+        ${confidenceArc(g.score, d.thresholds)}
       </div></div>`;
 
     const c = d.certification || {};
@@ -2364,6 +2427,9 @@ async function boot() {
   $$('#presets button').forEach(b => b.onclick = () => preset_(b.dataset.p));
 
   health();
+  // Calibration is a file on disk, not a computation — cheap to fetch once and
+  // the confidence arc reads it. Silent if it has never been measured.
+  api('/calibration').then(c => { if (c && c.buckets) S.calibration = c; }).catch(() => {});
 
   const [v, ent] = location.hash.slice(1).split('/');
   go(v || 'draft');

@@ -185,6 +185,18 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   standards, so this path complements translation rather than replacing it.
   Where BIS has not named a standard in Hindi, nothing is invented and the query
   falls back to translation.
+- **Confidence calibration**: `eval_retrieval.py` writes `data/calibration.json`
+  — for each score band, how often the top answer was the expected standard.
+  The honest reading is that **the score is concentrated, not calibrated**:
+  569 of the 621 queries (92%) score between 0.9 and 1.0, and within that band
+  the answer is right **453 of 569 times (80%)**. The remaining bands hold one
+  to nineteen queries each, which is far too few to quote, so the interface
+  shows a calibration line only for a band with at least 30 queries and says
+  nothing for the rest. Expected calibration error is 0.161.
+  The cause is the cross-encoder's sigmoid saturating — the score behaves more
+  like a decision than a probability. It is still the right input to the gate,
+  which compares it against fixed thresholds, but it should not be presented as
+  "the system is 97% sure".
 - **Evaluation set**: 621 query/standard pairs in `golden_queries.csv`, built by
   `build_golden.py` from BIS's own certification notifications — the
   notification names a product in its own words and states the standard it

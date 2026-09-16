@@ -1064,3 +1064,33 @@ blockquote.clause-suggest {
 @media print {
   .xray { max-height: none; overflow: visible; }
 }
+
+
+/* ── confidence arc ──────────────────────────────────────────────────────────
+   The score read against the thresholds the gate compares it to, so "0.721"
+   is legible as a decision rather than a decimal. */
+
+.gov-grid { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: start; }
+.gov-main { min-width: 0; }
+@media (max-width: 900px) { .gov-grid { grid-template-columns: 1fr; } }
+
+.carc { display: flex; flex-direction: column; align-items: center; gap: 4px;
+        min-width: 172px; }
+.carc svg { width: 120px; height: 86px; overflow: visible; }
+.carc-n { font: 600 17px 'JetBrains Mono', ui-monospace, monospace; fill: var(--ink);
+          font-variant-numeric: tabular-nums; }
+.carc-l { font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; fill: var(--ink-3);
+          font-weight: 700; }
+.carc-fill { stroke-dasharray: var(--arc-len); stroke-dashoffset: var(--arc-len);
+             animation: arcSweep var(--t-reveal) var(--ease-out) forwards; }
+@keyframes arcSweep { to { stroke-dashoffset: 0; } }
+
+.carc-key { font-size: 10px; color: var(--ink-3); text-align: left; width: 100%; }
+.carc-key > div { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.carc-key .sw { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+.carc-key .carc-cal { display: block; margin-top: 6px; padding-top: 6px;
+                      border-top: 1px solid var(--line); line-height: 1.45; color: var(--ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .carc-fill { animation: none; stroke-dashoffset: 0; }
+}

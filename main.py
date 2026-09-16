@@ -363,6 +363,22 @@ def peers(text: str):
     return peer_citations(text)
 
 
+@app.get("/calibration")
+def calibration():
+    """How often a score of a given size was actually right.
+
+    Written by `eval_retrieval.py` over the golden set. Absent until that has
+    been run, and the page says nothing about calibration rather than implying
+    a number."""
+    import json as _json
+
+    try:
+        with open("data/calibration.json", encoding="utf-8") as fh:
+            return _json.load(fh)
+    except (OSError, ValueError):
+        return {"measured": False}
+
+
 @app.get("/health-index")
 def health_index():
     """How healthy are the standards government buyers actually cite?

@@ -10,6 +10,8 @@ source document itself names. Five seed rows is not a benchmark — treat any
 figure from this harness as indicative until the set is meaningfully larger.
 """
 
+import datetime as _dt
+import json
 import os
 import sys
 
@@ -119,6 +121,43 @@ def main():
     for r in rows:
         print(f"{r['expected']:<26}{str(r['rank'] or '—'):>5}{r['top']:>26}"
               f"{r['top_score']:>8.3f}  {r['decision']}")
+
+    # Calibration: does a score of 0.9 mean the same thing as a score of 0.5?
+    # A confidence number is only worth showing if it predicts something, and
+    # the honest way to say so is with the count it was measured on.
+    buckets: dict[str, list[int]] = {}
+    for r in rows:
+        score = float(r["top_score"] or 0)
+        lo = min(int(score * 10) / 10, 0.9)
+        buckets.setdefault(f"{lo:.1f}", []).append(1 if r["rank"] == 1 else 0)
+
+    print("\ncalibration — how often the top answer is right, by the score it was given:")
+    calibration = []
+    ece_num = 0.0
+    for key in sorted(buckets):
+        hits = buckets[key]
+        lo = float(key)
+        accuracy = sum(hits) / len(hits)
+        midpoint = lo + 0.05
+        ece_num += len(hits) * abs(accuracy - midpoint)
+        calibration.append({"from": round(lo, 2), "to": round(lo + 0.1, 2),
+                            "queries": len(hits), "correct": sum(hits),
+                            "accuracy": round(accuracy, 3)})
+        bar = "#" * round(accuracy * 24)
+        print(f"  {lo:.1f}-{lo + 0.1:.1f}  {sum(hits):>4}/{len(hits):<4} "
+              f"({accuracy:>5.0%})  {bar}")
+    ece = ece_num / max(n, 1)
+    print(f"  expected calibration error: {ece:.3f}  "
+          f"(mean gap between a bucket's score and how often it was right)")
+
+    with open("data/calibration.json", "w", encoding="utf-8") as fh:
+        json.dump({"generated": _dt.date.today().isoformat(), "queries": n,
+                   "buckets": calibration, "expected_calibration_error": round(ece, 4),
+                   "note": ("Measured on the golden set: for each query, the score the top "
+                            "candidate received and whether it was the expected standard. "
+                            "A bucket's accuracy is over the queries that landed in it.")},
+                  fh, indent=1)
+    print("  wrote data/calibration.json")
 
     print()
     print("Matching is on IS Base, so a part/section suffix mismatch still counts as a hit.")

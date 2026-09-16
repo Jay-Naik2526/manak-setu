@@ -1,0 +1,78 @@
+{
+ "generated": "2026-09-17",
+ "queries": 621,
+ "buckets": [
+  {
+   "from": 0.0,
+   "to": 0.1,
+   "queries": 19,
+   "correct": 2,
+   "accuracy": 0.105
+  },
+  {
+   "from": 0.1,
+   "to": 0.2,
+   "queries": 4,
+   "correct": 1,
+   "accuracy": 0.25
+  },
+  {
+   "from": 0.2,
+   "to": 0.3,
+   "queries": 3,
+   "correct": 0,
+   "accuracy": 0.0
+  },
+  {
+   "from": 0.3,
+   "to": 0.4,
+   "queries": 5,
+   "correct": 2,
+   "accuracy": 0.4
+  },
+  {
+   "from": 0.4,
+   "to": 0.5,
+   "queries": 5,
+   "correct": 2,
+   "accuracy": 0.4
+  },
+  {
+   "from": 0.5,
+   "to": 0.6,
+   "queries": 1,
+   "correct": 0,
+   "accuracy": 0.0
+  },
+  {
+   "from": 0.6,
+   "to": 0.7,
+   "queries": 2,
+   "correct": 2,
+   "accuracy": 1.0
+  },
+  {
+   "from": 0.7,
+   "to": 0.8,
+   "queries": 4,
+   "correct": 1,
+   "accuracy": 0.25
+  },
+  {
+   "from": 0.8,
+   "to": 0.9,
+   "queries": 9,
+   "correct": 1,
+   "accuracy": 0.111
+  },
+  {
+   "from": 0.9,
+   "to": 1.0,
+   "queries": 569,
+   "correct": 453,
+   "accuracy": 0.796
+  }
+ ],
+ "expected_calibration_error": 0.1613,
+ "note": "Measured on the golden set: for each query, the score the top candidate received and whether it was the expected standard. A bucket's accuracy is over the queries that landed in it."
+}
