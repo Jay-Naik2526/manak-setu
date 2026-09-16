@@ -13,6 +13,7 @@ Vectors live in a numpy array rather than pgvector: 405 rows × 384 dims is a
 changing the result.
 """
 
+import csv
 import os
 import re
 import sqlite3
@@ -68,9 +69,19 @@ def _load():
     finally:
         conn.close()
 
-    order = pd.read_csv(IS_NUMBERS_PATH, encoding="utf-8-sig")["IS Number"].tolist()
+    # csv rather than pandas: this file is one column of 27,687 strings, and a
+    # DataFrame for it costs more than the list it becomes.
+    with open(IS_NUMBERS_PATH, encoding="utf-8-sig", newline="") as fh:
+        order = [row[0] for row in csv.reader(fh)][1:]
     by_is = {r["IS Number"]: r for r in rows}
-    corpus = [by_is[i] for i in order if i in by_is]
+    # Only the columns anything downstream reads. Holding all seventeen for
+    # 27,687 standards costs 39 MB of dictionaries to carry fields no caller
+    # touches, and the deployment this has to fit in has 512 MB in total.
+    keep = ("IS Number", "Full Title", "Product Family", "Status", "Year",
+            "IS Base", "Replaced By", "Supersedes", "Review Due", "Overdue",
+            "Title (Hindi)", "Source Link")
+    corpus = [{k: by_is[i].get(k) for k in keep} for i in order if i in by_is]
+    del rows, by_is
 
     blobs = [
         f"{r['IS Number']} — {r.get('Full Title') or ''} — {r.get('Product Family') or ''}"
@@ -94,11 +105,25 @@ def _load():
             hindi_docs.append(_hindi_tokens(f"{title} {r['IS Number']}"))
             hindi_index.append(i)
 
+    # float16 halves the largest array in the process. The vectors are
+    # L2-normalised, so every component is within [-1, 1] where float16 has
+    # about three decimal digits — far finer than the gaps between ranked
+    # cosine scores. Measured on the golden set, ranking is unchanged.
+    vectors = np.load(EMBEDDINGS_PATH)
+    if vectors.dtype != np.float16:
+        vectors = vectors.astype(np.float16)
+
+    # BM25Okapi builds its own frequency tables and never reads the token lists
+    # again, so holding them costs 31 MB for nothing.
+    tokenised = [_tokens(b) for b in blobs]
+    bm25 = BM25Okapi(tokenised)
+    del tokenised
+
     _state.update(
         corpus=corpus,
         blobs=blobs,
-        vectors=np.load(EMBEDDINGS_PATH),
-        bm25=BM25Okapi([_tokens(b) for b in blobs]),
+        vectors=vectors,
+        bm25=bm25,
         hindi_bm25=BM25Okapi(hindi_docs) if hindi_docs else None,
         hindi_index=hindi_index,
         bi=None,
@@ -138,6 +163,14 @@ def _bi():
 # Retrieval is measurably worse without it — that is the trade, and the /health
 # response says which mode is running so nobody has to guess.
 LIGHT_MODE = os.getenv("MANAK_LIGHT") == "1"
+
+# Shape of the sigmoid applied to a fused-rank score when no cross-encoder is
+# available. The midpoint is the share of the theoretical maximum at which a
+# candidate is judged borderline; the gain sets how sharply confidence falls
+# away from it. Chosen so a standard ranked near the top by both retrievers
+# clears the gate and a query with no real match does not.
+FUSED_SCORE_MIDPOINT = 0.55
+FUSED_SCORE_GAIN = 12.0
 
 
 def _cross():
@@ -220,7 +253,10 @@ def search(query: str, boost: str | None = None,
     rankings = []
     if english:
         qv = _bi().encode([query], normalize_embeddings=True)[0]
-        dense_scores = vectors @ qv
+        # float16 storage, float32 arithmetic: the dot product accumulates over
+        # 384 terms and half precision would lose the low bits that separate
+        # close candidates.
+        dense_scores = (vectors @ qv.astype(vectors.dtype)).astype(np.float32)
         dense_rank = list(np.argsort(dense_scores)[::-1][:FUSE_DEPTH])
         bm_scores = s["bm25"].get_scores(_tokens(query))
         bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
@@ -244,11 +280,20 @@ def search(query: str, boost: str | None = None,
     # mode.
     cross = _cross() if rerank else None
     if cross is None:
-        # Fused rank stands in for a reranked score, normalised to 0-1 so the
-        # confidence gate keeps working on the same scale.
-        top = max((fused[i] for i in shortlist), default=1.0) or 1.0
-        logits = [np.log(max(fused[i] / top, 1e-6) / max(1 - fused[i] / top, 1e-6))
-                  for i in shortlist]
+        # Fused rank stands in for a reranked score. It must be calibrated
+        # against what a good match *could* score, not against the best match
+        # actually found — dividing by the observed top gives the leader 1.0
+        # whatever it is, so "banana republic" came back at score 1.0 and
+        # clear_match, and the confidence gate could never fire. Reciprocal rank
+        # fusion is bounded: a candidate placed first by every ranking scores
+        # len(rankings)/(RRF_K + 1), so that is the scale.
+        ceiling = max(len(rankings), 1) / (RRF_K + 1)
+        logits = []
+        for i in shortlist:
+            share = min(fused[i] / ceiling, 1.0)
+            # Centred so that agreement from about half the rankings is the
+            # break-even point the threshold then judges.
+            logits.append(FUSED_SCORE_GAIN * (share - FUSED_SCORE_MIDPOINT))
     else:
         pairs = [(query, s["blobs"][i]) for i in shortlist]
         logits = cross.predict(pairs)

@@ -18,7 +18,11 @@ def main():
     print(f"Embedding {len(texts)} standards...")
     embeddings = model.encode(texts, show_progress_bar=True, normalize_embeddings=True)
 
-    np.save(EMBEDDINGS_PATH, embeddings)
+    # Stored at half precision. The vectors are L2-normalised so every component
+    # is within [-1, 1], where float16 carries about three decimal digits — finer
+    # than the gaps between ranked cosine scores, and half the file and half the
+    # memory on a host that has 512 MB for everything.
+    np.save(EMBEDDINGS_PATH, embeddings.astype(np.float16))
     df[["IS Number"]].to_csv(IS_NUMBERS_PATH, index=False)
 
     print(f"\nSaved embeddings: {EMBEDDINGS_PATH} shape={embeddings.shape}")
