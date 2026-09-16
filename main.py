@@ -1,8 +1,9 @@
 import datetime
+import hashlib
 import os
 import sqlite3
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -54,12 +55,43 @@ def _dataset_date() -> str:
 app = FastAPI(title="MANAK-SETU Backend")
 
 @app.middleware("http")
-async def no_store(request, call_next):
-    """Data changes when the CSVs are rebuilt; a browser holding yesterday's
-    /graph or /stats shows stale counts with no visible error."""
+async def revalidate(request, call_next):
+    """Always ask, but do not always send.
+
+    Everything used to be `no-store`, because data changes when the CSVs are
+    rebuilt and a browser holding yesterday's /graph shows stale counts with no
+    visible error. That is still the right instinct — but `no-cache` gets it
+    without the cost: the browser revalidates on every request, and when nothing
+    has changed the answer is a 304 with no body instead of the payload again.
+
+    The tag is a hash of the body, so it changes exactly when the data does.
+    Streaming responses (the CSV exports) are passed through untouched — they
+    must not be buffered to be hashed.
+    """
     response = await call_next(request)
-    response.headers["Cache-Control"] = "no-store, must-revalidate"
-    return response
+    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+
+    if request.method != "GET" or response.status_code != 200:
+        return response
+    if not hasattr(response, "body_iterator"):
+        return response
+    if response.headers.get("content-type", "").startswith("text/csv"):
+        return response
+
+    chunks = [chunk async for chunk in response.body_iterator]
+    body = b"".join(chunks)
+    tag = '"' + hashlib.sha256(body).hexdigest()[:24] + '"'
+    if request.headers.get("if-none-match") == tag:
+        headers = {k: v for k, v in response.headers.items()
+                   if k.lower() not in ("content-length", "content-type")}
+        headers["etag"] = tag
+        return Response(status_code=304, headers=headers)
+
+    headers = dict(response.headers)
+    headers["etag"] = tag
+    headers["content-length"] = str(len(body))
+    return Response(content=body, status_code=200, headers=headers,
+                    media_type=response.media_type)
 
 
 # The graph and standards payloads are highly repetitive JSON; over a tunnel or
@@ -497,12 +529,13 @@ class NoCacheStatic(StaticFiles):
     on the page URL does not invalidate its subresources. Demo machines must
     never show yesterday's build."""
 
-    def is_not_modified(self, *args, **kwargs) -> bool:
-        return False
-
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
-        response.headers["Cache-Control"] = "no-store, must-revalidate"
+        # `no-cache` rather than `no-store`: the browser still checks on every
+        # request, so a demo machine can never run yesterday's build, but an
+        # unchanged app.js comes back as a 304 instead of 125 KB. StaticFiles
+        # already sets etag and last-modified, so the check is free.
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
         return response
 
 

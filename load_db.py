@@ -33,6 +33,35 @@ TABLES = {
 }
 
 
+def _create_indexes(conn) -> None:
+    """Index the columns every lookup actually uses.
+
+    There were none. `to_sql(..., if_exists="replace")` drops the table and
+    rebuilds it on each load, taking any index with it, so nothing survived.
+    /peers averaged 330 ms because resolving each citation of each matched bid
+    was a full scan of 27,687 rows."""
+    indexes = [
+        ("standards", "IS Number"), ("standards", "IS Base"), ("standards", "IS Digits"),
+        ("standards", "Status"), ("standards", "Product Family"),
+        ("tenders", "Tender ID"), ("tenders", "Usability"), ("tenders", "Product Family"),
+        ("certification_rules", "IS Number"), ("certification_rules", "IS Base"),
+        ("certification_rules", "Scheme"),
+        ("co_citation", "Source IS"), ("co_citation", "Target IS"),
+        ("coverage_gap_backlog", "IS Number"),
+    ]
+    made = 0
+    for table, column in indexes:
+        columns = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in columns:
+            continue
+        name = f"ix_{table}_{column.lower().replace(' ', '_')}"
+        conn.execute(f'CREATE INDEX IF NOT EXISTS {name} ON {table}("{column}")')
+        made += 1
+    conn.execute("ANALYZE")
+    conn.commit()
+    print(f"\nindexed {made} columns")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--allow-shrink", action="store_true",
@@ -75,6 +104,7 @@ def main():
             before = previous.get(table)
             delta = "" if before is None else f"  ({len(df) - before:+d})"
             print(f"{table:<22} {len(df):>6} rows{delta}   {TABLES[table]}")
+        _create_indexes(conn)
     finally:
         conn.close()
 
