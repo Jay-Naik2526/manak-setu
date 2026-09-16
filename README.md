@@ -66,11 +66,11 @@ no build step, no framework. Ten pages:
 |---|---|
 | **Dashboard** | Live corpus aggregates — status donut, coverage meter, decade histogram, family/degree/gap bars. Recomputed from SQLite on every load. |
 | **Analyze Tender** | Drag-drop a tender PDF (parsed server-side by pdfplumber), paste spec text, or enter IS numbers. One-click presets load real corpus examples. Severity-sorted findings. |
-| **Tender Corpus** | Browse and filter all 2,170 real tenders; click any row to run a live compliance check on its actual citations. |
-| **Knowledge Graph** | Animated force-directed graph of the 285 co-cited standards / 4,831 edges. Family filter, confidence threshold, node drill-down with real evidence statements. |
+| **Tender Corpus** | Browse and filter all 4,917 real tenders; click any row to run a live compliance check on its actual citations. |
+| **Knowledge Graph** | Animated force-directed graph of the 319 co-cited standards / 4,916 edges. Family filter, confidence threshold, node drill-down with real evidence statements. |
 | **Standards** | All 27,687 rows, searchable/filterable, with a detail drawer (record + certification + co-citations). |
 | **Certifications** | All 737 rules across ISI Mark Scheme I, CRS, QCO and Hallmarking. |
-| **Coverage & Gaps** | The 99.3% coverage figure with its exact denominator, and the 10-row remaining collection backlog. |
+| **Coverage & Gaps** | The 98.6% coverage figure with its exact denominator, and the 27-row remaining collection backlog. |
 | **Benchmark** | Runs the golden benchmark live and shows the confusion matrix, with an explicit warning against quoting a bare accuracy percentage. |
 
 Also: dark mode, ⌘K command palette, and a print stylesheet (⎙ exports the
@@ -145,7 +145,7 @@ specs like "PVC insulated cable" score High, e.g. matching `IS 5831` at 0.77).
 `GET /health` returns row counts per table, e.g.:
 
 ```json
-{"status": "ok", "row_counts": {"standards": 27687, "tenders": 2170, "co_citation": 4831, "certification_rules": 737, "coverage_gap_backlog": 10}}
+{"status": "ok", "row_counts": {"standards": 27687, "tenders": 4917, "co_citation": 4916, "certification_rules": 737, "coverage_gap_backlog": 27}}
 ```
 
 ## Known Data Gaps
@@ -155,25 +155,27 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
 
 - **Standards coverage**: 27,687 standards in `standards_master_extended.csv`,
   collected from the BIS catalogue's own public search endpoint by
-  `collect_catalogue.py` (34,884 records swept, 29,939 new). Of the 2,170 tender
-  rows, **535 are `Usability = Usable`** — the rest are service bids, scans, or
+  `collect_catalogue.py` (34,884 records swept, 29,939 new). Of the 4,917 tender
+  rows, **1,172 are `Usability = Usable`** — the rest are service bids, scans, or
   specifications naming no standard, and are excluded from every coverage and
-  accuracy statistic. Those 535 usable tenders cite **1,237 distinct IS
-  numbers**, of which **1,228 (99.3%)** are present in the register. The figure
-  was 84 (17%) at the start of the project, 483 of 488 (99.0%) against the
-  2,087-row register, and fell to 891 of 1,237 (72.0%) when the corpus grew
-  before the catalogue harvest closed it again. The remaining **10** correctly
-  return `found: false` and are the rows in `coverage_gap_backlog_current.csv`
-  (`rebuild_backlog.py`). That gap is closed by collection, never by writing
-  synthetic rows into the CSVs.
-- **Review dates**: 23,403 of 27,687 standards carry BIS's own `validUpto`
-  review date. **121 are overdue** — the
-  edition is past the date BIS set for its review, so the citation should be
-  confirmed before publication. This is *not* an amendment number: BIS does not
-  publish those through any endpoint this system could reach, and the interface
-  says so rather than implying otherwise. The endpoints tried, and the contract
-  recovered for one of them, are documented at the top of `stage_versions` in
-  `pipeline.py`.
+  accuracy statistic. Those 1,172 usable tenders cite **1,991 distinct IS
+  numbers**, of which **1,964 (98.6%)** are present in the register. The figure
+  was 84 (17%) at the start of the project and 483 of 488 (99.0%) against the
+  old 2,087-row register; it fell to 891 of 1,237 (72.0%) when the corpus grew
+  and the catalogue harvest closed it again. The remaining **27** correctly
+  return `found: false` and are the rows in `coverage_gap_backlog_current.csv`.
+  That gap is closed by collection, never by writing synthetic rows into the
+  CSVs.
+- **Deployment memory**: the full pipeline needs more than the 512 MB a free
+  host provides — measured at 745 MB with 27,687 standards, torch and both
+  encoders. `sentence_transformers` is imported lazily, so every endpoint that
+  does not embed anything serves at 135 MB; `/recommend` and the audit path do
+  not fit. `MANAK_LEXICAL=1` runs BM25, the filters and the gate in 188 MB with
+  no torch at all, and ranks well (61/71 at rank 1 on the golden set against the
+  hybrid's 56/71) — but it is **not** a supported fallback, because BM25 is
+  unbounded and its scores scale with query length, so no threshold separates a
+  real match from a coincidence across queries of different shapes. The
+  confidence gate needs the dense retriever's bounded similarity.
 - **Hindi titles**: 1,949 of 27,687 standards (7.0%) carry the Hindi title BIS
   publishes for them, collected by `collect_catalogue.py` from the same
   catalogue endpoint as the English one. Those are indexed directly, so a Hindi
