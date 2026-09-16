@@ -144,6 +144,42 @@ def _dispute_risk(conn, cited: list[str]) -> list[dict]:
     return findings
 
 
+# The gazette reference BIS publishes for a product is a running history: the
+# order that made certification mandatory, then every supersession and every
+# extension of the enforcement date, in one cell. 470 of 737 rules carry more
+# than 200 characters this way and the longest is 2,771 — which the draft clause
+# was pasting verbatim, so what an officer saw to copy into a tender was two
+# thousand characters of amendment history.
+#
+# The operative instrument is the first one named. The rest is provenance: kept
+# on the finding as `notification_history`, so nothing is lost and the full
+# chain is still one click away, but the clause quotes the order itself.
+_ORDER_TAIL = re.compile(
+    r"\s*(?:Superseded by|Extension in |Order of extension|Extension Order|"
+    r"Order of enforcement|Extension in the date)",
+    re.I,
+)
+
+
+def primary_notification(reference: str | None) -> str:
+    """The order that made certification mandatory, without its amendment history."""
+    text = re.sub(r"\s+", " ", str(reference or "")).strip()
+    if not text or text.upper() == "N/A":
+        return ""
+    text = re.sub(r"^\d+\.\s*", "", text)          # the list number from the BIS page
+    head = _ORDER_TAIL.split(text)[0].strip(" ,;")
+    # Some rows name the order once and then run straight into dates; cutting at
+    # the first order's own date keeps the citation complete but bounded.
+    m = re.search(r"\bdated\s+\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}", head, re.I)
+    if m:
+        head = head[: m.end()]
+    head = head[:180].strip(" ,;")
+    # Cutting mid-reference can leave a bracket open — "(S.O. 294 (E) dated
+    # 30-01-2020" — which reads as a truncation error rather than a citation.
+    missing = head.count("(") - head.count(")")
+    return head + ")" * max(0, missing)
+
+
 def _statutory_omission(conn, cited: list[str], text: str) -> list[dict]:
     """Mandatory certification demanded by law, not asked for by the document."""
     if MARK_RE.search(text or ""):
@@ -154,7 +190,8 @@ def _statutory_omission(conn, cited: list[str], text: str) -> list[dict]:
         rule = _cert_rule(conn, citation)
         if rule is None or rule["Certification Mandatory"] != "Yes":
             continue
-        notification = rule["Notification Reference"]
+        history = rule["Notification Reference"]
+        notification = primary_notification(history)
         findings.append(
             {
                 "kind": "statutory_omission",
@@ -164,11 +201,12 @@ def _statutory_omission(conn, cited: list[str], text: str) -> list[dict]:
                 "product": rule["Product Description"],
                 "scheme": rule["Scheme"],
                 "notification_reference": notification,
+                "notification_history": str(history or ""),
                 "headline": f"{citation} needs mandatory BIS certification — the tender never asks for it",
                 "detail": (
                     f"{rule['Product Description']} falls under mandatory BIS certification "
                     f"({rule['Scheme']}"
-                    + (f", {notification}" if notification and str(notification) != "N/A" else "")
+                    + (f", {notification}" if notification else "")
                     + "). No clause in this document requires the BIS Standard Mark, a licence "
                     "number, or certified material. As written, uncertified goods meet the "
                     "specification."
@@ -219,6 +257,16 @@ def _missing_connected(conn, cited: list[str]) -> list[dict]:
             if prior and prior["confidence"] >= r["Confidence"]:
                 continue
             std, _ = _resolve(conn, target)
+            # Never recommend adding a standard BIS has withdrawn or superseded.
+            # The co-citation graph is built from tenders published over several
+            # years, so a standard that was routine in 2021 can be dead now — and
+            # this screen was telling an officer to add IS 325 (Withdrawn) in the
+            # same breath as it flagged their own withdrawn citations as
+            # blocking. That the peers cite it is still true and still useful,
+            # but it belongs in the health index as evidence of a practice going
+            # stale, not here as advice.
+            if std is not None and std["Status"] in ("Withdrawn", "Superseded"):
+                continue
             best[td] = {
                 "kind": "missing_connected",
                 "severity": "medium",

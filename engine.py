@@ -1,5 +1,7 @@
 import json
 import re as _re_module
+
+from audit import primary_notification as _primary_notification
 import sqlite3
 
 import numpy as np
@@ -207,7 +209,10 @@ def check_certification(is_number: str) -> dict:
             "found": True,
             "certification_mandatory": row["Certification Mandatory"],
             "scheme": row["Scheme"],
-            "notification_reference": _display(row["Notification Reference"]),
+            # The operative order, not its amendment history — see
+            # audit.primary_notification. The full chain stays available.
+            "notification_reference": _primary_notification(row["Notification Reference"]),
+            "notification_history": _display(row["Notification Reference"]),
         }
     finally:
         conn.close()
