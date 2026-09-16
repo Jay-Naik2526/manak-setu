@@ -375,6 +375,16 @@ def search(query: str, boost: str | None = None,
             }
         )
     out.sort(key=lambda c: c["score"], reverse=True)
+    # What each stage actually handled, so the page can show the path an answer
+    # took without inferring it from the five candidates it is shown.
+    _state["last_trace"] = {
+        "dense_depth": len(dense_rank),
+        "bm25_depth": len(bm_rank),
+        "rankings_fused": len(rankings),
+        "fused_candidates": len(fused),
+        "reranked": len(shortlist),
+        "reranker": "cross-encoder" if cross is not None else "fused rank",
+    }
     out, _ = _apply_voltage_filter(query, out)
     _rank_candidates(out)
     return out
@@ -621,6 +631,7 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
             "high_confidence": HIGH_CONFIDENCE,
         },
         "candidates": candidates[:5],
+        "retrieval": dict(_state.get("last_trace") or {}, returned=len(candidates)),
         "voltage_filter": voltage_filter,
         "material_filter": material_filter,
         "role_filter": role_filter,

@@ -489,6 +489,10 @@ async function runForward() {
   if (!q) { toast('Enter some specification text first', 'bad'); return; }
   btn.disabled = true; btn.innerHTML = `<span class="spin"></span> Retrieving…`;
   out.innerHTML = `<div class="card"><div class="in"><div class="skel" style="height:90px"></div></div></div>`;
+  // The peer panel belongs to the previous answer. Leaving it up while a new
+  // query runs shows one specification's evidence under another's result.
+  const peers = $('#fw-peers');
+  if (peers) peers.innerHTML = '';
   try {
     S.fw = await api('/recommend', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -510,8 +514,65 @@ const provRow = c => `<tr class="hit" data-go="${esc(c.is_number)}">
       : '<span class="dimmer">—</span>'}</td>
   <td class="rowgo">${ic('arrow','sm')}</td></tr>`;
 
+/* The path an answer took, drawn from the response before the answer itself.
+   Every figure here is one the system reported about its own run — the depth
+   each retriever reached, the size of the fused set, which filters demoted
+   something, what the gate compared. A stage that cannot say what it did does
+   not get a pill, and when the gate declines the rail ends at a red stop, so
+   an abstention reads as a decision rather than a failure. */
+
+function traceRail(d) {
+  const r = d.retrieval || {};
+  const hindi = d.language && d.language.hindi_titles_searched;
+  const steps = [];
+  const pill = (k, v, cls) =>
+    `<div class="tpill ${cls || ''}"><span class="tk">${esc(k)}</span><span class="tv">${esc(v)}</span></div>`;
+
+  steps.push(pill('Query', `${(d.query || '').length} chars`));
+
+  if (r.dense_depth || r.bm25_depth) {
+    const pair = [];
+    if (hindi) {
+      pair.push(pill('BIS Hindi titles', `${d.language.hindi_title_hits || 0} matched`, 'par'));
+    }
+    if (r.dense_depth) pair.push(pill('Dense · MiniLM', `top ${r.dense_depth}`, 'par'));
+    if (r.bm25_depth) pair.push(pill('BM25 · lexical', `top ${r.bm25_depth}`, 'par'));
+    steps.push(pair.join('<span class="tsep"></span>'));
+  }
+  if (r.fused_candidates) steps.push(pill('Fused · RRF', `${r.fused_candidates} candidates`));
+  if (r.reranked) steps.push(pill(r.reranker === 'cross-encoder' ? 'Reranked' : 'Ranked',
+                                  `${r.reranked} scored`));
+
+  // A filter pill appears only when the filter ran, and turns amber only when
+  // it actually moved something. "Applied, demoted 0" is not an intervention.
+  [['voltage_filter', 'Voltage'], ['material_filter', 'Material'], ['role_filter', 'Document role']]
+    .forEach(([key, label]) => {
+      const f = d[key];
+      if (!f || !f.applied) return;
+      const n = f.demoted || 0;
+      steps.push(pill(label, n ? `${n} demoted` : 'no change', n ? 'acted' : ''));
+    });
+
+  const abstained = d.decision === 'abstain';
+  steps.push(pill('Confidence gate',
+    abstained ? String(d.reason || 'abstain').replace(/_/g, ' ') : `≥ ${d.thresholds.top_score}`,
+    abstained ? 'stop' : 'ok'));
+  if (!abstained && d.governing) {
+    steps.push(pill('Answer', d.governing.is_number, 'ok'));
+  }
+
+  const body = steps.map((sHtml, i) =>
+    `<div class="tstep" style="animation-delay:${i * 40}ms">${sHtml}</div>`)
+    .join('<span class="tsep"></span>');
+
+  const note = abstained
+    ? 'The gate stopped here. Nothing below was ruled out by judgement — it was not judged good enough to show.'
+    : `Every figure on this rail is one the system reported about this run.`;
+  return `<div class="trace">${body}<div class="tnote">${esc(note)}</div></div>`;
+}
+
 function renderForward(d) {
-  let h = '';
+  let h = traceRail(d);
 
   // Say what we actually read and what we actually ranked, before the answer.
   // An abstention on a clipped query would otherwise read as "nothing matches".

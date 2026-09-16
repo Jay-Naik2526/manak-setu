@@ -71,6 +71,15 @@
 
   --k1:#135A73; --k2:#C25A0D; --k3:#1B6E30; --k4:#0E7078;
   --k5:#6B4C9A; --k6:#96731A; --k7:#A34468; --k8:#5B6B7C;
+
+  /* Motion. Durations and easings live here so every animation in the product
+     is timed against the same scale, and so one edit changes all of them.
+     The rules that go with them: animate transform and opacity only; enter
+     animations run once, never on every scroll; anything with more than a
+     couple of hundred elements is drawn on a canvas, not the DOM. */
+  --t-fast: 120ms; --t-base: 200ms; --t-slow: 320ms; --t-reveal: 600ms;
+  --ease-out: cubic-bezier(.2,.7,.2,1); --ease-in-out: cubic-bezier(.65,0,.35,1);
+  --stagger: 40ms;
 }
 
 [data-theme="dark"] {
@@ -968,3 +977,48 @@ blockquote.clause-suggest {
 .loadmore { display: flex; justify-content: center; padding: 11px 0 3px; }
 .loadmore:empty { display: none; }
 .loadmore .dimmer { margin-left: 6px; font-size: 11px; }
+
+
+/* ── retrieval trace rail ────────────────────────────────────────────────────
+   The path an answer took, drawn before the answer itself. Every number on it
+   is read from the response: how deep each retriever went, how many candidates
+   the fusion produced, which filters demoted something and how many, and what
+   the gate compared. It is the system's own explanation, not a decoration —
+   if a stage cannot state what it did, it does not get a pill. */
+
+.trace { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+         margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--line);
+         border-radius: var(--r-2); background: var(--surface-2); }
+.trace .tstep { display: flex; align-items: center; gap: 8px;
+                animation-delay: inherit; }
+.trace .tstep > .tpill, .trace .tstep .tpill { animation-delay: inherit; }
+.trace .tsep { width: 16px; height: 1px; background: var(--line-hard); align-self: center;
+               margin: 0 3px; flex: 0 0 auto; }
+.trace .tpill { display: inline-flex; flex-direction: column; gap: 1px;
+                padding: 5px 9px; border-radius: var(--r-1); border: 1px solid var(--line);
+                background: var(--surface); min-width: 0;
+                opacity: 0; transform: translateY(4px);
+                animation: traceIn var(--t-base) var(--ease-out) forwards; }
+.trace .tpill .tk { font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase;
+                    color: var(--ink-3); font-weight: 700; white-space: nowrap; }
+.trace .tpill .tv { font: 500 11.5px/1.25 'JetBrains Mono', ui-monospace, monospace;
+                    font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+.trace .tpill.acted { border-color: var(--amber); background: var(--amber-bg); }
+.trace .tpill.acted .tk { color: var(--amber); }
+.trace .tpill.stop { border-color: var(--bad); background: var(--bad-bg); }
+.trace .tpill.stop .tk { color: var(--bad); }
+.trace .tpill.ok { border-color: var(--ok); background: var(--ok-bg); }
+.trace .tpill.ok .tk { color: var(--ok); }
+.trace .tpill.par { border-style: dashed; }
+.trace .tnote { flex-basis: 100%; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
+
+@keyframes traceIn { to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .trace .tpill { animation: none; opacity: 1; transform: none; }
+}
+
+@media (max-width: 860px) {
+  .trace { gap: 6px; }
+  .trace .tsep { display: none; }
+}
