@@ -962,3 +962,9 @@ blockquote.clause-suggest {
   font-size: 12.5px; line-height: 1.62; color: var(--ink);
 }
 .edit .btn.tiny { margin-top: 8px; }
+
+/* Paged tables: the control that fetches the next page. Centred under the
+   table so it reads as "there is more", not as a toolbar action. */
+.loadmore { display: flex; justify-content: center; padding: 11px 0 3px; }
+.loadmore:empty { display: none; }
+.loadmore .dimmer { margin-left: 6px; font-size: 11px; }

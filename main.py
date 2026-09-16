@@ -228,8 +228,14 @@ def graph(nodes: int | None = None, edges: int | None = None, min_count: int = 0
 
 
 @app.get("/standards")
-def standards():
-    return list_standards()
+def standards(q: str = "", status: str = "", family: str = "", sort: str = "",
+              descending: bool = False, limit: int = 100, offset: int = 0):
+    """One page of the register, searched and filtered in SQL.
+
+    This used to return all 27,687 rows — 10.2 MB — so the browser could show
+    the first 250."""
+    return list_standards(q=q, status=status, family=family, sort=sort,
+                          descending=descending, limit=limit, offset=offset)
 
 
 @app.get("/standard")
@@ -238,13 +244,67 @@ def standard(is_number: str):
 
 
 @app.get("/certifications")
-def certifications():
-    return list_certifications()
+def certifications(q: str = "", scheme: str = "", family: str = "", sort: str = "",
+                   descending: bool = False, limit: int = 100, offset: int = 0):
+    return list_certifications(q=q, scheme=scheme, family=family, sort=sort,
+                               descending=descending, limit=limit, offset=offset)
 
 
 @app.get("/tenders")
-def tenders():
-    return list_tenders()
+def tenders(q: str = "", usability: str = "", family: str = "", sort: str = "",
+            descending: bool = False, limit: int = 100, offset: int = 0):
+    return list_tenders(q=q, usability=usability, family=family, sort=sort,
+                        descending=descending, limit=limit, offset=offset)
+
+
+@app.get("/tender")
+def tender(tender_id: str):
+    """One document in full — the corpus drawer used to search the whole table
+    in the browser to find it."""
+    from engine import get_tender
+
+    return get_tender(tender_id)
+
+
+@app.get("/export/{table}.csv")
+def export_csv(table: str):
+    """The whole table, streamed.
+
+    The views page now, but an export is still an export: the officer who clicks
+    CSV wants every row, and streaming means the server never holds them either."""
+    import csv
+    import io
+    import sqlite3
+
+    from fastapi.responses import StreamingResponse
+
+    allowed = {"standards", "tenders", "certification_rules", "co_citation",
+               "coverage_gap_backlog"}
+    if table not in allowed:
+        raise HTTPException(status_code=404, detail=f"no exportable table named {table!r}")
+
+    def rows():
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.execute(f"SELECT * FROM {table}")
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            first = cursor.fetchone()
+            if first is None:
+                return
+            writer.writerow(first.keys())
+            yield buf.getvalue(); buf.seek(0); buf.truncate(0)
+            for row in [first] + cursor.fetchall():
+                writer.writerow([row[k] for k in row.keys()])
+                yield buf.getvalue(); buf.seek(0); buf.truncate(0)
+        finally:
+            conn.close()
+
+    return StreamingResponse(
+        rows(), media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="manak-setu-{table}.csv"'},
+    )
 
 
 @app.get("/backlog")

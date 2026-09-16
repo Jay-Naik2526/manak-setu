@@ -109,7 +109,7 @@ def build() -> dict:
                 has_dead = True
                 dead_by_doc[hit["is_number"]] += 1
         if has_dead:
-            documents_with_dead += 1
+            documents_with_dead += 1  # cross-checked against engine.dead_citation_documents
             by_year[year][1] += 1
             by_family[fam][1] += 1
         if has_unresolved:

@@ -114,7 +114,12 @@ def match_spec(query_text: str, top_k: int = 5) -> dict:
     scores = embeddings @ query_vec
 
     top_idx = np.argsort(scores)[::-1][:top_k]
-    matches = [{"is_number": is_numbers[i], "score": round(float(scores[i]), 4)} for i in top_idx]
+    # The title travels with the match. The page used to look it up in a copy of
+    # the whole register held in the browser, which is part of why the whole
+    # register was being downloaded.
+    titles = standard_titles([is_numbers[i] for i in top_idx])
+    matches = [{"is_number": is_numbers[i], "score": round(float(scores[i]), 4),
+                "title": titles.get(is_numbers[i], "")} for i in top_idx]
 
     top_score = matches[0]["score"] if matches else 0.0
     confidence = _confidence_label(top_score)
@@ -341,55 +346,187 @@ def standard_titles(is_numbers: list[str]) -> dict[str, str]:
     return out
 
 
-def list_standards() -> list[dict]:
+# The register grew from 2,087 rows to 27,687 and these endpoints did not
+# change: /standards served 10.2 MB and /tenders 3.4 MB, the browser parsed all
+# of it, and each view then displayed the first 250 rows. Searching, filtering
+# and paging belong in SQL, where an index can do them.
+LIST_PAGE_DEFAULT = 100
+LIST_PAGE_MAX = 500
+
+
+def _facets(conn, table: str, columns: tuple[str, ...]) -> dict[str, list[str]]:
+    """Distinct values for the filter dropdowns.
+
+    They used to be derived in the browser from the whole table, which is one of
+    the reasons the whole table had to be downloaded."""
+    out = {}
+    for col in columns:
+        out[col] = [
+            r[0] for r in conn.execute(
+                f'SELECT DISTINCT "{col}" FROM {table} '
+                f'WHERE TRIM(COALESCE("{col}", "")) NOT IN ("", "N/A", "nan") '
+                f'ORDER BY "{col}"'
+            )
+        ]
+    return out
+
+
+def _page(conn, table: str, columns: tuple[str, ...], *,
+          q: str = "", search_columns: tuple[str, ...] = (),
+          filters: dict[str, str] | None = None,
+          sort: str = "", descending: bool = False,
+          limit: int = LIST_PAGE_DEFAULT, offset: int = 0,
+          facet_columns: tuple[str, ...] = ()) -> dict:
+    """One page of a table, with the total the page was drawn from."""
+    limit = max(1, min(int(limit or LIST_PAGE_DEFAULT), LIST_PAGE_MAX))
+    offset = max(0, int(offset or 0))
+
+    where, params = [], []
+    for col, value in (filters or {}).items():
+        if value:
+            where.append(f'"{col}" = ?')
+            params.append(value)
+
+    term = (q or "").strip()
+    if term and search_columns:
+        clauses = [f'"{c}" LIKE ? COLLATE NOCASE' for c in search_columns]
+        params += [f"%{term}%"] * len(search_columns)
+        # "IS:694", "IS 694" and "694" are the same citation, so a search for
+        # any of them finds the row. Same normalisation the resolver uses.
+        digits = _is_digits(term) or _re_module.sub(r"[^0-9]", "", term)
+        if digits and "IS Digits" in _columns(conn, table):
+            clauses.append('"IS Digits" = ?')
+            params.append(digits)
+        where.append("(" + " OR ".join(clauses) + ")")
+
+    sql_where = (" WHERE " + " AND ".join(where)) if where else ""
+    total = conn.execute(f"SELECT COUNT(*) FROM {table}{sql_where}", params).fetchone()[0]
+
+    order = ""
+    if sort and sort in columns:
+        order = f' ORDER BY "{sort}" {"DESC" if descending else "ASC"}'
+    picked = ", ".join(f'"{c}"' for c in columns)
+    rows = conn.execute(
+        f"SELECT {picked} FROM {table}{sql_where}{order} LIMIT ? OFFSET ?",
+        params + [limit, offset],
+    ).fetchall()
+
+    out = {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "rows": [{k: _display(r[k]) for k in r.keys()} for r in rows],
+    }
+    if facet_columns and offset == 0:
+        out["facets"] = _facets(conn, table, facet_columns)
+    return out
+
+
+def _columns(conn, table: str) -> set[str]:
+    return {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def list_standards(q: str = "", status: str = "", family: str = "",
+                   sort: str = "", descending: bool = False,
+                   limit: int = LIST_PAGE_DEFAULT, offset: int = 0) -> dict:
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            'SELECT "IS Number", "Full Title", "Year", "Status", "Replaced By", '
-            '"Supersedes", "Product Family", "Priority", "Source Link" FROM standards'
-        ).fetchall()
-        return [{k: _display(row[k]) for k in row.keys()} for row in rows]
+        return _page(
+            conn, "standards",
+            ("IS Number", "Full Title", "Year", "Status", "Replaced By", "Product Family"),
+            q=q, search_columns=("IS Number", "Full Title"),
+            filters={"Status": status, "Product Family": family},
+            sort=sort, descending=descending, limit=limit, offset=offset,
+            facet_columns=("Status", "Product Family"),
+        )
     finally:
         conn.close()
 
 
-def list_certifications() -> list[dict]:
+def list_certifications(q: str = "", scheme: str = "", family: str = "",
+                        sort: str = "", descending: bool = False,
+                        limit: int = LIST_PAGE_DEFAULT, offset: int = 0) -> dict:
     conn = _get_conn()
     try:
-        rows = conn.execute("SELECT * FROM certification_rules").fetchall()
-        return [{k: _display(row[k]) for k in row.keys()} for row in rows]
+        page = _page(
+            conn, "certification_rules",
+            ("IS Number", "Product Description", "BIS Product Category",
+             "Certification Mandatory", "Scheme", "Notification Reference"),
+            q=q, search_columns=("IS Number", "Product Description", "Scheme"),
+            filters={"Scheme": scheme, "Product Family": family},
+            sort=sort, descending=descending, limit=limit, offset=offset,
+            facet_columns=("Scheme", "Product Family"),
+        )
+        # The stored reference is the order plus its whole amendment history —
+        # up to 2,771 characters. The table shows the order.
+        for row in page["rows"]:
+            full = row.get("Notification Reference") or ""
+            row["Notification History"] = full
+            row["Notification Reference"] = _primary_notification(full) or "N/A"
+        return page
     finally:
         conn.close()
 
 
-def list_tenders() -> list[dict]:
-    """Every tender, with a readable name derived from its filename.
-
-    "Tender ID" stays exactly as collected — it is what links to the source
-    document. "Title" is a formatting of it, and "title_derived" says whether the
-    filename actually carried words, so the UI never presents an invented subject
-    as if it were the document's real title."""
+def _tender_title(row) -> tuple[str, bool]:
+    """GeM prints the bid's own product line; that is the document's real name.
+    A filename-derived title is the fallback, and `derived` says which."""
     from tender_titles import display_title
 
+    keys = row.keys()
+    category = (row["Item Category"] if "Item Category" in keys else "") or ""
+    if str(category).strip() and str(category).strip().lower() != "nan":
+        return str(category).strip(), True
+    name = display_title(row["Tender ID"], row["Product Family"])
+    return name["title"], name["derived"]
+
+
+def list_tenders(q: str = "", usability: str = "", family: str = "",
+                 sort: str = "", descending: bool = False,
+                 limit: int = LIST_PAGE_DEFAULT, offset: int = 0) -> dict:
     conn = _get_conn()
     try:
-        rows = conn.execute("SELECT * FROM tenders").fetchall()
-        out = []
-        for row in rows:
-            d = {k: _display(row[k]) for k in row.keys()}
-            # GeM bids carry their own product line ("Item Category") as the
-            # portal prints it. That is the document's real name, so it is used
-            # as-is; a filename-derived title is the fallback for the rest.
-            category = (row["Item Category"] if "Item Category" in row.keys() else "") or ""
-            if str(category).strip() and str(category).strip().lower() != "nan":
-                d["Title"] = str(category).strip()
-                d["title_derived"] = True
-            else:
-                name = display_title(row["Tender ID"], row["Product Family"])
-                d["Title"] = name["title"]
-                d["title_derived"] = name["derived"]
-            out.append(d)
-        return out
+        cols = _columns(conn, "tenders")
+        picked = tuple(c for c in (
+            "Tender ID", "Product Family", "Count", "Any Outdated", "Usability",
+            "Item Category", "Source Link", "IS Numbers Cited",
+        ) if c in cols)
+        search = tuple(c for c in ("Tender ID", "Item Category", "Product Family") if c in cols)
+        page = _page(
+            conn, "tenders", picked,
+            q=q, search_columns=search,
+            filters={"Usability": usability, "Product Family": family},
+            sort=sort, descending=descending, limit=limit, offset=offset,
+            facet_columns=("Usability", "Product Family"),
+        )
+        raw = {r["Tender ID"]: r for r in conn.execute(
+            f'SELECT * FROM tenders WHERE "Tender ID" IN '
+            f'({",".join("?" * len(page["rows"]))})',
+            [r["Tender ID"] for r in page["rows"]],
+        )} if page["rows"] else {}
+        for row in page["rows"]:
+            source = raw.get(row["Tender ID"])
+            title, derived = _tender_title(source) if source is not None else (row["Tender ID"], False)
+            row["Title"] = title
+            row["title_derived"] = derived
+        return page
+    finally:
+        conn.close()
+
+
+def get_tender(tender_id: str) -> dict:
+    """One tender in full — what the corpus drawer needs without the corpus."""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            'SELECT * FROM tenders WHERE "Tender ID" = ?', (tender_id,)
+        ).fetchone()
+        if row is None:
+            return {"found": False, "tender_id": tender_id}
+        d = {k: _display(row[k]) for k in row.keys()}
+        d["Title"], d["title_derived"] = _tender_title(row)
+        d["found"] = True
+        return d
     finally:
         conn.close()
 
@@ -431,6 +568,47 @@ def _count_by(conn, table: str, column: str) -> list[dict]:
         f'GROUP BY "{column}" ORDER BY n DESC'
     ).fetchall()
     return [{"key": r["k"] if r["k"] is not None else "N/A", "count": r["n"]} for r in rows]
+
+
+def dead_citation_documents(conn=None) -> int:
+    """Machine-readable documents citing a standard BIS has withdrawn or
+    superseded, counted against the register as it is now.
+
+    The corpus carries an "Any Outdated" flag written when each document was
+    collected, and it is stale by construction: the catalogue harvest took the
+    register from 2,087 standards to 27,687, so citations that could not be
+    resolved then resolve now — and 147 documents that the flag calls clean are
+    not. The Tenders screen read the flag and the health index computed this,
+    which is two numbers for one fact. Both now call here.
+    """
+    close = conn is None
+    conn = conn or _get_conn()
+    try:
+        dead = {
+            r["IS Base"] for r in conn.execute(
+                'SELECT "IS Base" FROM standards WHERE "Status" IN ("Withdrawn", "Superseded")'
+            ) if r["IS Base"]
+        }
+        current = {
+            r["IS Base"] for r in conn.execute(
+                'SELECT "IS Base" FROM standards WHERE "Status" = "Current"'
+            ) if r["IS Base"]
+        }
+        count = 0
+        for (cited,) in conn.execute(
+            'SELECT "IS Numbers Cited" FROM tenders WHERE "Usability" = ?', ("Usable",)
+        ):
+            for citation in {c.strip() for c in str(cited or "").split(";") if c.strip()}:
+                base = _is_base(citation)
+                # A base with a Current edition is not dead: one withdrawn part
+                # of IS 1554 does not make every citation of IS 1554 outdated.
+                if base in dead and base not in current:
+                    count += 1
+                    break
+        return count
+    finally:
+        if close:
+            conn.close()
 
 
 def corpus_stats() -> dict:
@@ -512,9 +690,9 @@ def corpus_stats() -> dict:
             "certs_by_mandatory": _count_by(conn, "certification_rules", "Certification Mandatory"),
             "coverage": {
                 "usable_tenders": len(usable_rows),
-                "any_outdated": conn.execute(
-                    'SELECT COUNT(*) FROM tenders WHERE "Any Outdated" = ?', ("Yes",)
-                ).fetchone()[0],
+                # Computed against the register as it is now, not read from the
+                # flag stored at collection time — see dead_citation_documents.
+                "any_outdated": dead_citation_documents(conn),
                 "distinct_cited": len(cited),
                 "matched": len(matched),
                 "unmatched": len(cited) - len(matched),

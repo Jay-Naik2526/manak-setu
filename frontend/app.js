@@ -764,10 +764,15 @@ async function preset_(kind) {
     box.innerHTML = `<div class="note ok" style="margin:11px 0 0">${ic('check')}<div>Verbatim ${esc(CLAUSE[kind].name)} clause from a tender PDF · ${r.citations.length} citations read.</div></div>`;
     return;
   }
-  if (!S.tenders) { try { S.tenders = await api('/tenders'); } catch (_) { return; } }
+  // One document, chosen by the server. This used to download the whole corpus
+  // and search it in memory.
+  const params = new URLSearchParams({ usability: 'Usable', limit: '120' });
+  if (kind !== 'outdated') params.set('family', 'Electrical cables and wiring');
+  let page = null;
+  try { page = await api('/tenders?' + params); } catch (_) { return; }
   const row = kind === 'outdated'
-    ? S.tenders.find(t => t.Usability === 'Usable' && t['Any Outdated'] === 'Yes')
-    : S.tenders.find(t => t.Usability === 'Usable' && /cable/i.test(t['Product Family'] || '') && (t['IS Numbers Cited'] || '').split(';').length > 4);
+    ? (page.rows || []).find(t => t['Any Outdated'] === 'Yes')
+    : (page.rows || []).find(t => (t['IS Numbers Cited'] || '').split(';').length > 4);
   if (!row) { box.innerHTML = `<div class="note warn" style="margin:11px 0 0">${ic('alert')}<div>No matching document in the corpus.</div></div>`; return; }
   const cites = (row['IS Numbers Cited'] || '').split(';').map(s => s.trim()).filter(Boolean);
   S.chips = []; addChips(cites); $('#spec').value = '';
@@ -839,9 +844,8 @@ function renderAudit(d) {
       ${m.message ? `<div class="in" style="padding-bottom:0"><div class="note warn">${ic('alert')}<div>${esc(m.message)}</div></div></div>` : ''}
       <div class="scroll"><table><thead><tr><th>IS Number</th><th>Title</th><th class="r">Similarity</th><th></th></tr></thead><tbody>
       ${m.matches.map(x => {
-        const s = (S.standards || []).find(v => v['IS Number'] === x.is_number);
         return `<tr class="hit" data-go="${esc(x.is_number)}"><td class="mono">${esc(x.is_number)}</td>
-          <td>${esc(s ? s['Full Title'] : '—')}</td><td class="mono r">${x.score.toFixed(4)}</td>
+          <td>${esc(x.title || '—')}</td><td class="mono r">${x.score.toFixed(4)}</td>
           <td class="rowgo">${ic('arrow','sm')}</td></tr>`;
       }).join('')}</tbody></table></div>
       <div class="ft">Cosine similarity over embeddings of ${S.stats ? S.stats.row_counts.standards : ''} held standards. Returns existing rows only.</div>
@@ -1118,6 +1122,66 @@ const capped = (rows, total, label) => {
 
 const sorts = {};
 
+/* ── paged tables ───────────────────────────────────────────────────────────
+   Standards, Tenders and Certifications each used to download their whole
+   table — 10.2 MB, 3.4 MB and 952 KB — parse it, and display the first 250
+   rows. Searching and filtering ran over the copy in memory.
+
+   Now the server does all three in SQL and returns a page with the total it
+   was drawn from, so the view holds what it shows. The filter dropdowns are
+   filled from facets the first page carries, because deriving them in the
+   browser was the other reason the whole table had to arrive. */
+
+function pagedTable(cfg) {
+  const st = { rows: [], total: 0, busy: false, facets: null };
+
+  const url = (offset) => {
+    const p = new URLSearchParams(cfg.params());
+    const sort = sorts[cfg.key];
+    if (sort) { p.set('sort', sort.k); if (sort.dir === 'desc') p.set('descending', 'true'); }
+    p.set('limit', cfg.pageSize || 100);
+    p.set('offset', offset);
+    return `${cfg.endpoint}?${p}`;
+  };
+
+  async function fetchPage(offset) {
+    if (st.busy) return;
+    st.busy = true;
+    try {
+      const page = await api(url(offset));
+      st.total = page.total;
+      st.rows = offset === 0 ? page.rows : st.rows.concat(page.rows);
+      if (page.facets && !st.facets) { st.facets = page.facets; cfg.onFacets?.(page.facets); }
+      cfg.render(st.rows, st.total);
+      renderMore();
+    } catch (e) {
+      $(cfg.countSel).innerHTML = offline(e.message);
+    } finally {
+      st.busy = false;
+    }
+  }
+
+  function renderMore() {
+    const host = $(cfg.moreSel);
+    if (!host) return;
+    const shown = st.rows.length;
+    if (shown >= st.total) { host.innerHTML = ''; return; }
+    host.innerHTML = `<button class="btn q" id="${cfg.key}-more">
+      Load ${Math.min(cfg.pageSize || 100, st.total - shown)} more
+      <span class="dimmer">· ${shown.toLocaleString()} of ${st.total.toLocaleString()}</span></button>`;
+    $(`#${cfg.key}-more`).onclick = () => fetchPage(shown);
+  }
+
+  // A keystroke must not become a request. 250 ms is long enough that typing an
+  // IS number sends one query rather than eight, and short enough to feel live.
+  let timer = null;
+  const reload = () => fetchPage(0);
+  const debounced = () => { clearTimeout(timer); timer = setTimeout(reload, 250); };
+  return { reload, debounced, state: st };
+}
+
+
+
 function sortable(tblSel, rows, key) {
   const s = sorts[key];
   if (!s) return rows;
@@ -1156,42 +1220,59 @@ function filterChips(target, entries, onClear) {
 
 /* ── tenders ───────────────────────────────────────────────────────────── */
 
+let tenderTable = null;
+
 async function loadTenders() {
-  if (ready.has('tenders')) return drawTenders();
-  try { if (!S.tenders) S.tenders = await api('/tenders'); }
-  catch (e) { $('#td-n').innerHTML = offline(e.message); return; }
+  if (ready.has('tenders')) return tenderTable.reload();
   ready.add('tenders');
-  fillSel('#td-use', [...new Set(S.tenders.map(t => t.Usability))].filter(Boolean).sort());
-  fillSel('#td-fam', [...new Set(S.tenders.map(t => t['Product Family']))].filter(v => v && v !== 'N/A').sort());
 
-  const use = S.tenders.filter(t => t.Usability === 'Usable');
-  $('#td-kpis').innerHTML = [
-    { label: 'Documents collected', value: S.tenders.length, sub: 'source: public tender portals', icon: 'files' },
-    { label: 'Text extractable', value: use.length, sub: 'basis for all figures', tone: 'ok', icon: 'check' },
-    { label: 'Dead citations recorded', value: use.filter(t => t['Any Outdated'] === 'Yes').length, sub: 'ground truth in corpus', tone: 'bad', icon: 'alert' },
-    { label: 'Unverified', value: use.filter(t => t['Any Outdated'] === 'Not checked').length, sub: `${use.filter(t => t['Any Outdated'] === 'No').length} confirmed clean`, icon: 'target' },
-  ].map(kpi).join('');
-  runCounts();
+  // Corpus totals come from /stats, which counts them in SQL. They used to be
+  // derived by filtering the whole table in the browser.
+  try {
+    const st = S.stats || (S.stats = await api('/stats'));
+    const byUse = Object.fromEntries((st.tenders_by_usability || []).map(r => [r.key, r.count]));
+    const usable = st.coverage.usable_tenders;
+    $('#td-kpis').innerHTML = [
+      { label: 'Documents collected', value: st.row_counts.tenders, sub: 'source: public tender portals', icon: 'files' },
+      { label: 'Text extractable', value: usable, sub: 'basis for all figures', tone: 'ok', icon: 'check' },
+      { label: 'Cite a dead standard', value: st.coverage.any_outdated,
+        sub: `of ${usable.toLocaleString()} readable · checked against the register now`,
+        tone: 'bad', icon: 'alert' },
+      { label: 'Not extractable', value: (byUse['Not extractable'] || 0), sub: 'scans and image-only PDFs', icon: 'target' },
+    ].map(kpi).join('');
+    runCounts();
+  } catch (_) { /* the table still works without the headline figures */ }
 
-  ['#td-q', '#td-use', '#td-fam', '#td-out'].forEach(s => $(s).addEventListener('input', drawTenders));
-  wireSort('#td-tbl', 'td', drawTenders);
-  drawTenders();
+  tenderTable = pagedTable({
+    key: 'td', endpoint: '/tenders', countSel: '#td-n', moreSel: '#td-more',
+    params: () => ({ q: $('#td-q').value.trim(), usability: $('#td-use').value,
+                     family: $('#td-fam').value }),
+    onFacets: f => { fillSel('#td-use', f.Usability); fillSel('#td-fam', f['Product Family']); },
+    render: drawTenders,
+  });
+  $('#td-q').addEventListener('input', tenderTable.debounced);
+  ['#td-use', '#td-fam', '#td-out'].forEach(x => $(x).addEventListener('change', tenderTable.reload));
+  wireSort('#td-tbl', 'td', () => tenderTable.reload());
+  tenderTable.reload();
 }
 
-function drawTenders() {
-  const q = $('#td-q').value.trim().toLowerCase();
+function drawTenders(rows, total) {
   const u = $('#td-use').value, f = $('#td-fam').value, o = $('#td-out').value;
-  let rows = S.tenders.filter(t =>
-    (!u || t.Usability === u) && (!f || t['Product Family'] === f) && (!o || t['Any Outdated'] === o) &&
-    (!q || `${t.Title || ''} ${t['Tender ID']} ${t['IS Numbers Cited']}`.toLowerCase().includes(q)));
-  rows = sortable('#td-tbl', rows, 'td');
-  $('#td-n').textContent = `${rows.length} of ${S.tenders.length} documents`;
+  // "Dead cites" has no column in the tenders table to filter on server-side,
+  // so it narrows the page that arrived. The count says which set it describes
+  // rather than implying it searched the corpus.
+  const shown = o ? rows.filter(t => t['Any Outdated'] === o) : rows;
+  $('#td-n').textContent = o
+    ? `${shown.length.toLocaleString()} of the ${rows.length.toLocaleString()} loaded (corpus: ${total.toLocaleString()})`
+    : rows.length === total
+      ? `${total.toLocaleString()} documents`
+      : `${rows.length.toLocaleString()} of ${total.toLocaleString()} documents`;
   filterChips('#td-chips', [
     { label: 'Extractability', v: u, sel: '#td-use' }, { label: 'Family', v: f, sel: '#td-fam' },
     { label: 'Dead cites', v: o, sel: '#td-out' },
-  ], drawTenders);
+  ], () => tenderTable.reload());
 
-  $('#td-tbl tbody').innerHTML = rows.slice(0, 300).map(t => {
+  $('#td-tbl tbody').innerHTML = shown.map(t => {
     const od = t['Any Outdated'];
     const pill = od === 'Yes' ? '<span class="pill bad">yes</span>' : od === 'No' ? '<span class="pill ok">no</span>' : '<span class="pill mute">unchecked</span>';
     return `<tr class="hit" data-t="${esc(t['Tender ID'])}">
@@ -1209,8 +1290,8 @@ function drawTenders() {
 }
 
 async function openTender(id) {
-  const t = S.tenders.find(x => x['Tender ID'] === id);
-  if (!t) return;
+  const t = await api('/tender?tender_id=' + encodeURIComponent(id)).catch(() => null);
+  if (!t || !t.found) return;
   const cites = (t['IS Numbers Cited'] || '').split(';').map(s => s.trim()).filter(Boolean);
   drawer('Tender document', t.Title || id, `
     <dl class="kv">
@@ -1254,30 +1335,33 @@ async function openTender(id) {
 
 /* ── standards ─────────────────────────────────────────────────────────── */
 
+let stdTable = null;
+
 async function loadStandards() {
-  if (ready.has('standards')) return drawStandards();
-  try { if (!S.standards) S.standards = await api('/standards'); }
-  catch (e) { $('#st-n').innerHTML = offline(e.message); return; }
+  if (ready.has('standards')) return stdTable.reload();
   ready.add('standards');
-  fillSel('#st-status', [...new Set(S.standards.map(s => s.Status))].filter(Boolean).sort());
-  fillSel('#st-fam', [...new Set(S.standards.map(s => s['Product Family']))].filter(v => v && v !== 'N/A').sort());
-  ['#st-q', '#st-status', '#st-fam'].forEach(s => $(s).addEventListener('input', drawStandards));
-  wireSort('#st-tbl', 'st', drawStandards);
-  drawStandards();
+  stdTable = pagedTable({
+    key: 'st', endpoint: '/standards', countSel: '#st-n', moreSel: '#st-more',
+    params: () => ({ q: $('#st-q').value.trim(), status: $('#st-status').value,
+                     family: $('#st-fam').value }),
+    onFacets: f => { fillSel('#st-status', f.Status); fillSel('#st-fam', f['Product Family']); },
+    render: drawStandards,
+  });
+  ['#st-q'].forEach(x => $(x).addEventListener('input', stdTable.debounced));
+  ['#st-status', '#st-fam'].forEach(x => $(x).addEventListener('change', stdTable.reload));
+  wireSort('#st-tbl', 'st', () => stdTable.reload());
+  stdTable.reload();
 }
 
-function drawStandards() {
-  const q = $('#st-q').value.trim().toLowerCase();
+function drawStandards(rows, total) {
   const st = $('#st-status').value, f = $('#st-fam').value;
-  let rows = S.standards.filter(s =>
-    (!st || s.Status === st) && (!f || s['Product Family'] === f) &&
-    (!q || `${s['IS Number']} ${s['Full Title']}`.toLowerCase().includes(q)));
-  rows = sortable('#st-tbl', rows, 'st');
-  const cap = capped(rows, S.standards.length, 'standards');
-  $('#st-n').textContent = cap.label;
-  filterChips('#st-chips', [{ label: 'Status', v: st, sel: '#st-status' }, { label: 'Family', v: f, sel: '#st-fam' }], drawStandards);
+  $('#st-n').textContent = rows.length === total
+    ? `${total.toLocaleString()} standards`
+    : `${rows.length.toLocaleString()} of ${total.toLocaleString()} standards`;
+  filterChips('#st-chips', [{ label: 'Status', v: st, sel: '#st-status' },
+                            { label: 'Family', v: f, sel: '#st-fam' }], () => stdTable.reload());
 
-  $('#st-tbl tbody').innerHTML = cap.rows.map(s => `
+  $('#st-tbl tbody').innerHTML = rows.map(s => `
     <tr class="hit" data-s="${esc(s['IS Number'])}">
       <td class="mono">${esc(s['IS Number'])}</td>
       <td style="max-width:430px">${esc(s['Full Title'])}</td>
@@ -1331,36 +1415,39 @@ async function openStandard(id) {
 
 /* ── certifications ────────────────────────────────────────────────────── */
 
+let certTable = null;
+
 async function loadCerts() {
-  if (ready.has('certs')) return drawCerts();
-  try { if (!S.certs) S.certs = await api('/certifications'); }
-  catch (e) { $('#ce-n').innerHTML = offline(e.message); return; }
+  if (ready.has('certs')) return certTable.reload();
   ready.add('certs');
-  fillSel('#ce-scheme', [...new Set(S.certs.map(c => c.Scheme))].filter(Boolean).sort());
-  fillSel('#ce-fam', [...new Set(S.certs.map(c => c['Product Family']))].filter(v => v && v !== 'N/A').sort());
-  ['#ce-q', '#ce-scheme', '#ce-fam'].forEach(s => $(s).addEventListener('input', drawCerts));
-  wireSort('#ce-tbl', 'ce', drawCerts);
-  drawCerts();
+  certTable = pagedTable({
+    key: 'ce', endpoint: '/certifications', countSel: '#ce-n', moreSel: '#ce-more',
+    params: () => ({ q: $('#ce-q').value.trim(), scheme: $('#ce-scheme').value,
+                     family: $('#ce-fam').value }),
+    onFacets: f => { fillSel('#ce-scheme', f.Scheme); fillSel('#ce-fam', f['Product Family']); },
+    render: drawCerts,
+  });
+  $('#ce-q').addEventListener('input', certTable.debounced);
+  ['#ce-scheme', '#ce-fam'].forEach(x => $(x).addEventListener('change', certTable.reload));
+  wireSort('#ce-tbl', 'ce', () => certTable.reload());
+  certTable.reload();
 }
 
-function drawCerts() {
-  const q = $('#ce-q').value.trim().toLowerCase();
-  const sc = $('#ce-scheme').value, f = $('#ce-fam').value;
-  let rows = S.certs.filter(c =>
-    (!sc || c.Scheme === sc) && (!f || c['Product Family'] === f) &&
-    (!q || `${c['IS Number']} ${c['Product Description']} ${c.Scheme}`.toLowerCase().includes(q)));
-  rows = sortable('#ce-tbl', rows, 'ce');
-  const cap = capped(rows, S.certs.length, 'rules');
-  $('#ce-n').textContent = cap.label;
-  $('#ce-tbl tbody').innerHTML = cap.rows.map(c => `
+function drawCerts(rows, total) {
+  $('#ce-n').textContent = rows.length === total
+    ? `${total.toLocaleString()} rules`
+    : `${rows.length.toLocaleString()} of ${total.toLocaleString()} rules`;
+  $('#ce-tbl tbody').innerHTML = rows.map(c => `
     <tr class="hit" data-s="${esc(c['IS Number'])}">
       <td class="mono">${esc(c['IS Number'])}</td>
       <td style="max-width:300px">${esc(c['Product Description'])}</td>
       <td class="xs dim">${esc(c['BIS Product Category'])}</td>
       <td><span class="pill ${c['Certification Mandatory'] === 'Yes' ? 'bad' : 'mute'}">${esc(c['Certification Mandatory'])}</span></td>
       <td class="mono">${esc(c.Scheme)}</td>
-      <td class="xs" style="max-width:260px">${c['Notification Reference'] === 'N/A' ? '<span class="dimmer">not recorded</span>' : esc(c['Notification Reference'])}</td>
-    </tr>`).join('') || `<tr><td colspan="6">${blank('No rules match', '')}</td></tr>`;
+      <td class="xs" style="max-width:260px"${c['Notification History'] && c['Notification History'] !== c['Notification Reference']
+        ? ` title="${esc(c['Notification History'].slice(0, 600))}"` : ''}>${
+        c['Notification Reference'] === 'N/A' ? '<span class="dimmer">not recorded</span>' : esc(c['Notification Reference'])}</td>
+    </tr>`).join('') || `<tr><td colspan="6">${blank('No rules match', 'Try a different search or clear the filters.')}</td></tr>`;
   $$('#ce-tbl tbody tr[data-s]').forEach(tr => tr.addEventListener('click', () => openStandard(tr.dataset.s)));
 }
 
@@ -1963,15 +2050,36 @@ function buildPal(q) {
   const l = q.toLowerCase(), out = [];
   visibleNav().filter(n => !l || n.full.toLowerCase().includes(l) || n.label.toLowerCase().includes(l))
     .forEach(n => out.push({ g: 'Go to', icon: n.icon, label: n.full, run: () => go(n.id) }));
-  if (l.length >= 2) {
-    (S.standards || []).filter(s => `${s['IS Number']} ${s['Full Title']}`.toLowerCase().includes(l))
-      .slice(0, 7).forEach(s => out.push({ g: 'Standards', icon: 'book',
-        label: `${s['IS Number']} — ${s['Full Title'].slice(0, 56)}`, run: () => openStandard(s['IS Number']) }));
-    (S.tenders || []).filter(t => String(t['Tender ID']).toLowerCase().includes(l))
-      .slice(0, 5).forEach(t => out.push({ g: 'Tenders', icon: 'files', label: t['Tender ID'],
-        run: () => { go('tenders'); setTimeout(() => openTender(t['Tender ID']), 130); } }));
-  }
+  // Results from the last server search for this term. The palette used to
+  // filter two arrays held in memory, which is why the whole register had to be
+  // downloaded before it could find anything.
+  (palHits.q === l ? palHits.standards : []).forEach(s => out.push({
+    g: 'Standards', icon: 'book',
+    label: `${s['IS Number']} — ${String(s['Full Title']).slice(0, 56)}`,
+    run: () => openStandard(s['IS Number']) }));
+  (palHits.q === l ? palHits.tenders : []).forEach(t => out.push({
+    g: 'Tenders', icon: 'files', label: t.Title ? `${t.Title.slice(0, 54)}` : t['Tender ID'],
+    run: () => { go('tenders'); setTimeout(() => openTender(t['Tender ID']), 130); } }));
   pal = out.slice(0, 16); pi = 0; paintPal();
+  if (l.length >= 2 && palHits.q !== l) searchPal(l);
+}
+
+const palHits = { q: null, standards: [], tenders: [] };
+let palTimer = null;
+
+function searchPal(l) {
+  clearTimeout(palTimer);
+  palTimer = setTimeout(async () => {
+    try {
+      const [std, ten] = await Promise.all([
+        api(`/standards?q=${encodeURIComponent(l)}&limit=7`),
+        api(`/tenders?q=${encodeURIComponent(l)}&limit=5`),
+      ]);
+      palHits.q = l; palHits.standards = std.rows || []; palHits.tenders = ten.rows || [];
+      // Only repaint if the user has not typed on since this went out.
+      if ($('#pal-in').value.trim().toLowerCase() === l) buildPal($('#pal-in').value.trim());
+    } catch (_) { /* the navigation entries still work */ }
+  }, 220);
 }
 
 function paintPal() {
@@ -2100,7 +2208,6 @@ async function boot() {
   $$('#presets button').forEach(b => b.onclick = () => preset_(b.dataset.p));
 
   health();
-  api('/standards').then(d => { S.standards = d; }).catch(() => {});
 
   const [v, ent] = location.hash.slice(1).split('/');
   go(v || 'draft');
