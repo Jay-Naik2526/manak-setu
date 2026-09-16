@@ -17,7 +17,7 @@ there and must not appear in the video:
 
 | Feature | Why it is absent |
 |---|---|
-| Multilingual input | The translation provider refuses shared datacentre IPs. The page says so honestly, but that is not a good look on camera. |
+| Multilingual input (partly) | Translation providers refuse shared datacentre IPs. Hindi queries for standards BIS has named in Hindi now work without translation — 1,949 of 27,687 carry one — but most do not, so a Hindi query for a cable standard still fails on camera. |
 | LLM-drafted clauses | A 7B model does not fit a free 512 MB host. Clauses come from the deterministic template, and the interface states this. |
 
 The Hindi step has already been removed from Run demo for exactly this reason.
@@ -70,23 +70,28 @@ understood the domain rather than just the technology.
 Total automated hold time is **70 seconds**. Narration should track it closely.
 
 ### Step 1 — Overview · 9s
-**On screen:** "What the console holds"
-> 2,087 Indian Standards, 220 real government tenders, 3,336 co-citation edges,
-> 737 certification rules. Every figure is recomputed from the database on load —
-> nothing on this page is typed in.
+**On screen:** the caption is generated from the database at run time, so it
+states whatever the corpus currently holds — at the time of writing, 27,687
+Indian Standards, 4,349 real government tenders, 4,861 co-citation edges and
+737 certification rules.
+
+> Every figure is recomputed from the database on load — nothing on this page is
+> typed in.
 
 **Narration idea:** Open on scale and on provenance. These are real BIS records
 and real published tenders, and the numbers are read from the database at load
 time rather than written into the page.
 
 ### Step 2 — Overview · 9s
-**On screen:** "And what it does not"
-> 99% of the standards real tenders cite are in the register — 483 of 488. It was
-> 17% when we started. We collected the rest from the BIS catalogue rather than
-> inventing them, and the last 5 stay on the front page as a declared gap.
+**On screen:** "And what it does not" — also generated live. Currently: 98.6% of
+the standards real tenders cite are in the register, 1,826 of 1,851.
+
+> It was 17% when we started. We collected the rest from the BIS catalogue
+> rather than inventing them, and the remainder stay on the front page as a
+> declared gap.
 
 **Narration idea:** This is the honesty slide. The system publishes its own gap on
-its front page. Emphasise "483 of 488" — a stated denominator, not a round claim.
+its front page. Emphasise the denominator — "1,826 of 1,851", not a round claim.
 
 ### Step 3 — Draft clause · 10s
 **On screen:** "A specification, and the standard that governs it"
@@ -119,9 +124,9 @@ instrument that makes it binding, and wording ready to paste.
 
 ### Step 6 — Graph · 10s
 **On screen:** "Where 'related' comes from"
-> 193 standards joined by 3,336 edges, each edge a count of two standards
-> appearing in the same published tender. Colour is BIS department. The clusters
-> are procurement practice, not a layout choice.
+> Generated live; currently 314 standards joined by 4,861 edges, each edge a
+> count of two standards appearing in the same published tender. Colour is BIS
+> department. The clusters are procurement practice, not a layout choice.
 
 **Narration idea — the legal insight.** BIS sells standard text, so relationships
 cannot be mined from it. Tenders are public. Every edge is two standards cited
@@ -130,10 +135,10 @@ buys.
 
 ### Step 7 — Benchmark · 11s
 **On screen:** "Measured, and stated carefully"
-> All 4 known dead-citation documents caught, 0 false positives across 20 sampled
-> clean ones. Retrieval scores 92% Recall@10 on 71 queries labelled by BIS Quality
-> Control Orders. The positive class here is 4 — too small for an accuracy claim,
-> so we never make one.
+> Counts, not percentages: the dead-citation benchmark's positive class is small,
+> and the caption says so rather than quoting an accuracy figure. Retrieval ranks
+> the right standard first on 56 of 71 labelled queries and within the top ten on
+> 66, measured against all 27,687 standards.
 
 **Narration idea — close here.** Every number has a denominator. Four positives is
 too small a sample for a percentage, so the system reports counts. Ending on
@@ -146,22 +151,35 @@ measured restraint is stronger than ending on a boast.
 Quote these exactly. Every one was computed fresh from the current data.
 
 **Data**
-- 2,087 standards in the register (grown from 405)
-- 220 tender documents, 134 machine-readable
-- 3,336 co-citation edges across 193 standards
-- 737 certification rules — ISI Mark Scheme I, CRS Scheme II, Hallmarking
-- **483 of 488** standards cited by real tenders are in the register (99.0%)
+- **27,687 standards** in the register, harvested from the BIS catalogue (grown from 405, then 2,087)
+- **4,349 tender documents**, 1,051 machine-readable, 5,400 citations read
+- **4,861 co-citation edges** across 314 standards
+- 737 certification rules — ISI Mark Scheme I, CRS Scheme II, QCO, Hallmarking
+- **1,826 of 1,851** standards cited by real tenders are in the register (98.6%)
+- 1,949 standards carry BIS's own Hindi title (7.0%)
 
-**Retrieval — 71 labelled queries**
-- Recall@1: **58/71 (82%)** — the top answer was correct
-- Recall@10: **65/71 (92%)**
-- Abstention: 3/71 (4%)
+**Retrieval — 71 labelled queries, measured against all 27,687 standards**
+- Recall@1: **56/71 (79%)** — the top answer was correct
+- Recall@10: **66/71 (93%)**
+- Abstention: 2/71 (3%)
+- The register grew thirteenfold and this moved by two queries. The four
+  constraint filters and the confidence gate carry that.
 
 **Dead-citation detection — n=24**
 - 4 of 4 known outdated-citation documents caught
 - 0 false positives across 20 clean documents
 
-**Robustness:** 23 of 23 adversarial tests pass.
+**Procurement Standards Health Index — the measurement only this corpus can make**
+- **377 of 1,051** machine-readable government tender documents cite a standard
+  BIS has already withdrawn or superseded
+- **326** distinct dead standards still in circulation
+- The most-cited standard in the corpus is itself past its BIS review date
+
+**Peer citations** — for "11 kV XLPE cable joint", 10 of 13 comparable bids cite
+IS 7098 (Part 1), 7 cite IS 5831, 7 cite IS 8130. A tally of what buyers wrote,
+not a model's inference.
+
+**Robustness:** 28 of 28 adversarial tests pass.
 
 ### Never say
 - "100% coverage" or "100% accuracy" — neither is true.
@@ -209,7 +227,7 @@ numbers — but "3rd" and "5th" are.
 
 **The top 10 are reranked by a cross-encoder**, which reads the query and the
 title together rather than comparing two pre-computed vectors. More accurate,
-slower — which is why it only sees ten candidates and not 2,087.
+slower — which is why it only sees ten candidates and not 27,687.
 
 **Four filters then enforce voltage, material, document role and status**, applied
 as one combined sort so no filter can silently undo another.
