@@ -1568,10 +1568,23 @@ async function drawHealthIndex() {
     <p class="xs dimmer" style="margin-top:11px">${esc(c.note)}</p>`;
 }
 
-/* ── graph ─────────────────────────────────────────────────────────────── */
+/* ── graph ─────────────────────────────────────────────────────────────────
+   Drawn on a canvas from coordinates the server computed once.
 
-const G = { n: [], e: [], by: {}, k: 1, tx: 0, ty: 0, fams: [], anim: null };
-const GW = 1040, GH = 660, PAD = 26;
+   It used to be SVG: one <line> per edge, one <g> per node, and a physics loop
+   that ran 110 frames x 2 passes over 319 mutually repelling nodes, rewriting
+   thousands of DOM attributes every frame. That is a quarter of a million
+   writes to settle a picture that never changes — the layout is a property of
+   the co-citation data, not of the session — and it came out differently on
+   every visit depending on how many frames finished before you navigated away.
+
+   graph_layout.py settles it once and ships the coordinates. Here the whole
+   scene is three stroke() calls for the edges and one arc per node, redrawn
+   only when something actually changes: pan, zoom, filter, hover, selection. */
+
+const G = { n: [], e: [], by: {}, k: 1, tx: 0, ty: 0, fams: [], fit: 1,
+            hover: null, pick: null, path: null, drag: null, pan: null };
+const GW = 1040, GH = 660;
 
 async function loadGraph() {
   if (ready.has('graph')) return;
@@ -1585,127 +1598,153 @@ async function loadGraph() {
 
 const famColor = f => { const i = G.fams.indexOf(f); return i < 0 ? 'var(--k8)' : KC[i % 8]; };
 
+/* Canvas cannot resolve a CSS custom property, so each token is read once per
+   draw from the live computed style — which is also what keeps the picture
+   correct when the theme changes. */
+function tokens() {
+  const cs = getComputedStyle(document.documentElement);
+  const get = v => cs.getPropertyValue(v).trim() || '#888';
+  return {
+    edge: get('--line-hard'), ink: get('--ink-3'), pickC: get('--amber'),
+    surface: get('--surface'), fam: G.fams.map((_, i) => get(KC[i % 8].replace(/var\(|\)/g, ''))),
+    other: get('--k8'),
+  };
+}
+const famIndex = f => { const i = G.fams.indexOf(f); return i < 0 ? -1 : i; };
+
 function drawGraph() {
-  const G0 = S.heroGraph || S.graph;
-  if (!G0 || !G0.edges) return;
-  const deg = {};
-  G0.edges.forEach(e => { deg[e.source] = (deg[e.source] || 0) + 1; deg[e.target] = (deg[e.target] || 0) + 1; });
-  const mx = Math.max(...Object.values(deg), 1);
+  const g = S.graph;
+  if (!g || !g.edges) return;
+  const t0 = performance.now();
 
-  G.n = S.graph.nodes.map((n, i) => {
-    const a = i / S.graph.nodes.length * Math.PI * 2;
-    return { ...n, deg: deg[n.id] || 0, r: 4.5 + (deg[n.id] || 0) / mx * 14,
-      x: GW / 2 + Math.cos(a) * 255, y: GH / 2 + Math.sin(a) * 255, vx: 0, vy: 0 };
-  });
+  const maxDeg = Math.max(...g.nodes.map(n => n.degree || 0), 1);
+  G.n = g.nodes.map(n => ({
+    ...n,
+    // A node the layout has never seen (a graph rebuilt without re-running
+    // graph_layout.py) is parked in the centre rather than at NaN, so a stale
+    // layout degrades to a worse picture instead of a blank panel.
+    x: n.x == null ? GW / 2 : n.x,
+    y: n.y == null ? GH / 2 : n.y,
+    r: 4 + (n.degree || 0) / maxDeg * 13,
+    hidden: false, dim: false,
+  }));
   G.by = Object.fromEntries(G.n.map(n => [n.id, n]));
-  G.e = S.graph.edges.filter(e => G.by[e.source] && G.by[e.target]);
+  G.e = g.edges.filter(e => G.by[e.source] && G.by[e.target])
+               .map(e => ({ ...e, hidden: false, lit: false, onPath: false }));
 
-  const svg = $('#gsvg');
-  svg.setAttribute('viewBox', `0 0 ${GW} ${GH}`);
-  svg.innerHTML = '<g id="gg"></g>';
-  const gg = $('#gg');
-
-  G.e.forEach(e => {
-    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    l.setAttribute('class', 'gedge');
-    l.setAttribute('stroke-width', 0.4 + e.confidence * 2.2);
-    l.setAttribute('opacity', 0.1 + e.confidence * 0.3);
-    gg.appendChild(l); e.el = l;
-  });
-  G.n.forEach(n => {
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'gnode');
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('r', n.r); c.setAttribute('fill', famColor(n.product_family));
-    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    t.textContent = n.id;
-    g.append(c, t); gg.appendChild(g);
-    n.el = g; n.c = c; n.t = t;
-    g.addEventListener('click', ev => { ev.stopPropagation(); pickNode(n.id); });
-    g.addEventListener('mouseenter', ev => tip(ev, n));
-    g.addEventListener('mousemove', ev => tip(ev, n));
-    g.addEventListener('mouseleave', () => { $('#gtip').style.display = 'none'; });
-    g.addEventListener('mousedown', ev => { ev.stopPropagation(); G.drag = n; });
-  });
-
-  $('#gkey').innerHTML = G.fams.map(f => `<div class="r"><span class="sw" style="background:${famColor(f)}"></span>${esc(f)}</div>`).join('')
+  $('#gkey').innerHTML = G.fams.map(f =>
+    `<div class="r"><span class="sw" style="background:${famColor(f)}"></span>${esc(f)}</div>`).join('')
     + `<div class="r"><span class="sw" style="background:var(--k8)"></span>Not in register</div>`;
   const dens = 2 * G.e.length / (G.n.length * (G.n.length - 1));
   if ($('#graph-meta')) $('#graph-meta').textContent =
-    `${G.n.length} nodes · ${G.e.length.toLocaleString()} edges · thresholds 5+ co-citations / 40%+ confidence / source cited in 8+ tenders`;
+    `${G.n.length} standards · ${G.e.length.toLocaleString()} edges · thresholds 5+ co-citations / 40%+ confidence / source cited in 8+ tenders`;
   $('#gstat').innerHTML = `<div><div class="lb">Nodes</div><div class="vl">${G.n.length}</div></div>
-    <div><div class="lb">Edges</div><div class="vl">${G.e.length}</div></div>
+    <div><div class="lb">Edges</div><div class="vl">${G.e.length.toLocaleString()}</div></div>
     <div><div class="lb">Density</div><div class="vl">${dens.toFixed(3)}</div></div>`;
 
-  settle(); applyT();
+  resizeGraph();
+  console.info(`graph: ${G.n.length} nodes, ${G.e.length} edges drawn in ${(performance.now() - t0).toFixed(0)} ms`);
 }
 
-/* Settling used to run 150 frames x 3 physics passes and repaint all 3,336 edges
-   on every one of them — roughly half a million SVG attribute writes for an
-   animation nobody watches to the end. Nodes still move every frame (193 writes,
-   cheap); edges catch up every EDGE_EVERY frames and once more at the end, which
-   is visually indistinguishable and an order of magnitude less work. */
-const SETTLE_FRAMES = 110, SETTLE_STEPS = 2, EDGE_EVERY = 4;
-
-function settle() {
-  if (G.anim) cancelAnimationFrame(G.anim);
-  let f = 0;
-  const step = () => {
-    for (let i = 0; i < SETTLE_STEPS; i++) physics();
-    f++;
-    const last = f >= SETTLE_FRAMES;
-    paint(last || f % EDGE_EVERY === 0);
-    if (!last) G.anim = requestAnimationFrame(step); else G.anim = null;
-  };
-  G.anim = requestAnimationFrame(step);
+function resizeGraph() {
+  const cv = $('#gcanvas'), wrap = $('#gwrap');
+  if (!cv || !wrap) return;
+  const r = wrap.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(r.width * dpr);
+  cv.height = Math.round(r.height * dpr);
+  G.fit = Math.min(r.width / GW, r.height / GH);
+  G.dpr = dpr;
+  G.cw = r.width; G.ch = r.height;
+  paint();
 }
 
-function physics() {
-  const n = G.n, L = n.length;
-  for (let i = 0; i < L; i++) for (let j = i + 1; j < L; j++) {
-    const a = n[i], b = n[j];
-    let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy;
-    if (d2 < 1) d2 = 1;
-    const d = Math.sqrt(d2), f = 6200 / d2, fx = f * dx / d, fy = f * dy / d;
-    a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+/* world -> css pixels. One matrix, applied to the context, so hit testing is
+   the same arithmetic inverted rather than a second code path. */
+const sx = x => (x - GW / 2) * G.fit * G.k + G.cw / 2 + G.tx;
+const sy = y => (y - GH / 2) * G.fit * G.k + G.ch / 2 + G.ty;
+const wx = px => (px - G.cw / 2 - G.tx) / (G.fit * G.k) + GW / 2;
+const wy = py => (py - G.ch / 2 - G.ty) / (G.fit * G.k) + GH / 2;
+
+function paint() {
+  const cv = $('#gcanvas');
+  if (!cv || !G.n.length) return;
+  const ctx = cv.getContext('2d');
+  const T = tokens();
+  const labels = $('#g-lab') ? $('#g-lab').checked : true;
+  const anyFocus = !!(G.pick || G.hover || G.path);
+
+  ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
+  ctx.clearRect(0, 0, G.cw, G.ch);
+
+  // Edges in three passes bucketed by confidence — the entire edge set is
+  // three stroke() calls instead of 4,916 DOM nodes.
+  const buckets = [
+    { max: 0.5, w: 0.5, a: 0.13 },
+    { max: 0.8, w: 1.0, a: 0.20 },
+    { max: 1.01, w: 1.7, a: 0.30 },
+  ];
+  let lo = 0;
+  for (const b of buckets) {
+    ctx.beginPath();
+    for (const e of G.e) {
+      if (e.hidden || e.lit || e.onPath) continue;
+      if (!(e.confidence >= lo && e.confidence < b.max)) continue;
+      const a = G.by[e.source], c = G.by[e.target];
+      if (a.hidden || c.hidden) continue;
+      ctx.moveTo(sx(a.x), sy(a.y)); ctx.lineTo(sx(c.x), sy(c.y));
+    }
+    ctx.strokeStyle = T.edge;
+    ctx.globalAlpha = anyFocus ? b.a * 0.3 : b.a;
+    ctx.lineWidth = b.w;
+    ctx.stroke();
+    lo = b.max;
   }
-  G.e.forEach(e => {
-    const a = G.by[e.source], b = G.by[e.target];
-    let dx = b.x - a.x, dy = b.y - a.y;
-    const d = Math.sqrt(dx * dx + dy * dy) || .01;
-    const f = .022 * (d - (68 + (1 - e.confidence) * 130));
-    const fx = f * dx / d, fy = f * dy / d;
-    a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
-  });
-  n.forEach(p => {
-    if (p === G.drag) { p.vx = p.vy = 0; return; }
-    p.vx += (GW / 2 - p.x) * .0016; p.vy += (GH / 2 - p.y) * .0016;
-    p.vx *= .8; p.vy *= .8; p.x += p.vx; p.y += p.vy;
-    // Hard walls. 193 mutually repelling nodes out-push a centering force this
-    // gentle, and the layout drifted to x[-2728..2966] on a 1040x660 canvas —
-    // every node outside the viewBox, so the graph rendered as an empty panel.
-    // Relying on the centring spring alone meant the picture depended on how
-    // many iterations it happened to get.
-    if (p.x < PAD) { p.x = PAD; p.vx = Math.abs(p.vx) * .4; }
-    if (p.x > GW - PAD) { p.x = GW - PAD; p.vx = -Math.abs(p.vx) * .4; }
-    if (p.y < PAD) { p.y = PAD; p.vy = Math.abs(p.vy) * .4; }
-    if (p.y > GH - PAD) { p.y = GH - PAD; p.vy = -Math.abs(p.vy) * .4; }
-  });
-}
 
-function paint(edges = true) {
-  const lab = $('#g-lab').checked;
-  G.n.forEach(n => {
-    n.c.setAttribute('cx', n.x); n.c.setAttribute('cy', n.y);
-    n.t.setAttribute('x', n.x + n.r + 3); n.t.setAttribute('y', n.y + 3);
-    n.t.style.display = lab ? '' : 'none';
-  });
-  if (!edges) return;
-  G.e.forEach(e => {
-    const a = G.by[e.source], b = G.by[e.target];
-    e.el.setAttribute('x1', a.x); e.el.setAttribute('y1', a.y);
-    e.el.setAttribute('x2', b.x); e.el.setAttribute('y2', b.y);
-  });
+  // Highlighted edges (neighbourhood or traced path) on top, fully opaque.
+  const hi = G.e.filter(e => (e.lit || e.onPath) && !e.hidden);
+  if (hi.length) {
+    ctx.beginPath();
+    for (const e of hi) {
+      const a = G.by[e.source], c = G.by[e.target];
+      ctx.moveTo(sx(a.x), sy(a.y)); ctx.lineTo(sx(c.x), sy(c.y));
+    }
+    ctx.strokeStyle = T.pickC; ctx.globalAlpha = 0.85; ctx.lineWidth = 1.8; ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.4;
+  for (const n of G.n) {
+    if (n.hidden) continue;
+    const r = Math.max(2.2, n.r * Math.sqrt(G.k));
+    ctx.beginPath();
+    ctx.arc(sx(n.x), sy(n.y), r, 0, Math.PI * 2);
+    const fi = famIndex(n.product_family);
+    ctx.fillStyle = fi < 0 ? T.other : T.fam[fi];
+    ctx.globalAlpha = anyFocus && n.dim ? 0.18 : 1;
+    ctx.fill();
+    ctx.strokeStyle = n === G.pick ? T.pickC : T.surface;
+    ctx.lineWidth = n === G.pick ? 2.5 : 1.4;
+    ctx.stroke();
+  }
+
+  // Labels cost text layout, so only where they can be read: the best-connected
+  // standards, plus whatever the pointer or a search is pointing at.
+  if (labels) {
+    ctx.globalAlpha = 1;
+    ctx.font = '500 10px "JetBrains Mono", ui-monospace, monospace';
+    ctx.fillStyle = T.ink;
+    ctx.textBaseline = 'middle';
+    const top = [...G.n].filter(n => !n.hidden && !n.dim)
+      .sort((a, b) => b.degree - a.degree).slice(0, G.k > 1.6 ? 90 : 34);
+    const show = new Set(top);
+    if (G.hover) show.add(G.hover);
+    if (G.pick) show.add(G.pick);
+    for (const n of show) {
+      if (n.hidden) continue;
+      ctx.fillText(n.id, sx(n.x) + Math.max(2.2, n.r * Math.sqrt(G.k)) + 4, sy(n.y));
+    }
+  }
 }
 
 function tip(ev, n) {
@@ -1713,27 +1752,47 @@ function tip(ev, n) {
   t.style.display = 'block';
   t.innerHTML = `<div class="a">${esc(n.id)}</div>
     <div class="b">${esc(n.title !== 'N/A' ? n.title.slice(0, 74) : 'Not in the register')}</div>
-    <div class="b">${n.deg} connections · ${esc(n.product_family)}</div>`;
+    <div class="b">${n.degree} connections · ${esc(n.product_family)}</div>`;
   t.style.left = Math.min(ev.clientX - w.left + 14, w.width - 262) + 'px';
   t.style.top = ev.clientY - w.top + 14 + 'px';
 }
 
-function clearGraph() {
-  G.n.forEach(n => n.el.classList.remove('off', 'pick', 'path'));
-  G.e.forEach(e => e.el.classList.remove('off', 'lit', 'path'));
+function nodeAt(ev) {
+  const r = $('#gwrap').getBoundingClientRect();
+  const x = wx(ev.clientX - r.left), y = wy(ev.clientY - r.top);
+  let best = null, bestD = Infinity;
+  for (const n of G.n) {
+    if (n.hidden) continue;
+    const dx = n.x - x, dy = n.y - y, d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; best = n; }
+  }
+  // Tolerance in world units, so the target stays the same physical size at
+  // every zoom level.
+  const tol = Math.max(10, (best ? best.r : 6) + 6) / Math.max(G.k, 0.35);
+  return bestD <= tol * tol ? best : null;
 }
 
-function pickNode(id) {
-  clearGraph();
-  const near = new Set([id]);
+function clearGraph() {
+  G.pick = null; G.path = null; G.hover = null;
+  G.n.forEach(n => { n.dim = false; });
+  G.e.forEach(e => { e.lit = false; e.onPath = false; });
+  gFilter();
+}
+
+function focusNode(n, andOpen) {
+  G.pick = n; G.path = null;
+  const near = new Set([n.id]);
   G.e.forEach(e => {
-    const on = e.source === id || e.target === id;
-    e.el.classList.toggle('lit', on); e.el.classList.toggle('off', !on);
+    const on = e.source === n.id || e.target === n.id;
+    e.lit = on; e.onPath = false;
     if (on) { near.add(e.source); near.add(e.target); }
   });
-  G.n.forEach(n => { n.el.classList.toggle('pick', n.id === id); n.el.classList.toggle('off', !near.has(n.id)); });
-  openStandard(id);
+  G.n.forEach(m => { m.dim = !near.has(m.id); });
+  paint();
+  if (andOpen) openStandard(n.id);
 }
+
+function pickNode(id) { const n = G.by[id]; if (n) focusNode(n, true); }
 
 /* Breadth-first search over the real co-citation edges. */
 function tracePath() {
@@ -1749,14 +1808,15 @@ function tracePath() {
   }
   if (!(b in prev)) { toast('No co-citation path connects those two', 'bad'); return; }
   const path = []; for (let c = b; c; c = prev[c]) path.unshift(c);
-  clearGraph();
   const set = new Set(path);
-  G.n.forEach(n => { n.el.classList.toggle('path', set.has(n.id)); n.el.classList.toggle('off', !set.has(n.id)); });
+  G.pick = null; G.path = path;
+  G.n.forEach(n => { n.dim = !set.has(n.id); });
   G.e.forEach(e => {
-    const on = set.has(e.source) && set.has(e.target) &&
+    e.onPath = set.has(e.source) && set.has(e.target) &&
       Math.abs(path.indexOf(e.source) - path.indexOf(e.target)) === 1;
-    e.el.classList.toggle('path', on); e.el.classList.toggle('off', !on);
+    e.lit = false;
   });
+  paint();
   toast(`${path.length - 1} hop(s): ${path.join(' → ')}`, 'info');
 }
 
@@ -1765,31 +1825,44 @@ function gFilter() {
   $('#g-cv').textContent = min.toFixed(2);
   const keep = new Set();
   G.e.forEach(e => {
-    const ok = e.confidence >= min;
-    e.el.style.display = ok ? '' : 'none';
-    if (ok) { keep.add(e.source); keep.add(e.target); }
+    e.hidden = e.confidence < min;
+    if (!e.hidden) { keep.add(e.source); keep.add(e.target); }
   });
   G.n.forEach(n => {
-    n.el.style.display = (!fam || n.product_family === fam) && (min === 0 || keep.has(n.id)) ? '' : 'none';
+    n.hidden = (fam && n.product_family !== fam) || (min > 0 && !keep.has(n.id));
   });
+  paint();
 }
 
-const applyT = () => {
-  const gg = $('#gg');
-  if (gg) gg.setAttribute('transform', `translate(${G.tx},${G.ty}) translate(${GW / 2},${GH / 2}) scale(${G.k}) translate(${-GW / 2},${-GH / 2})`);
-};
-
-function gPoint(ev) {
-  const r = $('#gsvg').getBoundingClientRect();
-  const px = (ev.clientX - r.left) / r.width * GW, py = (ev.clientY - r.top) / r.height * GH;
-  return { x: (px - G.tx - GW / 2 * (1 - G.k)) / G.k, y: (py - G.ty - GH / 2 * (1 - G.k)) / G.k };
+function graphSVG() {
+  // The canvas is the renderer; an export has to be built from the data. Doing
+  // it here keeps the exported file vector — a canvas screenshot would not be.
+  const T = tokens();
+  const line = e => {
+    const a = G.by[e.source], b = G.by[e.target];
+    return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${T.edge}" ` +
+           `stroke-width="${(0.4 + e.confidence * 1.6).toFixed(2)}" opacity="${(0.1 + e.confidence * 0.3).toFixed(2)}"/>`;
+  };
+  const dot = n => {
+    const fi = famIndex(n.product_family);
+    return `<circle cx="${n.x}" cy="${n.y}" r="${n.r.toFixed(1)}" fill="${fi < 0 ? T.other : T.fam[fi]}" ` +
+           `stroke="#fff" stroke-width="1.4"/>` +
+           `<text x="${(n.x + n.r + 4).toFixed(1)}" y="${(n.y + 3).toFixed(1)}" ` +
+           `font-family="monospace" font-size="8.5" fill="${T.ink}">${esc(n.id)}</text>`;
+  };
+  const vis = G.n.filter(n => !n.hidden);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GW} ${GH}" width="${GW}" height="${GH}">` +
+    `<rect width="${GW}" height="${GH}" fill="${T.surface}"/>` +
+    G.e.filter(e => !e.hidden && !G.by[e.source].hidden && !G.by[e.target].hidden).map(line).join('') +
+    vis.map(dot).join('') + `</svg>`;
 }
 
 function wireGraph() {
-  const svg = $('#gsvg');
-  $('#g-in').onclick = () => { G.k = Math.min(3, G.k * 1.25); applyT(); };
-  $('#g-out').onclick = () => { G.k = Math.max(.3, G.k / 1.25); applyT(); };
-  $('#g-fit').onclick = () => { G.k = 1; G.tx = G.ty = 0; applyT(); clearGraph(); };
+  const cv = $('#gcanvas');
+  const zoom = f => { G.k = Math.max(.3, Math.min(4, G.k * f)); paint(); };
+  $('#g-in').onclick = () => zoom(1.25);
+  $('#g-out').onclick = () => zoom(1 / 1.25);
+  $('#g-fit').onclick = () => { G.k = 1; G.tx = G.ty = 0; clearGraph(); };
   $('#g-lab').onchange = paint;
   $('#g-fam').onchange = gFilter;
   $('#g-conf').oninput = gFilter;
@@ -1797,28 +1870,37 @@ function wireGraph() {
   $('#g-q').oninput = e => {
     const q = e.target.value.trim().toUpperCase();
     if (!q) return clearGraph();
-    const hit = G.n.filter(n => n.id.toUpperCase().includes(q));
-    G.n.forEach(n => { n.el.classList.toggle('pick', hit.includes(n)); n.el.classList.toggle('off', !hit.includes(n)); });
-    G.e.forEach(e => e.el.classList.add('off'));
+    const hit = new Set(G.n.filter(n => n.id.toUpperCase().includes(q)).map(n => n.id));
+    G.pick = null; G.path = null;
+    G.n.forEach(n => { n.dim = !hit.has(n.id); });
+    G.e.forEach(e => { e.lit = false; e.onPath = false; });
+    paint();
   };
-  $('#g-svg').onclick = () => {
-    const clone = svg.cloneNode(true);
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    clone.insertAdjacentHTML('afterbegin',
-      `<style>.gnode circle{stroke:#fff;stroke-width:1.5}.gnode text{font:500 8.5px monospace;fill:#546272}.gedge{stroke:#AEBCC9}</style>`);
-    download('manak-setu-graph.svg', new XMLSerializer().serializeToString(clone), 'image/svg+xml');
-  };
-  svg.addEventListener('mousedown', ev => { G.pan = { x: ev.clientX, y: ev.clientY }; svg.classList.add('grab'); });
-  window.addEventListener('mousemove', ev => {
-    if (G.drag) { const p = gPoint(ev); G.drag.x = p.x; G.drag.y = p.y; paint(); }
-    else if (G.pan) { G.tx += ev.clientX - G.pan.x; G.ty += ev.clientY - G.pan.y; G.pan = { x: ev.clientX, y: ev.clientY }; applyT(); }
+  $('#g-svg').onclick = () => download('manak-setu-graph.svg', graphSVG(), 'image/svg+xml');
+
+  cv.addEventListener('mousedown', ev => {
+    const n = nodeAt(ev);
+    if (n) { G.drag = n; } else { G.pan = { x: ev.clientX, y: ev.clientY }; cv.classList.add('grab'); }
   });
-  window.addEventListener('mouseup', () => { G.drag = null; G.pan = null; svg.classList.remove('grab'); });
-  svg.addEventListener('wheel', ev => {
-    ev.preventDefault();
-    G.k = Math.max(.3, Math.min(3, G.k * (ev.deltaY < 0 ? 1.1 : .9)));
-    applyT();
-  }, { passive: false });
+  cv.addEventListener('mousemove', ev => {
+    if (G.drag || G.pan) return;
+    const n = nodeAt(ev);
+    if (n !== G.hover) { G.hover = n; paint(); }
+    if (n) tip(ev, n); else $('#gtip').style.display = 'none';
+  });
+  cv.addEventListener('mouseleave', () => {
+    if (G.hover) { G.hover = null; paint(); }
+    $('#gtip').style.display = 'none';
+  });
+  cv.addEventListener('click', ev => { const n = nodeAt(ev); if (n) focusNode(n, true); });
+  window.addEventListener('mousemove', ev => {
+    const r = $('#gwrap').getBoundingClientRect();
+    if (G.drag) { G.drag.x = wx(ev.clientX - r.left); G.drag.y = wy(ev.clientY - r.top); paint(); }
+    else if (G.pan) { G.tx += ev.clientX - G.pan.x; G.ty += ev.clientY - G.pan.y; G.pan = { x: ev.clientX, y: ev.clientY }; paint(); }
+  });
+  window.addEventListener('mouseup', () => { G.drag = null; G.pan = null; cv.classList.remove('grab'); });
+  cv.addEventListener('wheel', ev => { ev.preventDefault(); zoom(ev.deltaY < 0 ? 1.1 : .9); }, { passive: false });
+  window.addEventListener('resize', () => { if (ready.has('graph')) resizeGraph(); }, { passive: true });
 }
 
 /* ── drawer ────────────────────────────────────────────────────────────── */

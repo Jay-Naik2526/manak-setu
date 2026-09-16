@@ -214,10 +214,17 @@ def recommend(req: RecommendRequest):
 
 
 @app.get("/graph")
-def graph(nodes: int | None = None, edges: int | None = None):
-    """Full co-citation graph, or a top-degree sample when `nodes`/`edges` are
-    given — the overview's decorative figure does not need 600 KB."""
-    return full_graph(node_limit=nodes, edge_limit=edges)
+def graph(nodes: int | None = None, edges: int | None = None, min_count: int = 0):
+    """The co-citation graph, trimmed to the fields the renderer draws.
+
+    The whole graph is sent by default. That was worth checking rather than
+    assuming: 4,916 edges are 409 KB of JSON but **39 KB on the wire** once
+    gzipped, and the canvas draws them in three stroke calls. Trimming to the
+    strongest 1,500 edges would have saved 25 KB and cost 197 of the 319
+    standards their place in the picture — a bad trade made on an uncompressed
+    number. `nodes` and `edges` remain for callers that want a sample; the
+    overview hero uses them."""
+    return full_graph(node_limit=nodes, edge_limit=edges, min_count=min_count)
 
 
 @app.get("/standards")

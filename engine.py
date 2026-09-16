@@ -1,3 +1,4 @@
+import json
 import re as _re_module
 import sqlite3
 
@@ -5,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 DB_PATH = "manak_setu.db"
+LAYOUT_PATH = "data/graph_layout.json"
 EMBEDDINGS_PATH = "standards_embeddings.npy"
 IS_NUMBERS_PATH = "standards_embeddings_is_numbers.csv"
 MODEL_NAME = "all-MiniLM-L6-v2"
@@ -211,69 +213,109 @@ def check_certification(is_number: str) -> dict:
         conn.close()
 
 
-def full_graph(node_limit: int | None = None, edge_limit: int | None = None) -> dict:
-    """Co-citation graph scoped to real data only: the 74 standards that
-    actually appear in co_citation_graph.csv, not all 405 standards.
-    Each node is enriched with title/status/product family from
-    standards_master.csv where a match exists (exact, then IS Base)."""
+_LAYOUT: dict | None = None
+
+
+def _layout() -> dict:
+    """Node coordinates computed once by graph_layout.py.
+
+    The browser used to settle this itself — 110 frames of physics over 319
+    mutually repelling nodes — which was a quarter of a million DOM writes for a
+    picture that never changes, and which came out differently on every visit
+    because it depended on how many frames finished. Reading coordinates is the
+    whole of the client's layout work now."""
+    global _LAYOUT
+    if _LAYOUT is None:
+        try:
+            with open(LAYOUT_PATH, encoding="utf-8") as fh:
+                _LAYOUT = json.load(fh)
+        except (OSError, ValueError):
+            _LAYOUT = {}
+    return _LAYOUT
+
+
+def full_graph(node_limit: int | None = None, edge_limit: int | None = None,
+               min_count: int = 0) -> dict:
+    """The co-citation graph, ready to draw.
+
+    Only the fields the renderer reads: an edge is two endpoints, a confidence
+    and a count; a node is its identity, what it is, and where it sits. The
+    evidence sentence and lift stay on `/standard`, where the drawer shows one
+    standard's relationships in full — sending them for every edge cost 600 KB
+    to render nothing.
+    """
     conn = _get_conn()
     try:
         rows = conn.execute(
-            'SELECT "Source IS", "Target IS", "Confidence", "Lift", "Co-citation Count", '
-            '"Evidence Statement" FROM co_citation'
+            'SELECT "Source IS", "Target IS", "Confidence", "Co-citation Count" '
+            'FROM co_citation WHERE "Co-citation Count" >= ?', (min_count,)
         ).fetchall()
 
         # A caller that only needs a representative sample (the overview hero)
-        # should not download the whole corpus: the full payload is ~600 KB, which
-        # dominates page load over anything slower than localhost.
+        # should not download the whole corpus.
         if node_limit:
             degree: dict[str, int] = {}
             for r in rows:
                 degree[r["Source IS"]] = degree.get(r["Source IS"], 0) + 1
                 degree[r["Target IS"]] = degree.get(r["Target IS"], 0) + 1
-            keep = {
-                k for k, _ in sorted(degree.items(), key=lambda kv: -kv[1])[:node_limit]
-            }
+            keep = {k for k, _ in sorted(degree.items(), key=lambda kv: -kv[1])[:node_limit]}
             rows = [r for r in rows if r["Source IS"] in keep and r["Target IS"] in keep]
         if edge_limit:
-            rows = sorted(rows, key=lambda r: -r["Confidence"])[:edge_limit]
+            # By count, not confidence: confidence is a ratio, so a pair cited
+            # together twice out of twice scores 1.0 and outranks a pair cited
+            # together forty times out of fifty. The strongest evidence should
+            # survive the trim.
+            rows = sorted(rows, key=lambda r: -(r["Co-citation Count"] or 0))[:edge_limit]
 
         node_ids = sorted({r["Source IS"] for r in rows} | {r["Target IS"] for r in rows})
+        degree = {}
+        for r in rows:
+            degree[r["Source IS"]] = degree.get(r["Source IS"], 0) + 1
+            degree[r["Target IS"]] = degree.get(r["Target IS"], 0) + 1
 
+        # One query for every node's record instead of one query per node.
+        held = {}
+        if node_ids:
+            marks = ",".join("?" * len(node_ids))
+            for std in conn.execute(
+                f'SELECT "IS Number", "IS Base", "Full Title", "Status", "Product Family" '
+                f'FROM standards WHERE "IS Number" IN ({marks}) OR "IS Base" IN ({marks})',
+                node_ids + node_ids,
+            ):
+                held.setdefault(std["IS Number"], std)
+                held.setdefault(std["IS Base"], std)
+
+        layout = _layout()
         nodes = []
         for node_id in node_ids:
-            std = conn.execute(
-                'SELECT * FROM standards WHERE "IS Number" = ?', (node_id,)
-            ).fetchone()
-            if std is None:
-                std = conn.execute(
-                    'SELECT * FROM standards WHERE "IS Base" = ?', (_is_base(node_id),)
-                ).fetchone()
-            nodes.append(
-                {
-                    "id": node_id,
-                    "title": _display(std["Full Title"]) if std else "N/A",
-                    "status": std["Status"] if std else "Unknown",
-                    "product_family": _display(std["Product Family"]) if std else "N/A",
-                    "in_standards_master": std is not None,
-                }
-            )
+            std = held.get(node_id) or held.get(_is_base(node_id))
+            xy = layout.get(node_id)
+            nodes.append({
+                "id": node_id,
+                "title": _display(std["Full Title"]) if std is not None else "N/A",
+                "status": std["Status"] if std is not None else "Unknown",
+                "product_family": _display(std["Product Family"]) if std is not None else "N/A",
+                "degree": degree.get(node_id, 0),
+                "x": xy[0] if xy else None,
+                "y": xy[1] if xy else None,
+            })
 
         edges = [
             {
                 "source": r["Source IS"],
                 "target": r["Target IS"],
                 "confidence": r["Confidence"],
-                "lift": r["Lift"],
-                "co_citation_count": r["Co-citation Count"],
-                "evidence_statement": r["Evidence Statement"],
+                "count": r["Co-citation Count"],
             }
             for r in rows
         ]
+        total = conn.execute("SELECT COUNT(*) FROM co_citation").fetchone()[0]
         return {
             "nodes": nodes,
             "edges": edges,
-            "sampled": bool(node_limit or edge_limit),
+            "total_edges": total,
+            "truncated": len(edges) < total,
+            "layout": "precomputed" if layout else "missing",
         }
     finally:
         conn.close()

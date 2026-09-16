@@ -573,8 +573,8 @@ dl.kv dd { margin: 0; word-break: break-word; }
 /* ── Graph ───────────────────────────────────────────────────────────────── */
 
 .gwrap { position: relative; height: 660px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-2); overflow: hidden; }
-#gsvg { width: 100%; height: 100%; display: block; cursor: grab; }
-#gsvg.grab { cursor: grabbing; }
+#gcanvas { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#gcanvas.grab { cursor: grabbing; }
 .gnode circle { stroke: var(--surface); stroke-width: 1.5; }
 .gnode text { font: 500 8.5px/1 'JetBrains Mono', monospace; fill: var(--ink-2); pointer-events: none; }
 .gnode { cursor: pointer; }
@@ -593,8 +593,9 @@ dl.kv dd { margin: 0; word-break: break-word; }
 .gside { top: 11px; right: 11px; width: 232px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-2); box-shadow: var(--sh-1); padding: 11px; }
 .gside .grp { margin-bottom: 11px; }
 .gside .grp:last-child { margin-bottom: 0; }
-.gkey { bottom: 11px; left: 11px; background: color-mix(in srgb,var(--surface) 93%,transparent); border: 1px solid var(--line); border-radius: var(--r-2); padding: 8px 10px; font-size: 10.5px; }
-.gkey .r { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.gkey { margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 10.5px;
+        max-height: 168px; overflow-y: auto; }
+.gkey .r { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; color: var(--ink-2); }
 .gkey .sw { width: 8px; height: 8px; border-radius: 50%; }
 .gstat { bottom: 11px; right: 11px; display: flex; gap: 15px; background: color-mix(in srgb,var(--surface) 93%,transparent); border: 1px solid var(--line); border-radius: var(--r-2); padding: 7px 13px; }
 .gstat .lb { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }

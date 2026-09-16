@@ -10,6 +10,7 @@ the same real tender document. Writes a new file and leaves the original alone.
 """
 
 import itertools
+import json
 from collections import Counter
 
 import pandas as pd
@@ -88,6 +89,19 @@ def main():
         print(f"  {r['Source IS']:<22} -> {r['Target IS']:<22} "
               f"{r['Co-citation Count']:>3} of {r['Tenders Citing Source']:<3} "
               f"({r['Confidence']:.3f})")
+
+    # The layout is a property of these edges, so it is recomputed here rather
+    # than left for someone to remember. A stale layout would park every new
+    # standard in the centre of the picture.
+    print()
+    from graph_layout import compute as _layout_compute
+
+    edges = [(r["Source IS"], r["Target IS"], float(r["Confidence"] or 0))
+             for _, r in out.iterrows()]
+    coords = _layout_compute(edges)
+    with open("data/graph_layout.json", "w", encoding="utf-8") as fh:
+        json.dump(coords, fh, separators=(",", ":"), sort_keys=True)
+    print(f"wrote data/graph_layout.json — {len(coords)} node positions")
 
 
 if __name__ == "__main__":
