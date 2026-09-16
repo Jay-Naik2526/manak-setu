@@ -68,11 +68,13 @@ properly on 621 queries.
 | USPs that reach top 5 | **B, C, D, E, F** — each is a claim no other team can make |
 | Value to the Ministry of Consumer Affairs, Food & Public Distribution | **B**, **E** |
 | Better UI — animations, layout, something new | **H** (full specification), with A and E |
+| Very optimised and smooth, everywhere | **S** — the list endpoints are 10.2 MB and 3.4 MB; the fix is server-side |
+| Bhashini, integrated end to end | **L** — the client is built here; the two credentials are yours to paste |
 
-Phase order by leverage: **A → H → B → C → D → E → F → G**. A and H are what a
-judge sees; do them first. B–E are independent of each other and can be done in
-any order if credits run short. F and G are stretch: last, and only with the
-measurement.
+Phase order by leverage: **A → S → H → L → B → C → D → E → F → G**. A and S make
+it fast, H makes it memorable, L is the flow the user asked for by name. B–E are
+independent of each other and can be done in any order if credits run short.
+F and G are stretch: last, and only with the measurement.
 
 ---
 
@@ -120,6 +122,81 @@ view first paint under 300 ms on a laptop (measure with
 holds 60 fps in the DevTools performance panel; no console errors in light and
 dark themes; the same standard selected before and after the change opens the
 same drawer content; `qa_adversarial.py` still 28/28. Commit the layout JSON.
+
+---
+
+## Phase L — Bhashini, integrated end to end  (~2 h; needs the user's two credentials to verify live)
+
+**State:** `multilingual.py` has no Bhashini code — a comment says it "should be"
+the provider (lines 26–28) and nothing more. The translation chain today is:
+BIS Hindi titles → MyMemory → Google, with IS numbers and units masked by
+`_protect()` before any provider sees the text. Bhashini goes **first** in that
+chain when configured, and the rest is unchanged as fallback.
+
+**What Bhashini is, precisely.** The Government of India's ULCA platform
+(bhashini.gov.in) exposes translation through a two-step pipeline API. Step one
+asks the platform which service handles a language pair and returns a callback
+URL and an inference key; step two calls that URL with the text. The executing
+model must **verify the endpoint and field names against the current
+documentation at bhashini.gov.in / ulcacontrib before shipping** — they have
+changed before — but the shape below is what the platform has published:
+
+1. `POST https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline`
+   headers `userID: <ULCA_USER_ID>`, `ulcaApiKey: <ULCA_API_KEY>`; body
+   `{"pipelineTasks":[{"taskType":"translation","config":{"language":{"sourceLanguage":"hi","targetLanguage":"en"}}}],"pipelineRequestConfig":{"pipelineId":"64392f96daac500b55c543cd"}}`
+   → read `pipelineInferenceAPIEndPoint.callbackUrl`,
+   `pipelineInferenceAPIEndPoint.inferenceApiKey.{name,value}` and
+   `pipelineResponseConfig[0].config[0].serviceId`.
+2. `POST <callbackUrl>` with header `<inferenceApiKey.name>: <value>`; body
+   `{"pipelineTasks":[{"taskType":"translation","config":{"language":{"sourceLanguage":"hi","targetLanguage":"en"},"serviceId":"<serviceId>"}}],"inputData":{"input":[{"source":"<masked text>"}]}}`
+   → `pipelineResponse[0].output[0].target`.
+
+**L1 — the client, in `multilingual.py`.** `_via_bhashini(text, source, target="en")`:
+reads `ULCA_USER_ID` and `ULCA_API_KEY`; returns `None` immediately if either
+is absent; caches the step-one config **per language pair for the process
+lifetime** (it is stable and step one is the slow call); 12 s timeouts; any
+HTTP error, timeout or unexpected shape returns `None` and logs one line, so
+the chain falls through exactly as today. Language codes are ISO 639-1
+(`hi mr bn ta te kn ml gu pa or ur as`) — the same ones `detect_script` and the
+switcher already use. `MANAK_TRANSLATE_PROVIDER=bhashini` puts it first;
+unset, the chain is unchanged. The response's `provider` field says which
+provider actually answered, and the interface's language note reads
+"translated by Bhashini" **only** when it did — never as a label on the
+switcher.
+
+**L2 — `python multilingual.py --doctor`.** One command that prints, for the
+current environment: whether the two ULCA variables are set, whether step one
+returns a callback for hi→en, whether step two translates a fixed sentence,
+and the same for MyMemory and Google — each line PASS/FAIL with the reason.
+This is the answer to "I have a problem integrating it": the user runs one
+command and sees which step fails.
+
+**L3 — the interface in twelve languages, translated by the Government's own
+service.** `translate_ui.py --provider bhashini` regenerates the ten
+machine-translated locale files (`frontend/locales.js`) through Bhashini's
+batch input (`inputData.input` accepts a list), with the same `.mono` /
+`.std-title` / IS-number exclusions. Keep the old files; write the new ones
+only after a spot check of ten strings in two languages, and record in the
+commit which provider produced each locale. Hindi and English stay
+hand-checked.
+
+**L4 — deployment.** The two credentials go in Render's Environment tab (the
+user does this — they are secrets and never enter `render.yaml` or the repo).
+Then the hosted site translates through Bhashini, which does not refuse the
+datacentre IP the free providers refuse — so the Hindi demo step can return to
+the walkthrough **if and only if** it is verified working on the live link.
+
+**Registration, for the user (the model cannot do this):** bhashini.gov.in →
+register on ULCA → profile → generate `userID` and `ulcaApiKey`; set them as
+`ULCA_USER_ID` and `ULCA_API_KEY` locally (`export …`) and in Render; run
+`--doctor`.
+
+**Acceptance:** with the variables unset, every existing test passes and the
+behaviour is byte-for-byte what it was; with them set, `--doctor` shows PASS on
+both steps, `औद्योगिक सुरक्षा हेलमेट` returns IS 2925 with `provider: bhashini` in
+the response and the note on screen; the golden 71 Hindi-path check from the
+README is re-run and its number recorded. No claim of Bhashini anywhere on
+screen or in the brief until that acceptance has been seen.
 
 ---
 
@@ -295,6 +372,76 @@ existing print stylesheet; no new dependencies. Same palette.
 **Acceptance:** the report for the "outdated" preset opens, prints to one or
 two A4 pages, and every IS number on it resolves in the register or is marked
 unresolved.
+
+---
+
+## Phase S — Very optimised and smooth, measured  (~3 h, right after A)
+
+**Cause, measured (17 Sep):** `/standards` serves **10,244,760 bytes** and
+`/tenders` **3,429,003 bytes**, uncompressed; `/certifications` 952 KB; `/graph`
+916 KB at 1.16 s. The Standards, Tenders and Certification views each fetch the
+*entire* table on first open (`api('/standards')` at app.js:1259, `/tenders` at
+:767 and :1161, `/certifications` at :1336) and then cap the *display* at 250
+rows — so the browser downloads and parses ten megabytes to show 250 lines. The
+register grew thirteenfold and the list endpoints never changed. This is the
+invisible lag; the graph was the visible one.
+
+**S1 — list endpoints become searchable and paged.** `/standards`, `/tenders`,
+`/certifications` accept `q`, `family`, `status`, `limit` (default 100, max
+500), `offset`, and return `{total, rows}` with a **lean projection** — only the
+columns the table shows (Standards: number, title, year, status, family, review
+due; Tenders: id, title, family, count, any outdated, usability; Certs: number,
+description, scheme, notification). Search is `LIKE` over number and title with
+the same `_is_digits` normalisation the resolver uses, so "IS:694" and "694"
+find the same rows. Detail stays on `/standard?is_number=`. CSV export moves to
+`/standards.csv` etc., streamed with `StreamingResponse`, so the button still
+exports everything without the view ever holding everything.
+
+**S2 — the views switch to server search.** Standards, Tenders and
+Certifications: a 200 ms debounced search box, family/status selects that
+requery, a "Load 100 more" control (or windowed infinite scroll — the simpler
+one that stays smooth), and the table renders only the rows it has. Initial
+transfer per view **≤ 100 KB** (state the bytes). Sorting by a column requeries
+with `sort=`; never sorts a partial page client-side and calls it sorted.
+
+**S3 — SQLite indexes.** In `load_db.py` after the load: indexes on
+`standards("IS Base")`, `standards("IS Digits")`, `standards("Status")`,
+`standards("Product Family")`, `tenders("Usability")`, `tenders("Ministry")`,
+`co_citation("Source IS")`, `co_citation("Target IS")`. Measure `/audit-text`,
+`/peers` and `/standard` p95 over 20 calls before and after and write both
+numbers in the commit.
+
+**S4 — caching.** Versioned static assets (`app.js?v=`, `styles.css?v=`) get
+`Cache-Control: public, max-age=31536000, immutable`; `index.html` gets
+`no-cache`; API responses carry an `ETag` (hash of body) so unchanged `/stats`
+and `/health-index` return 304. `/stats`, `/health-index` and `/graph` are
+cached in memory for 120 s and invalidated by `load_db.py` (write a marker
+file it bumps). Gzip is already on; check `Content-Encoding: gzip` appears on
+every JSON response over 1 KB.
+
+**S5 — the client.** `content-visibility: auto` with `contain-intrinsic-size`
+on cards below the fold; `<link rel="preload">` for the two font files with
+`font-display: swap`; `passive: true` on scroll and wheel listeners; the i18n
+DOM walk runs inside `requestIdleCallback`; no `innerHTML` rebuild of a table on
+keystroke — render on the debounced result only. Split `app.js` by view using
+native `<script type="module">` and dynamic `import()` per view **only if** the
+measured parse time of the single file exceeds 40 ms on a mid-range laptop;
+otherwise leave it, and say which.
+
+**S6 — warm start where memory allows.** `MANAK_WARM=1` loads the retrieval
+state in a background thread at startup so the first query is not the slow
+one. Off by default; never set on the 512 MB host.
+
+**Budget and acceptance (paste the numbers into the commit):**
+- Lighthouse Performance **≥ 90** on Overview, Draft, Audit, Graph, Standards
+  — mobile and desktop; CLS < 0.05 everywhere.
+- Standards view opens in **< 400 ms** with **< 100 KB** transferred; `/graph`
+  ≤ 250 KB (Phase A); no request on any first screen larger than 250 KB.
+- No long task > 50 ms while typing in any search box (DevTools performance).
+- `/audit-text` p95 < 300 ms and `/peers` p95 < 400 ms locally after S3.
+- Nothing in any response body changes meaning; `qa_adversarial.py` 28/28
+  after each sub-phase (its list-endpoint checks may need `limit=` — update
+  them, do not weaken them).
 
 ---
 
@@ -533,8 +680,8 @@ Keep the 11 kV → IS 7098 (Part 2) opener. Fix the idea PPT's 405 / 226 / 3,718
 
 ## Order of execution and credit economy
 
-A first — it is the only thing a judge will visibly see failing — then H, the
-interface. Then B, C, D, E in any order; they are independent. F and G last, and
-only with measurement. Push after each phase. If credits run short, a finished
-A + H + B is worth more than a half-finished everything: the graph works, the
-interface is the one they remember, and the ministry has its number.
+A and S first — nothing else matters if the site stalls — then H, then L. Then
+B, C, D, E in any order; they are independent. F and G last, and only with
+measurement. Push after each phase. If credits run short, a finished
+A + S + H + L is worth more than a half-finished everything: it is fast, it is
+the one they remember, and Hindi works through the Government's own service.
