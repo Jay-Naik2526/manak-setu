@@ -3,7 +3,6 @@ import sqlite3
 
 import numpy as np
 import pandas as pd
-from sentence_transformers import SentenceTransformer
 
 DB_PATH = "manak_setu.db"
 EMBEDDINGS_PATH = "standards_embeddings.npy"
@@ -18,6 +17,12 @@ _is_numbers = None
 def _get_model():
     global _model
     if _model is None:
+        # Imported here, not at module scope: the import pulls torch, and every
+        # part of this module that does not embed anything — lookups, stats,
+        # extraction, the health index, peer citations — would otherwise pay
+        # 400 MB for a model they never call.
+        from sentence_transformers import SentenceTransformer
+
         _model = SentenceTransformer(MODEL_NAME)
     return _model
 

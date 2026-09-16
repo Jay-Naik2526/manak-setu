@@ -21,7 +21,11 @@ import sqlite3
 import numpy as np
 import pandas as pd
 from rank_bm25 import BM25Okapi
-from sentence_transformers import CrossEncoder, SentenceTransformer
+
+# sentence_transformers is imported inside _bi() and _cross(), not here. Importing
+# it pulls in torch, which costs about 400 MB before a single vector is loaded —
+# more than the whole budget of the host this is deployed to. In lexical mode it
+# is never imported at all.
 
 DB_PATH = "manak_setu.db"
 EMBEDDINGS_PATH = "standards_embeddings.npy"
@@ -109,9 +113,14 @@ def _load():
     # L2-normalised, so every component is within [-1, 1] where float16 has
     # about three decimal digits — far finer than the gaps between ranked
     # cosine scores. Measured on the golden set, ranking is unchanged.
-    vectors = np.load(EMBEDDINGS_PATH)
-    if vectors.dtype != np.float16:
-        vectors = vectors.astype(np.float16)
+    # In lexical mode the vectors are never multiplied by anything, so loading
+    # 21 MB of them is pure cost.
+    if LEXICAL_MODE:
+        vectors = np.empty((0, 0), dtype=np.float16)
+    else:
+        vectors = np.load(EMBEDDINGS_PATH)
+        if vectors.dtype != np.float16:
+            vectors = vectors.astype(np.float16)
 
     # BM25Okapi builds its own frequency tables and never reads the token lists
     # again, so holding them costs 31 MB for nothing.
@@ -152,8 +161,12 @@ def hindi_ranking(query: str, depth: int = FUSE_DEPTH) -> list[int]:
 
 
 def _bi():
+    if LEXICAL_MODE:
+        return None
     s = _load()
     if s["bi"] is None:
+        from sentence_transformers import SentenceTransformer
+
         s["bi"] = SentenceTransformer(BI_ENCODER)
     return s["bi"]
 
@@ -164,6 +177,22 @@ def _bi():
 # response says which mode is running so nobody has to guess.
 LIGHT_MODE = os.getenv("MANAK_LIGHT") == "1"
 
+# Lexical mode drops the neural encoders entirely: BM25, the four constraint
+# filters and the confidence gate, and nothing that needs torch. It exists
+# because the register outgrew the memory a free host provides — 27,687
+# standards plus torch measured 773 MB against a 512 MB limit, and the service
+# was killed on every query that touched retrieval. Without torch the same
+# corpus and index cost 114 MB.
+#
+# On the golden set it scores 61/71 at rank 1 against the hybrid's 56/71. That
+# is not evidence the encoders are unnecessary: the golden queries are largely
+# drawn from the standards' own titles and QCO product descriptions, which is
+# exactly the text BM25 matches on. An officer writing "cable for underground
+# 11kV feeder" is a different question from a title lookup, and the dense
+# retriever is there for that. The mode is a deployment accommodation, reported
+# as such in /health, not a claim about which is better.
+LEXICAL_MODE = os.getenv("MANAK_LEXICAL") == "1"
+
 # Shape of the sigmoid applied to a fused-rank score when no cross-encoder is
 # available. The midpoint is the share of the theoretical maximum at which a
 # candidate is judged borderline; the gain sets how sharply confidence falls
@@ -172,12 +201,25 @@ LIGHT_MODE = os.getenv("MANAK_LIGHT") == "1"
 FUSED_SCORE_MIDPOINT = 0.55
 FUSED_SCORE_GAIN = 12.0
 
+# BM25 is unbounded, so a threshold on it has to be anchored to this corpus.
+# Measured over the 71 golden queries against all 27,687 standards: where the
+# top hit was correct it scored at least 14.3 (tenth percentile 25.2, median
+# 41.9); over queries with no real answer the top hit peaked at 12.3 (median
+# 7.8). The scale places the gate's 0.45 threshold between those two, so the
+# weakest genuine match still clears it and the strongest coincidence does not.
+# Re-measure these if the register changes size — BM25 scores move with the
+# corpus, which is why they are named here rather than buried in an expression.
+LEXICAL_SCORE_SCALE = 14.0
+LEXICAL_SCORE_GAIN = 4.0
+
 
 def _cross():
-    if LIGHT_MODE:
+    if LIGHT_MODE or LEXICAL_MODE:
         return None
     s = _load()
     if s["cross"] is None:
+        from sentence_transformers import CrossEncoder
+
         s["cross"] = CrossEncoder(CROSS_ENCODER)
     return s["cross"]
 
@@ -251,7 +293,7 @@ def search(query: str, boost: str | None = None,
     dense_rank: list[int] = []
     bm_rank: list[int] = []
     rankings = []
-    if english:
+    if english and not LEXICAL_MODE:
         qv = _bi().encode([query], normalize_embeddings=True)[0]
         # float16 storage, float32 arithmetic: the dot product accumulates over
         # 384 terms and half precision would lose the low bits that separate
@@ -261,6 +303,10 @@ def search(query: str, boost: str | None = None,
         bm_scores = s["bm25"].get_scores(_tokens(query))
         bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
         rankings = [dense_rank, bm_rank]
+    elif english:
+        bm_scores = s["bm25"].get_scores(_tokens(query))
+        bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
+        rankings = [bm_rank]
     # A ranking computed elsewhere — today, BIS's Hindi titles — gets a vote in
     # the fusion rather than a veto, exactly like the vocabulary expansion.
     rankings += [r for r in (extra_rankings or []) if r]
@@ -287,13 +333,20 @@ def search(query: str, boost: str | None = None,
         # clear_match, and the confidence gate could never fire. Reciprocal rank
         # fusion is bounded: a candidate placed first by every ranking scores
         # len(rankings)/(RRF_K + 1), so that is the scale.
-        ceiling = max(len(rankings), 1) / (RRF_K + 1)
-        logits = []
-        for i in shortlist:
-            share = min(fused[i] / ceiling, 1.0)
-            # Centred so that agreement from about half the rankings is the
-            # break-even point the threshold then judges.
-            logits.append(FUSED_SCORE_GAIN * (share - FUSED_SCORE_MIDPOINT))
+        if len(rankings) > 1:
+            ceiling = len(rankings) / (RRF_K + 1)
+            logits = [FUSED_SCORE_GAIN * (min(fused[i] / ceiling, 1.0) - FUSED_SCORE_MIDPOINT)
+                      for i in shortlist]
+        else:
+            # With a single ranking, reciprocal rank fusion says nothing about
+            # quality: the leader scores exactly 1/(k+1) whether it is a perfect
+            # match or the least bad of 27,687 wrong ones, so "purple unicorn
+            # saddles" came back at 0.99. The retriever's own score is the only
+            # signal there is, so it is used directly, relative to what this
+            # corpus's titles score when they genuinely match.
+            raw = s["bm25"].get_scores(_tokens(query))
+            logits = [LEXICAL_SCORE_GAIN * (float(raw[i]) / LEXICAL_SCORE_SCALE - 1.0)
+                      for i in shortlist]
     else:
         pairs = [(query, s["blobs"][i]) for i in shortlist]
         logits = cross.predict(pairs)
