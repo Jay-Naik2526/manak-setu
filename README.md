@@ -182,10 +182,24 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   query can be matched without a translation service — which matters because
   the free translation providers refuse the shared datacentre addresses a hosted
   deployment sits behind. Coverage is narrow and skewed to recently published
-  standards: **1 of the 71 golden-set standards carries one**, so this path
-  complements translation rather than replacing it. Where BIS has not named a
-  standard in Hindi, nothing is invented and the query falls back to
-  translation.
+  standards, so this path complements translation rather than replacing it.
+  Where BIS has not named a standard in Hindi, nothing is invented and the query
+  falls back to translation.
+- **Evaluation set**: 621 query/standard pairs in `golden_queries.csv`, built by
+  `build_golden.py` from BIS's own certification notifications — the
+  notification names a product in its own words and states the standard it
+  applies to, so the label comes from a legal instrument rather than from
+  hand review. It was 71 pairs and electrical-only while it was built from the
+  77 Quality Control Orders; the catalogue sweep added the Scheme I list, and
+  with it 146 steel, 20 agro-textile, 18 fastener, 17 aluminium and 12 cement
+  queries.
+  Current scores against all 27,687 standards: **Recall@1 464/621 (75%)**,
+  **Recall@10 525/621 (85%)**, abstention 39/621 (6%), of which 14 had no
+  correct answer available. `eval_retrieval.py` breaks rank-1 down by product
+  family, because one figure over a set this uneven hides which domains it was
+  measured on — fasteners score 94%, cement 83%, steel 78%, hand tools 50%.
+  Two limits remain: the queries are notification text rather than an officer's
+  own phrasing, and families BIS does not certify are still unmeasured.
 - **Certification gaps**: `certification_rules_all.csv` has 737 rows across four schemes — BIS Product Certification (ISI Mark, Scheme I) 628, Quality Control Orders 77, CRS (Scheme II) 30, Hallmarking 2. Some
   product families — e.g. LED lighting — currently have **zero** certification
   rows. `check_certification` correctly returns `found: false` for these;

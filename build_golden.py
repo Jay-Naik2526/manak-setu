@@ -35,7 +35,13 @@ import sqlite3
 
 import pandas as pd
 
-RULES = "data/certification_rules.csv"
+# The full certification register, not just the original 77 Quality Control
+# Order rows. The catalogue sweep added the Scheme I list — 156 steel and iron
+# products, 19 fasteners, 17 aluminium, 16 cement, 20 geotextiles — which is
+# precisely the non-electrical ground the QCO-only set could not cover. Same
+# method, same authority: BIS names the product in its own words and states the
+# standard it applies to.
+RULES = "data/certification_rules_all.csv"
 OUT = "data/golden_queries.csv"
 DB = "manak_setu.db"
 
@@ -88,7 +94,9 @@ def main():
         rows.append({
             "query": query,
             "expected_is": is_number,
-            "source": f"QCO product description, {clean(r.get('Notification Reference'))[:60] or 'certification_rules.csv'}",
+            "source": (f"{clean(r.get('Scheme')) or 'BIS certification'} product "
+                       f"description, {clean(r.get('Notification Reference'))[:52] or 'certification_rules_all.csv'}"),
+            "family": clean(r.get("BIS Product Category"))[:48],
         })
 
     existing = pd.read_csv(OUT, encoding="utf-8-sig") if OUT else None

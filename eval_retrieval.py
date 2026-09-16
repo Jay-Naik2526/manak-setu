@@ -90,6 +90,20 @@ def main():
     hits_at_1 = sum(1 for r in rows if r["rank"] == 1)
     print(f"Recall@1     : {hits_at_1}/{n}  ({hits_at_1 / n:.0%})   "
           f"— expected standard ranked first")
+
+    # A single figure over a set this uneven hides which domains it was measured
+    # on. The register covers many families; the evaluation set covers the ones
+    # BIS names in a certification notification, and unevenly.
+    if "family" in df.columns:
+        by_family: dict[str, list[int]] = {}
+        for row, (_, g) in zip(rows, df.iterrows()):
+            fam = str(g.get("family") or "").strip()
+            fam = (fam if fam and fam.lower() != "nan" else "QCO seed rows")[:44]
+            by_family.setdefault(fam, []).append(1 if row["rank"] == 1 else 0)
+        print("\n  rank-1 by product family (families with 8 or more queries):")
+        for fam, hits in sorted(by_family.items(), key=lambda kv: -len(kv[1])):
+            if len(hits) >= 8:
+                print(f"    {sum(hits):>4}/{len(hits):<4} ({sum(hits)/len(hits):>4.0%})  {fam}")
     print(f"Recall@{RECALL_AT}    : {hits_at_k}/{n}  ({hits_at_k / n:.0%})   "
           f"— expected standard present in the reranked candidates")
     print(f"Precision@{PRECISION_AT}  : {prec_total / n:.3f}")
