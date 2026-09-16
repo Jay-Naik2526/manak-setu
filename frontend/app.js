@@ -861,13 +861,107 @@ async function runAudit() {
   finally { btn.disabled = false; btn.innerHTML = `${ic('check','sm')} Run verification`; }
 }
 
+/* ── the document, marked up ────────────────────────────────────────────────
+   The audit used to be a list of findings beside a document you could not see.
+   An officer reading "IS 434 (Part 1) is superseded" then had to go and find it
+   themselves. Here the document is shown with every citation underlined where
+   it actually appears, coloured by what the register says about it, so the
+   report and the text are the same object.
+
+   The markup is built from the citations the server resolved, matched back into
+   the text the officer supplied. Nothing is inferred: a citation is underlined
+   only where its own characters occur. */
+
+const CITE_CLASS = { Withdrawn: 'x-dead', Superseded: 'x-super', Current: 'x-ok' };
+
+function citationStatus(d) {
+  // One place that decides what colour a citation is, so the underline, the
+  // summary bar and the ledger cannot disagree.
+  const status = {};
+  const dead = (d && d.dead_citations) || {};
+  Object.keys(dead).forEach(k => {
+    const r = dead[k];
+    status[k] = !r.found ? 'unresolved' : (r.status || (r.dead ? 'Withdrawn' : 'Current'));
+  });
+  (S.audit && S.audit.findings || []).forEach(f => {
+    if (f.kind === 'not_in_register') status[f.is_number] = 'unresolved';
+    else if (f.kind === 'dispute_risk' && f.status) status[f.is_number] = f.status;
+  });
+  return status;
+}
+
+function documentXray(text, status) {
+  if (!text || !text.trim()) return '';
+  const cites = Object.keys(status);
+  if (!cites.length) return '';
+
+  // Longest first: "IS 1554 (Part 1)" must win over "IS 1554" where both are
+  // present, or the part reference is left dangling outside the mark.
+  const ordered = [...cites].sort((a, b) => b.length - a.length);
+  const escaped = ordered.map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'));
+  const re = new RegExp('(' + escaped.join('|') + ')', 'gi');
+
+  const counts = { Withdrawn: 0, Superseded: 0, Current: 0, unresolved: 0 };
+  const seen = new Set();
+  let idx = 0;
+  const marked = esc(text).replace(re, (m) => {
+    const key = ordered.find(c => c.replace(/\s+/g, ' ').toLowerCase() === m.replace(/\s+/g, ' ').toLowerCase())
+      || ordered.find(c => m.replace(/\s+/g, ' ').toLowerCase().startsWith(c.replace(/\s+/g, ' ').toLowerCase()));
+    if (!key) return m;
+    const st = status[key] || 'unresolved';
+    if (!seen.has(key)) { seen.add(key); counts[st] = (counts[st] || 0) + 1; }
+    const cls = CITE_CLASS[st] || 'x-unres';
+    return `<mark class="xcite ${cls}" data-cite="${esc(key)}" tabindex="0"
+      title="${esc(key)} — ${esc(st === 'unresolved' ? 'not in the register' : st)}"
+      style="animation-delay:${(idx++) * 40}ms">${m}</mark>`;
+  });
+
+  const bar = [
+    `${seen.size} citation${seen.size === 1 ? '' : 's'} found in the text`,
+    counts.Withdrawn ? `${counts.Withdrawn} withdrawn` : '',
+    counts.Superseded ? `${counts.Superseded} superseded` : '',
+    counts.unresolved ? `${counts.unresolved} not in the register` : '',
+    counts.Current ? `${counts.Current} current` : '',
+  ].filter(Boolean).join(' · ');
+
+  const missing = cites.filter(c => !seen.has(c));
+  return `<div class="card xray-card">
+    <div class="hd"><span class="eyebrow">The document, marked up</span><h3></h3>
+      <span class="xs dimmer">${esc(bar)}</span></div>
+    <div class="in">
+      <div class="xray" id="an-xray">${marked}</div>
+      ${missing.length ? `<p class="xs dimmer" style="margin-top:9px">
+        ${missing.length} citation${missing.length === 1 ? ' was' : 's were'} verified but
+        ${missing.length === 1 ? 'does' : 'do'} not appear verbatim in this text
+        (entered by hand, or written differently in the document):
+        <span class="mono">${missing.map(esc).join(', ')}</span></p>` : ''}
+      <p class="xs dimmer" style="margin-top:7px">Underline colour is the register's status for that
+        standard. Click one to jump to its finding.</p>
+    </div></div>`;
+}
+
+function wireXray() {
+  $$('#an-xray .xcite').forEach(el => {
+    const go = () => {
+      const key = el.dataset.cite;
+      const row = document.querySelector(`[data-finding="${CSS.escape(key)}"]`);
+      if (!row) { toast(`${key} is current — no finding to show`, 'info'); return; }
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.add('flash');
+      setTimeout(() => row.classList.remove('flash'), 1400);
+    };
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+}
+
 function renderAudit(d) {
   const all = Object.keys(d.dead_citations || {});
   const dead = all.filter(k => d.dead_citations[k].dead);
   const gone = all.filter(k => !d.dead_citations[k].found);
   const live = all.filter(k => d.dead_citations[k].found && !d.dead_citations[k].dead);
   const duty = all.filter(k => (d.certifications[k] || {}).found);
-  let h = renderFindings(S.audit);
+  let h = documentXray($('#spec').value, citationStatus(d)) + renderFindings(S.audit);
 
   if (all.length) {
     h += `<div class="kpis" style="margin-top:16px">` + [
@@ -940,6 +1034,7 @@ function renderAudit(d) {
   }
 
   $('#an-out').innerHTML = h || blank(t('msg.nothingYet'), t('msg.queueFirst'));
+  wireXray();
   setTimeout(translatePage, 60);
   runCounts();
   $$('#an-out [data-go]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); openStandard(el.dataset.go); }));
@@ -2328,7 +2423,7 @@ function renderFindings(a) {
       <div class="in">${rows.join('')}</div></div>` : '';
 
   h += block('Replace these citations', 'alert', 'bad', S.replace.map(r => `
-    <div class="edit">
+    <div class="edit" data-finding="${esc(r.cite)}">
       <div class="top">
         <span class="mono strike jump" data-go="${esc(r.cite)}">${esc(r.cite)}</span>
         <span class="pill bad">${esc(r.status)}</span>
@@ -2342,7 +2437,7 @@ function renderFindings(a) {
     </div>`));
 
   h += block('Consider adding these standards', 'net', 'warn', S.add.map(r => `
-    <div class="edit">
+    <div class="edit" data-finding="${esc(r.cite)}">
       <div class="top">
         <span class="mono jump" data-go="${esc(r.cite)}">${esc(r.cite)}</span>
         ${r.confidence != null ? `<span class="pill mute">${(r.confidence * 100).toFixed(0)}% of comparable tenders</span>` : ''}
@@ -2354,7 +2449,7 @@ function renderFindings(a) {
     </div>`));
 
   h += block('Add these certification clauses', 'badge', 'bad', S.add_clause.map(r => `
-    <div class="edit">
+    <div class="edit" data-finding="${esc(r.for)}">
       <div class="top">
         <span class="mono jump" data-go="${esc(r.for)}">${esc(r.for)}</span>
         <span class="pill bad">${esc(r.scheme || 'mandatory')}</span>
