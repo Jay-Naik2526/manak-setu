@@ -1529,16 +1529,47 @@ table td { font-size: 14.5px; }
    left 912px for labels that need 987, so Evidence, Coverage and Benchmark
    fell off a 1280px screen. On its own row the block costs height, which the
    masthead has, instead of width, which the sections do not. */
-.nav-right {
-  grid-column: 4; grid-row: 1;
-  flex-direction: column; align-items: flex-end; justify-content: center;
-  gap: 7px; padding: 9px 0 9px 16px;
+/* The two control rows belong to different rows of the masthead: the actions
+   sit beside the identity, the settings sit beside the sections. `display:
+   contents` dissolves their wrapper so each becomes a grid item of the bar
+   itself and can be placed on its own row — otherwise both are trapped in
+   whichever cell the wrapper occupies. */
+.nav-right { display: contents; }
+.nav-row { display: flex; align-items: center; gap: 6px; justify-self: end; }
+.nav-row:first-child { grid-column: 4; grid-row: 1; padding-left: 16px; }
+.nav-row:last-child {
+  grid-column: 4; grid-row: 2; padding-left: 16px;
+  border-top: 1px solid var(--nav-line); align-self: stretch;
 }
-/* Each row right-aligned, so the two stack flush against the same edge. */
-.nav-row { display: flex; align-items: center; gap: 6px; }
 .tabwrap {
-  grid-column: 1 / 5; grid-row: 2;
+  grid-column: 1 / 4; grid-row: 2;
   border-top: 1px solid var(--nav-line);
+}
+
+/* Settings beside the sections costs the sections about 215px, which they can
+   afford at 1280 and cannot below it: at 1000 they came up 169px short and
+   Coverage and Benchmark fell off the end. So under 1200 the settings move up
+   beside the actions — both right-aligned on the identity row — and the
+   sections take the whole width back. Labels people click beat a tidier
+   arrangement of controls. */
+@media (max-width: 1199.98px) {
+  .nav-row:last-child {
+    grid-column: 3; grid-row: 1;
+    border-top: none; align-self: center; padding-left: 0;
+  }
+  .tabwrap { grid-column: 1 / 5; }
+}
+
+/* On a phone the four columns cannot hold a brand and two control groups on one
+   line — placing them there pushed the bar past the viewport and every view
+   scrolled sideways. Below this the masthead stops being a grid and simply
+   wraps: identity, controls, then the sections on their own full-width line. */
+@media (max-width: 780px) {
+  .topnav { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+  .brand { flex: 1 1 auto; min-width: 0; }
+  .brand-sep { display: none; }
+  .nav-row { flex: 0 0 auto; border-top: none; padding-left: 0; }
+  .tabwrap { flex-basis: 100%; }
 }
 .tabs { height: 46px; }
 .tab { height: 46px; padding: 0 12px 10px; font-size: 14.5px; }
