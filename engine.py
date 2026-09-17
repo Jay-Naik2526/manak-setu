@@ -267,8 +267,19 @@ def _layout() -> dict:
     return _LAYOUT
 
 
+# How many relationships each standard contributes to the drawing. The stored
+# graph keeps every co-citation — that is the evidence, and the drawer reads it
+# in full — but drawing all of it is neither useful nor fast: at the lowest
+# thresholds the table holds over a hundred thousand rows, which is 7.6 MB and
+# two and a half seconds before a pixel appears. Keeping each standard's
+# best-evidenced partners shows every node and the relationships that actually
+# say something, and the number is stated on screen so nobody mistakes the
+# picture for the whole table.
+DRAW_EDGES_PER_NODE = 12
+
+
 def full_graph(node_limit: int | None = None, edge_limit: int | None = None,
-               min_count: int = 0) -> dict:
+               min_count: int = 0, per_node: int | None = None) -> dict:
     """The co-citation graph, ready to draw.
 
     Only the fields the renderer reads: an edge is two endpoints, a confidence
@@ -299,6 +310,41 @@ def full_graph(node_limit: int | None = None, edge_limit: int | None = None,
             # together forty times out of fifty. The strongest evidence should
             # survive the trim.
             rows = sorted(rows, key=lambda r: -(r["Co-citation Count"] or 0))[:edge_limit]
+
+        # The table stores a row per direction, because confidence is
+        # directional — "cited alongside A in 18 of 20" is not the same claim as
+        # "cited alongside B in 18 of 51". Drawing is not directional, so both
+        # rows drew the same line on top of itself: half the graph's render cost
+        # was producing pixels that were already there. One line per pair now,
+        # keeping the better-evidenced direction so the tooltip still reads true.
+        best: dict[tuple, object] = {}
+        for r in rows:
+            key = (r["Source IS"], r["Target IS"])
+            key = key if key[0] <= key[1] else (key[1], key[0])
+            held_row = best.get(key)
+            if held_row is None or (r["Confidence"] or 0) > (held_row["Confidence"] or 0):
+                best[key] = r
+        rows = list(best.values())
+        # Pairs available at this threshold, counted after deduplication and
+        # before the cap — so the screen can say "N of M drawn" with an M that
+        # responds to the filter. It used to be total // 2, which ignored
+        # min_count entirely and reported the same M for every request.
+        pairs = len(rows)
+
+        # Each standard keeps its strongest relationships. Applied after the
+        # deduplication so the cap counts lines, not table rows.
+        cap = DRAW_EDGES_PER_NODE if per_node is None else per_node
+        if cap and cap > 0:
+            kept: list = []
+            per: dict[str, int] = {}
+            for r in sorted(rows, key=lambda r: -(r["Co-citation Count"] or 0)):
+                a, b = r["Source IS"], r["Target IS"]
+                if per.get(a, 0) >= cap and per.get(b, 0) >= cap:
+                    continue
+                per[a] = per.get(a, 0) + 1
+                per[b] = per.get(b, 0) + 1
+                kept.append(r)
+            rows = kept
 
         node_ids = sorted({r["Source IS"] for r in rows} | {r["Target IS"] for r in rows})
         degree = {}
@@ -343,11 +389,20 @@ def full_graph(node_limit: int | None = None, edge_limit: int | None = None,
             for r in rows
         ]
         total = conn.execute("SELECT COUNT(*) FROM co_citation").fetchone()[0]
+        try:
+            with open("data/graph_meta.json", encoding="utf-8") as fh:
+                meta = json.load(fh)
+        except (OSError, ValueError):
+            meta = {}
+
         return {
             "nodes": nodes,
             "edges": edges,
+            "thresholds": meta,
             "total_edges": total,
-            "truncated": len(edges) < total,
+            "distinct_pairs": pairs,
+            "edges_per_node": cap,
+            "truncated": len(edges) < pairs,
             "layout": "precomputed" if layout else "missing",
         }
     finally:

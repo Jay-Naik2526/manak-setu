@@ -67,7 +67,7 @@ no build step, no framework. Ten pages:
 | **Dashboard** | Live corpus aggregates — status donut, coverage meter, decade histogram, family/degree/gap bars. Recomputed from SQLite on every load. |
 | **Analyze Tender** | Drag-drop a tender PDF (parsed server-side by pdfplumber), paste spec text, or enter IS numbers. One-click presets load real corpus examples. Severity-sorted findings. |
 | **Tender Corpus** | Browse and filter all 4,917 real tenders; click any row to run a live compliance check on its actual citations. |
-| **Knowledge Graph** | Canvas graph of the 320 co-cited standards / 4,904 edges, laid out server-side. Family filter, confidence threshold, node drill-down with real evidence statements. |
+| **Knowledge Graph** | Canvas graph of all 1,858 co-cited standards, each drawn with its 12 best-evidenced relationships out of 35,806 pairs held; laid out server-side. Family filter, confidence threshold, node drill-down with real evidence statements. |
 | **Standards** | All 27,687 rows, searchable/filterable, with a detail drawer (record + certification + co-citations). |
 | **Certifications** | All 737 rules across ISI Mark Scheme I, CRS, QCO and Hallmarking. |
 | **Coverage & Gaps** | The 99.0% coverage figure with its exact denominator, and the 20-row remaining collection backlog. |
@@ -145,7 +145,7 @@ specs like "PVC insulated cable" score High, e.g. matching `IS 5831` at 0.77).
 `GET /health` returns row counts per table, e.g.:
 
 ```json
-{"status": "ok", "row_counts": {"standards": 27687, "tenders": 4917, "co_citation": 4904, "certification_rules": 737, "coverage_gap_backlog": 20}}
+{"status": "ok", "row_counts": {"standards": 27687, "tenders": 4917, "co_citation": 65872, "certification_rules": 737, "coverage_gap_backlog": 20}}
 ```
 
 ## Known Data Gaps

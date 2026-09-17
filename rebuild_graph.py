@@ -17,14 +17,35 @@ import pandas as pd
 
 SRC = "data/tender_dataset.csv"
 OUT = "data/co_citation_graph_full.csv"
+META = "data/graph_meta.json"
 
-# Specification thresholds (section 5.3).
-MIN_CO_CITATIONS = 5
-MIN_CONFIDENCE = 0.40
-MIN_SOURCE_TENDERS = 8
+# Evidence thresholds. These decide how much repetition a pair needs before the
+# graph will claim the two standards go together — they are the graph's standard
+# of proof, not a display setting, so they are printed with every rebuild and
+# shown on the screen that draws the result.
+#
+# Lower values admit weakly-evidenced pairs. That is a legitimate choice for an
+# operator who wants to see the whole corpus rather than only its core, which is
+# why they are settable here; but an edge backed by two documents is a much
+# weaker claim than one backed by forty, and the renderer must keep that visible
+# rather than drawing both the same.
+MIN_CO_CITATIONS = 2
+MIN_CONFIDENCE = 0.20
+MIN_SOURCE_TENDERS = 2
 
 
 def citation_sets(df: pd.DataFrame) -> list[set[str]]:
+    """One document, one set of citations — over the same population every other
+    figure in this project measures.
+
+    The graph used to read every row that carried citations, including the 27
+    Multi-scope and 27 Not-extractable ones, while coverage, the backlog and the
+    health index all count Usability='Usable' only. Two populations meant the
+    graph could hold a standard that the backlog had never heard of, which is
+    exactly what consistency_check found: IS 23896, an endpoint in the graph,
+    cited only by two multi-scope documents, declared as a gap nowhere."""
+    if "Usability" in df.columns:
+        df = df[df["Usability"] == "Usable"]
     sets = []
     for value in df["IS Numbers Cited"].dropna():
         cited = {c.strip() for c in str(value).split(";") if c.strip()}
@@ -34,6 +55,17 @@ def citation_sets(df: pd.DataFrame) -> list[set[str]]:
 
 
 def main():
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--min-co", type=int, default=MIN_CO_CITATIONS)
+    ap.add_argument("--min-confidence", type=float, default=MIN_CONFIDENCE)
+    ap.add_argument("--min-source", type=int, default=MIN_SOURCE_TENDERS)
+    args = ap.parse_args()
+    globals()["MIN_CO_CITATIONS"] = args.min_co
+    globals()["MIN_CONFIDENCE"] = args.min_confidence
+    globals()["MIN_SOURCE_TENDERS"] = args.min_source
+
     tenders = pd.read_csv(SRC, encoding="utf-8-sig")
     sets = citation_sets(tenders)
     print(f"{len(tenders)} tender rows · {len(sets)} contain citations")
@@ -77,6 +109,20 @@ def main():
         ["Confidence", "Co-citation Count"], ascending=False
     )
     out.to_csv(OUT, index=False)
+
+    # The thresholds are a property of this graph, so they travel with it. The
+    # screen used to print them from a string typed into app.js; when they
+    # changed here, that string kept announcing the old ones — the same
+    # two-copies-of-one-fact failure this project keeps finding. Now there is
+    # one place they are written and one place they are read.
+    import json as _json
+    with open(META, "w", encoding="utf-8") as fh:
+        _json.dump({
+            "min_co_citations": MIN_CO_CITATIONS,
+            "min_confidence": MIN_CONFIDENCE,
+            "min_source_tenders": MIN_SOURCE_TENDERS,
+            "documents": len(sets),
+        }, fh, indent=1)
 
     nodes = set(out["Source IS"]) | set(out["Target IS"])
     print(f"\nthresholds: {MIN_CO_CITATIONS}+ co-citations, "

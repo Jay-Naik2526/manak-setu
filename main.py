@@ -291,17 +291,26 @@ def recommend(req: RecommendRequest):
 
 
 @app.get("/graph")
-def graph(nodes: int | None = None, edges: int | None = None, min_count: int = 0):
+def graph(nodes: int | None = None, edges: int | None = None, min_count: int = 0,
+          per_node: int | None = None):
     """The co-citation graph, trimmed to the fields the renderer draws.
 
-    The whole graph is sent by default. That was worth checking rather than
-    assuming: 4,916 edges are 409 KB of JSON but **39 KB on the wire** once
-    gzipped, and the canvas draws them in three stroke calls. Trimming to the
-    strongest 1,500 edges would have saved 25 KB and cost 197 of the 319
-    standards their place in the picture — a bad trade made on an uncompressed
-    number. `nodes` and `edges` remain for callers that want a sample; the
-    overview hero uses them."""
-    return full_graph(node_limit=nodes, edge_limit=edges, min_count=min_count)
+    Every node is sent. Edges are deduplicated to one line per pair — the table
+    stores a row per direction because confidence is directional, but drawing
+    both put the same line on the canvas twice — and then each standard keeps
+    its best-evidenced relationships, `per_node` of them.
+
+    The cap exists because the evidence thresholds were lowered so an operator
+    could see the whole corpus rather than only its core: nodes went from 146 to
+    1,100 and the stored table from 4,904 rows to 106,379, which is 7.6 MB and
+    2.3 seconds before anything appears. Every node still appears; what the cap
+    drops is a standard's weakest relationships, and the response says how many
+    each kept so the picture is never mistaken for the whole table.
+
+    `nodes` and `edges` remain for callers that want a sample; the overview hero
+    uses them. `per_node=0` disables the cap and sends every pair."""
+    return full_graph(node_limit=nodes, edge_limit=edges, min_count=min_count,
+                      per_node=per_node)
 
 
 @app.get("/standards")

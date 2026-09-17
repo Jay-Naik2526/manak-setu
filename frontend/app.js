@@ -2161,10 +2161,21 @@ function drawGraph(intro) {
     `<div class="r"><span class="sw" style="background:${famColor(f)}"></span>${esc(f)}</div>`).join('')
     + `<div class="r"><span class="sw" style="background:var(--k8)"></span>Not in register</div>`;
   const dens = 2 * G.e.length / (G.n.length * (G.n.length - 1));
+  // The thresholds come from the graph that was built, never from a string
+  // typed here — this line spent a rebuild announcing "5+ co-citations" for a
+  // graph built at 2+.
+  const th = g.thresholds || {};
+  const rule = th.min_co_citations
+    ? `${th.min_co_citations}+ co-citations / ${Math.round(th.min_confidence * 100)}%+ confidence / source cited in ${th.min_source_tenders}+ tenders`
+    : 'thresholds not recorded with this graph';
   if ($('#graph-meta')) $('#graph-meta').textContent =
-    `${G.n.length} standards · ${G.e.length.toLocaleString()} edges · thresholds 5+ co-citations / 40%+ confidence / source cited in 8+ tenders`;
-  $('#gstat').innerHTML = `<div><div class="lb">Nodes</div><div class="vl">${G.n.length}</div></div>
-    <div><div class="lb">Edges</div><div class="vl">${G.e.length.toLocaleString()}</div></div>
+    `${G.n.length.toLocaleString()} standards · ${G.e.length.toLocaleString()} of `
+    + `${(g.distinct_pairs || G.e.length).toLocaleString()} related pairs drawn`
+    + (g.edges_per_node ? ` (each standard's ${g.edges_per_node} best-evidenced)` : '')
+    + ` · ${rule}`;
+  $('#gstat').innerHTML = `<div><div class="lb">Nodes</div><div class="vl">${G.n.length.toLocaleString()}</div></div>
+    <div><div class="lb">Edges drawn</div><div class="vl">${G.e.length.toLocaleString()}</div></div>
+    <div title="Every co-citation the corpus supports at these thresholds; the picture shows each standard's strongest."><div class="lb">Pairs held</div><div class="vl">${(g.distinct_pairs || G.e.length).toLocaleString()}</div></div>
     <div><div class="lb">Density</div><div class="vl">${dens.toFixed(3)}</div></div>`;
 
   resizeGraph();
