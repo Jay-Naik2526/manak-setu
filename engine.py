@@ -770,15 +770,29 @@ def run_benchmark(sample_size: int = 20, seed: int = 42) -> dict:
         "evaluated": len(evaluated),
         "positives_in_set": len(yes_rows),
         "negatives_sampled": len(sampled_no),
+        # Kept under their old names so nothing that reads this breaks, but they
+        # are agreement counts, not accuracy counts — see `what_this_measures`.
         "true_positives": tp,
         "true_negatives": tn,
         "false_positives": fp,
         "false_negatives": fn,
+        "agree": tp + tn,
+        "newly_dead": fp,
+        "flag_says_dead_register_does_not": fn,
         "mismatches": [r for r in results if not r["match"]],
+        "what_this_measures": (
+            "Agreement between the Any Outdated flag stored when each document was "
+            "collected and what the register says today — not the system's accuracy. "
+            "The flag was written against a smaller register, so a disagreement "
+            "usually means the register has since learned that a cited standard is "
+            "withdrawn, not that the check is wrong."
+        ),
         "honest_summary": (
-            f"Caught {tp} of {len(yes_rows)} known outdated-citation tenders, with {fp} false "
-            f"positives across {len(sampled_no)} sampled clean tenders (n={len(evaluated)}). "
-            "Small positive class — not a general accuracy claim."
+            f"{tp + tn} of {len(evaluated)} documents agree with the flag stored when they "
+            f"were collected. {fp} now cite a standard the register has since recorded as "
+            f"withdrawn or superseded — the flag calls them clean and the register does not. "
+            f"{fn} are flagged dead but resolve as current today. This measures how far the "
+            "register has moved since collection; it is not an accuracy figure for the check."
         ),
         "results": results,
     }

@@ -1758,20 +1758,29 @@ function drawBench() {
   $('#bm-out').innerHTML = `
     <div class="note info">${ic('info')}<div>${esc(b.honest_summary)}</div></div>
     <div class="kpis">${[
-      { label: 'True positives', value: b.true_positives, sub: 'flagged, correctly', tone: 'ok', icon: 'check' },
-      { label: 'True negatives', value: b.true_negatives, sub: 'passed, correctly', tone: 'ok', icon: 'check' },
-      { label: 'False positives', value: b.false_positives, sub: 'flagged, wrongly', tone: b.false_positives ? 'bad' : 'plain', icon: 'alert' },
-      { label: 'False negatives', value: b.false_negatives, sub: 'missed', tone: b.false_negatives ? 'bad' : 'plain', icon: 'alert' },
+      { label: 'Agree with the stored flag', value: b.agree ?? (b.true_positives + b.true_negatives),
+        sub: `of ${b.evaluated} documents checked`, tone: 'ok', icon: 'check' },
+      { label: 'Newly dead since collection', value: b.newly_dead ?? b.false_positives,
+        sub: 'register found a dead citation the flag missed',
+        tone: (b.newly_dead ?? b.false_positives) ? 'warn' : 'plain', icon: 'alert' },
+      { label: 'Flagged dead, now current', value: b.flag_says_dead_register_does_not ?? b.false_negatives,
+        sub: 'the flag is stricter than the register',
+        tone: (b.flag_says_dead_register_does_not ?? b.false_negatives) ? 'bad' : 'plain', icon: 'alert' },
+      { label: 'Documents checked', value: b.evaluated,
+        sub: `${b.positives_in_set} flagged dead · ${b.negatives_sampled} sampled clean`,
+        tone: 'plain', icon: 'scan' },
     ].map(kpi).join('')}</div>
-    <div class="note warn">${ic('alert')}<div><b>Why this is shown as counts, not a percentage.</b>
-      The positive class is ${b.positives_in_set} documents. On a set that small a single miss moves a
-      percentage by ${(100 / b.positives_in_set).toFixed(0)} points, so a figure like “100% accurate” would
-      read as far stronger evidence than ${b.evaluated} documents can support. What this measures is
-      dead-citation detection on those ${b.evaluated} documents — not the accuracy of the register or of
-      standard recommendation.</div></div>
+    <div class="note warn">${ic('alert')}<div><b>What this measures — and what it does not.</b>
+      ${esc(b.what_this_measures || '')}
+      </div></div>
+    <div class="note info">${ic('info')}<div><b>How the set was drawn.</b>
+      Every document the stored flag calls dead is included — ${b.positives_in_set} of them — against
+      ${b.negatives_sampled} sampled from those it calls clean. The two sides are deliberately
+      unbalanced, so counts are reported rather than a rate: a percentage over a 273-to-20 split
+      would say more about the sampling than about the corpus.</div></div>
     <div class="tbl">
       <div class="toolbar"><h3 style="flex:1">Per-document results</h3><span class="xs dimmer">n = ${b.evaluated}</span></div>
-      <div class="scroll"><table><thead><tr><th>Document</th><th>Ground truth</th><th>Detected</th><th>Agree</th><th>Dead citations found</th></tr></thead><tbody>
+      <div class="scroll"><table><thead><tr><th>Document</th><th>Flag at collection</th><th>Register today</th><th>Agree</th><th>Dead citations found</th></tr></thead><tbody>
       ${b.results.map(r => `<tr>
         <td style="max-width:300px">${esc(r.tender_id)}</td>
         <td><span class="pill ${r.actual === 'Yes' ? 'bad' : 'ok'}">${esc(r.actual)}</span></td>
