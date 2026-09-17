@@ -240,7 +240,7 @@ const navLabel = n => (typeof t === 'function' ? t('nav.' + n.id) : n.label);
 const navFull = n => (typeof t === 'function' ? t('full.' + n.id) : n.full);
 const TITLE = Object.fromEntries(NAV.map(n => [n.id, n.full]));
 const LOAD = {
-  draft: () => {}, overview: loadOverview, analyze: () => renderChips(), tenders: loadTenders,
+  draft: () => draftResting(), overview: loadOverview, analyze: () => renderChips(), tenders: loadTenders,
   evidence: () => {},
   graph: loadGraph, standards: loadStandards, certs: loadCerts,
   coverage: loadCoverage, benchmark: () => loadBench(false),
@@ -568,9 +568,43 @@ function unitChart(held, total) {
       title="${i < held ? 'held in register' : 'cited, not held'}"></span>`).join('')}</div>`;
 }
 
+/* What sits in the answer column before there is an answer.
+
+   The two-column Draft made an old problem visible: the right half was empty
+   until a query ran, so the screen opened as a narrow card beside two-thirds of
+   nothing. This is not filled with example results — invented findings on a
+   system whose whole claim is that it never invents anything would be the worst
+   possible placeholder. It names what the answer will contain and what to do
+   next, and it is replaced the moment a real answer arrives. */
+function draftResting() {
+  const out = $('#fw-out');
+  if (!out || out.dataset.answered === '1') return;
+  out.innerHTML = `<div class="card resting">
+    <div class="hd"><span class="eyebrow">What comes back</span></div>
+    <div class="in">
+      <ol class="resting-list">
+        <li><b>The governing standard</b>, with the path it was found by — which
+          retriever ranked it, what the cross-encoder scored it, and where that
+          score sits against the thresholds that decide whether it is shown.</li>
+        <li><b>Its status in the register</b>, and its successor if BIS has
+          superseded it.</li>
+        <li><b>Any certification duty</b> that applies, with the Gazette
+          notification it comes from.</li>
+        <li><b>What comparable tenders cite alongside it</b> — counted over real
+          published documents, never suggested by a model.</li>
+      </ol>
+      <p class="xs dimmer" style="margin-top:11px">If nothing scores well enough,
+        the answer is that nothing scored well enough — the shortlist is shown and
+        the choice stays with the officer.</p>
+      <p class="xs dimmer" style="margin-top:7px">Paste a specification on the left,
+        or pick one of the five examples under it.</p>
+    </div></div>`;
+}
+
 /* ── forward flow: spec text → governing standard → clause ───────────────── */
 
 async function runForward() {
+
   const q = $('#fw-spec').value.trim(), out = $('#fw-out'), btn = $('#fw-run');
   if (!q) { toast('Enter some specification text first', 'bad'); return; }
   btn.disabled = true; btn.innerHTML = `<span class="spin"></span> Retrieving…`;
@@ -906,6 +940,7 @@ function renderForward(d) {
     <div class="ft">Dense = MiniLM cosine rank, BM25 = lexical rank, both fused by reciprocal rank fusion then reranked by cross-encoder. A candidate absent from one column was retrieved only by the other.</div>
   </div>`;
 
+  $('#fw-out').dataset.answered = '1';
   $('#fw-out').innerHTML = h;
   setTimeout(translatePage, 60);
   $$('#fw-out [data-go]').forEach(el => el.addEventListener('click', e => {
@@ -2985,7 +3020,12 @@ async function boot() {
   $('#add-is').addEventListener('keydown', e => { if (e.key === 'Enter') $('#add-btn').click(); });
   $('#run').onclick = runAudit;
   $('#fw-run').onclick = runForward;
-  $('#fw-clear').onclick = () => { $('#fw-spec').value = ''; $('#fw-out').innerHTML = ''; };
+  $('#fw-clear').onclick = () => {
+    $('#fw-spec').value = '';
+    $('#fw-out').dataset.answered = '';
+    draftResting();
+    $('#fw-peers').innerHTML = '';
+  };
   $$('#fw-presets button').forEach(b => b.onclick = () => { $('#fw-spec').value = b.dataset.q; runForward(); });
   buildLangMenu();
   $('#role-btn').onclick = () => {
