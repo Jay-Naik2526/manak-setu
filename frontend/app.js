@@ -992,16 +992,25 @@ async function onFile(f) {
   try {
     const r = await api('/extract', { method: 'POST', body: fd });
     const added = addChips(r.citations);
-    box.innerHTML = `<div class="note ${r.scanned ? 'bad' : r.citations.length ? 'ok' : 'warn'}" style="margin:11px 0 0">
-      ${ic(r.citations.length && !r.scanned ? 'check' : 'alert')}<div>
+    const n = r.citations.length;
+    // "0 distinct citation(s)" followed by "No IS numbers found" said the same
+    // thing twice, in a construction nobody writes on purpose. One sentence,
+    // pluralised properly, and the empty case says what to do next instead of
+    // restating the count.
+    const read = n
+      ? `<b>${n}</b> distinct citation${n === 1 ? '' : 's'} read from the text${
+          added !== n ? `, ${added} new` : ''}.`
+      : 'No IS number appears in the text that was read.';
+    box.innerHTML = `<div class="note ${r.scanned ? 'bad' : n ? 'ok' : 'warn'}" style="margin:11px 0 0">
+      ${ic(n && !r.scanned ? 'check' : 'alert')}<div>
       <b>${esc(r.filename)}</b> — ${r.format === 'docx'
-        ? `${r.paragraphs} paragraphs, ${r.tables} table(s)`
-        : `${r.pages_read} of ${r.page_count} pages`}, ${r.characters.toLocaleString()} characters.
-      <b>${r.citations.length}</b> distinct citation(s) read from the text${added !== r.citations.length ? `, ${added} new` : ''}.
+        ? `${r.paragraphs} paragraph${r.paragraphs === 1 ? '' : 's'}, ${r.tables} table${r.tables === 1 ? '' : 's'}`
+        : `${r.pages_read} of ${r.page_count} page${r.page_count === 1 ? '' : 's'}`}, ${r.characters.toLocaleString()} characters.
+      ${read}
       ${r.scanned ? `<br><b>This looks like a scan.</b> ${esc(r.scanned_note)}`
-        : r.citations.length ? '' : '<br>No IS numbers found in the extracted text.'}</div></div>`;
+        : n ? '' : '<br>Either this document names none, or the specification is in an attachment that was not uploaded. Paste the clause text below, or add the IS numbers by hand.'}</div></div>`;
     if (r.text) $('#spec').value = r.text.slice(0, 4000);
-    toast(`${r.citations.length} citations extracted`);
+    toast(n ? `${n} citation${n === 1 ? '' : 's'} extracted` : 'No IS numbers found', n ? 'ok' : 'bad');
   } catch (e) {
     box.innerHTML = `<div class="note bad" style="margin:11px 0 0">${ic('alert')}<div>${esc(e.message)}</div></div>`;
   }
