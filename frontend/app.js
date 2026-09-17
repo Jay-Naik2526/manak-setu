@@ -283,7 +283,15 @@ async function health() {
   try {
     const h = await api('/health');
     $('#conn').innerHTML = `<span class="dot up"></span>connected · ${Object.keys(h.row_counts).length} tables`;
-    $('#build').textContent = `v${h.version} · data ${h.dataset_date}`;
+    // "data <date>" is a file mtime and reads as freshness, which it is not.
+    // The BIS check date is the one that means what a reader thinks it means.
+    $('#build').textContent = `v${h.version} · files ${h.dataset_date}`;
+    $('#build').title = h.dataset_date_note || '';
+    if ($('#prov-bis') && h.bis_check) {
+      $('#prov-bis').textContent = h.bis_check.checked
+        ? h.bis_check.note
+        : `Register status is as collected — ${h.bis_check.note}.`;
+    }
     const cc = h.row_counts.co_citation;
     if ($('#prov-cc')) $('#prov-cc').textContent = cc;
     const st = h.row_counts.standards;

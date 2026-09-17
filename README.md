@@ -233,3 +233,21 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   corpus from the saved attachments removed 3,341 citations the earlier pattern
   had invented. Anything the pattern still reads is present verbatim in the
   document.
+
+## Checks
+
+[![checks](https://github.com/Jay-Naik2526/manak-setu/actions/workflows/checks.yml/badge.svg)](https://github.com/Jay-Naik2526/manak-setu/actions/workflows/checks.yml)
+
+Every push runs three gates, none of which are unit tests — because none of
+this project's real bugs were the kind a unit test catches. Each one was two
+places holding the same fact and drifting apart.
+
+| Gate | What it refuses |
+|---|---|
+| `consistency_check.py` | The backlog disagreeing with the coverage figure; a graph node that resolves to nothing and is declared nowhere; a citation that is neither held nor logged as a gap; a stored citation the designation pattern refuses; a golden-set label naming a readable standard the register lacks; `/stats` row counts that do not match `COUNT(*)`. |
+| `qa_adversarial.py` | 28 cases that must fail safely — a corrupt PDF, a scanned page with no text layer, an override with no rationale, a phantom citation with no graph support, a peer lookup with nothing comparable. |
+| `eval_retrieval.py --min-recall` | Retrieval getting worse than a level already demonstrated. A floor, not a target: tuning toward a number is how an evaluation set gets gamed. Run locally — it needs both encoders and does not fit a free runner's budget. |
+
+`consistency_check.py --quick` skips the re-extraction pass, which re-reads
+saved tender attachments and diffs them against the stored citations. Run it
+without `--quick` locally, where the PDFs are.

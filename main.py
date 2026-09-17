@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import json
 import os
 import sqlite3
 
@@ -41,9 +42,53 @@ MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_TEXT_CHARS = 400_000
 VERSION = "0.4"
 
+def _bis_check() -> dict:
+    """When the register was last checked against the BIS portal, and what that
+    check covered.
+
+    `dataset_date` below is a file mtime. It moves whenever anything writes a
+    CSV — a merge, a re-extraction, a title fix — so it says when the files were
+    last touched, not when BIS was last consulted. Presenting it as freshness
+    would be the project's own failure mode: one number standing in for a
+    different fact. This reads the pipeline's own run log, which records every
+    time `--only versions` actually contacted standards.bis.gov.in.
+    """
+    path = os.path.join("data", "pipeline_runs.jsonl")
+    if not os.path.exists(path):
+        return {"checked": None, "note": "no pipeline run recorded"}
+    latest = None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    run = json.loads(line)
+                except ValueError:
+                    continue
+                for stage in run.get("results") or []:
+                    if stage.get("stage") == "versions" and stage.get("outcome") == "checked":
+                        latest = (run.get("finished"), stage)
+    except OSError:
+        return {"checked": None, "note": "run log unreadable"}
+    if not latest:
+        return {"checked": None, "note": "no version check recorded"}
+    finished, stage = latest
+    day = str(finished).split("T")[0]
+    checked = stage.get("standards_checked") or 0
+    found = stage.get("amendments_found") or 0
+    return {
+        "checked": day,
+        "standards_checked": checked,
+        "amendments_found": found,
+        "note": (f"{checked} standards re-checked against the BIS portal on {day}; "
+                 f"{found} amendment{'' if found == 1 else 's'} found. "
+                 "The rest of the register carries the status recorded when it "
+                 "was collected."),
+    }
+
+
 def _dataset_date() -> str:
-    """Newest mtime across the source CSVs — what an operator checks to see
-    how stale the register is."""
+    """Newest mtime across the source CSVs — when the files were last written,
+    which is not the same as when BIS was last consulted. See _bis_check."""
     newest = 0.0
     for name in os.listdir("data") if os.path.isdir("data") else []:
         if name.endswith(".csv"):
@@ -533,6 +578,8 @@ def health():
             "retrieval_mode": "light (no cross-encoder)" if LIGHT_MODE else "full",
             "version": VERSION,
             "dataset_date": _dataset_date(),
+            "dataset_date_note": "when the data files were last written, not when BIS was last checked",
+            "bis_check": _bis_check(),
             "row_counts": counts,
             "llm": llm.status(),
         }

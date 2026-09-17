@@ -39,6 +39,17 @@ def _base(is_number: str) -> str:
 
 
 def main():
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    # A floor, not a target. CI should fail when retrieval gets worse than a
+    # level we have already shown it can hold — it should never encourage
+    # tuning toward a number, which is how an evaluation set gets gamed.
+    ap.add_argument("--min-recall", type=float, default=None,
+                    help=f"exit non-zero if Recall@{RECALL_AT} falls below this "
+                         "fraction (e.g. 0.80). Omit to report only.")
+    args = ap.parse_args()
+
     if not os.path.exists(GOLDEN):
         print(f"No golden set at {GOLDEN}.")
         print("Create it with columns: query,expected_is,source — then re-run.")
@@ -150,8 +161,11 @@ def main():
     print(f"  expected calibration error: {ece:.3f}  "
           f"(mean gap between a bucket's score and how often it was right)")
 
+    rank1 = sum(1 for r in rows if r["rank"] == 1)
     with open("data/calibration.json", "w", encoding="utf-8") as fh:
         json.dump({"generated": _dt.date.today().isoformat(), "queries": n,
+                   "rank_1": rank1, "recall_at": RECALL_AT, "recall_hits": hits_at_k,
+                   "abstained": abstained,
                    "buckets": calibration, "expected_calibration_error": round(ece, 4),
                    "note": ("Measured on the golden set: for each query, the score the top "
                             "candidate received and whether it was the expected standard. "
@@ -162,6 +176,14 @@ def main():
     print()
     print("Matching is on IS Base, so a part/section suffix mismatch still counts as a hit.")
     print(f"n={n}. Report these as indicative, never as a headline accuracy figure.")
+
+    if args.min_recall is not None:
+        actual = hits_at_k / n if n else 0.0
+        held = actual >= args.min_recall
+        print(f"\nfloor: Recall@{RECALL_AT} {actual:.3f} against a floor of "
+              f"{args.min_recall:.3f} — {'held' if held else 'BREACHED'}")
+        if not held:
+            sys.exit(1)
 
 
 if __name__ == "__main__":
