@@ -37,7 +37,9 @@ EXTRA_COLUMNS = ["Item Category", "GeM Bid Id",
                  # Who was buying, read from the saved bid form. The original
                  # 220-row set has no bid form, so these stay empty there and
                  # every buyer figure carries "of N GeM documents".
-                 "Ministry", "Department", "Organisation", "Office"]
+                 "Ministry", "Department", "Organisation", "Office",
+                 # Whether the document's own text demands certified material.
+                 "Demands Standard Mark"]
 
 
 # Columns the collector owns — the ones re-read from the saved bid form and its
@@ -48,6 +50,7 @@ COLLECTOR_OWNED = [
     "Outdated Citations", "Any Outdated", "Unmatched Citations", "Usability",
     "Document Type", "Item Category",
     "Ministry", "Department", "Organisation", "Office",
+    "Demands Standard Mark",
 ]
 
 

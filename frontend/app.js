@@ -1955,6 +1955,39 @@ function healthBars(d) {
     </div>`;
   };
 
+  /* The Department of Consumer Affairs' own mandate, failing at the point of
+     purchase: a tender that names a product the law requires to carry the ISI
+     mark, and never asks for it. As written, uncertified goods meet that
+     specification.
+
+     Only the absence is shown, and the card says why. "No mark language
+     anywhere" is unambiguous. The opposite is not — a sixty-page tender
+     mentioning BIS somewhere is no proof the certified item is covered — so
+     there is no percentage here with a positive class behind it. */
+  const gap = d.certification_gap || {};
+  const gapCard = gap.scanned ? `<div class="card" style="margin-top:14px">
+    <div class="hd"><span class="eyebrow">Compulsory certification</span>
+      <h3>Tenders that never ask for the mark</h3></div>
+    <div class="in">
+      <p style="font-size:15px;line-height:1.55;margin:0 0 10px">
+        <b class="mono" style="font-size:22px;color:var(--bad)">${gap.no_standard_mark_clause}</b>
+        of the <b class="mono">${gap.scanned}</b> documents that cite a product under
+        compulsory BIS certification, and whose text could be read, demand the Standard Mark
+        nowhere at all. As written, uncertified goods meet those specifications.</p>
+      ${(gap.top_families || []).length ? `<div class="hbars">
+        ${gap.top_families.map((r, i) => `<div class="hix" style="animation-delay:${i * 40}ms">
+          <div class="hb-label" title="${esc(r.family)}">${esc(String(r.family).slice(0, 34))}</div>
+          <div class="hb-track"><div class="hb-total" style="width:${(r.documents / Math.max(...gap.top_families.map(x => x.documents), 1) * 100).toFixed(1)}%">
+            <div class="hb-dead" style="width:100%"></div></div></div>
+          <div class="hb-n"><b>${r.documents}</b></div>
+        </div>`).join('')}</div>` : ''}
+      <p class="xs dimmer" style="margin-top:10px">
+        ${gap.documents_citing_a_compulsory_item} of ${gap.of_documents} machine-readable
+        documents cite such a product at all; ${gap.not_scanned} of those had no readable
+        attachment and are excluded rather than assumed compliant.
+        ${esc(gap.note || '')}</p>
+    </div></div>` : '';
+
   const buyers = d.buyers || {};
   const widestMin = Math.max(...mins.map(m => m.documents), 1);
   const minRow = (m, i) => {
@@ -1991,7 +2024,7 @@ function healthBars(d) {
       A share over fewer documents is a fact about those documents, not about the ministry.</p>
     </div></div>` : '';
 
-  return ministryCard + `<div class="grid c2" style="margin-top:14px">
+  return gapCard + ministryCard + `<div class="grid c2" style="margin-top:14px">
     ${fams.length ? `<div class="card"><div class="hd"><h3>By product family</h3>
       <span class="hint">bar length = documents read</span></div>
       <div class="in"><div class="hbars">${fams.map(famRow).join('')}</div>

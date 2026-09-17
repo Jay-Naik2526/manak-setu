@@ -73,11 +73,23 @@ def build() -> dict:
         reg = _register(conn)
         columns = {r[1] for r in conn.execute("PRAGMA table_info(tenders)")}
         buyer_cols = [c for c in ("Ministry", "Department") if c in columns]
+        mark_col = "Demands Standard Mark" if "Demands Standard Mark" in columns else None
+        extra = buyer_cols + ([mark_col] if mark_col else [])
         select = ", ".join(f'"{c}"' for c in
-                           ["Tender ID", "Product Family", "IS Numbers Cited"] + buyer_cols)
+                           ["Tender ID", "Product Family", "IS Numbers Cited"] + extra)
         rows = conn.execute(
             f'SELECT {select} FROM tenders WHERE "Usability" = ?', ("Usable",)
         ).fetchall()
+
+        # Which cited standards carry a compulsory certification duty. Read from
+        # the certification register, never inferred from the product's wording.
+        mandatory = {
+            str(r[0]).strip().upper()
+            for r in conn.execute(
+                'SELECT "IS Number" FROM certification_rules '
+                'WHERE "Certification Mandatory" = ?', ("Yes",))
+            if r[0]
+        }
         total_documents = conn.execute("SELECT COUNT(*) FROM tenders").fetchone()[0]
     finally:
         conn.close()
@@ -97,9 +109,23 @@ def build() -> dict:
                 for c in buyer_cols}
     named = 0
 
+    # The QCO enforcement gap. A document that cites a product under compulsory
+    # BIS certification and demands the Standard Mark nowhere in its own text
+    # accepts uncertified goods as written — which is the Department of Consumer
+    # Affairs' own mandate failing at the point of purchase.
+    #
+    # Only the absence is reported. "No mark language anywhere" is unambiguous:
+    # none of the phrases that demand a mark, a licence number or certified
+    # material appear. The opposite is weak — a sixty-page tender mentioning BIS
+    # somewhere is no proof that it demands the mark for the certified item — so
+    # no figure here is built on the presence.
+    qco_cited = qco_unprotected = qco_unknown = 0
+    qco_by_family = collections.Counter()
+
     for row in rows:
         tender_id, family, cited = row[0], row[1], row[2]
-        buyers = dict(zip(buyer_cols, row[3:]))
+        buyers = dict(zip(buyer_cols, row[3:3 + len(buyer_cols)]))
+        demands = str(row[3 + len(buyer_cols)] or "") if mark_col else ""
         citations = [c.strip() for c in str(cited or "").split(";") if c.strip()]
         citations_total += len(citations)
         year = _year_of(tender_id)
@@ -122,6 +148,14 @@ def build() -> dict:
             if hit["status"] in ("Withdrawn", "Superseded"):
                 has_dead = True
                 dead_by_doc[hit["is_number"]] += 1
+        if mark_col and any(base_of(c) in mandatory for c in citations):
+            qco_cited += 1
+            if demands == "No":
+                qco_unprotected += 1
+                qco_by_family[fam] += 1
+            elif demands != "Yes":
+                qco_unknown += 1
+
         if any(str(v or "").strip() for v in buyers.values()):
             named += 1
         for col, value in buyers.items():
@@ -179,6 +213,27 @@ def build() -> dict:
             "of_documents": usable,
             "documents_citing_a_standard_not_in_the_register": unresolved_docs,
             "distinct_dead_standards_in_circulation": len(dead_by_doc),
+        },
+        "certification_gap": {
+            "documents_citing_a_compulsory_item": qco_cited,
+            "of_documents": usable,
+            # The rate belongs over the documents whose text was actually read.
+            # Dividing by all 161 that cite a compulsory item, when 57 of them
+            # were never scanned, reports a lower rate than the evidence
+            # supports and hides that the check did not run on a third of them.
+            "scanned": qco_cited - qco_unknown,
+            "no_standard_mark_clause": qco_unprotected,
+            "not_scanned": qco_unknown,
+            "top_families": [{"family": f, "documents": n}
+                             for f, n in qco_by_family.most_common(8)],
+            "note": (
+                "Documents citing at least one standard the certification register "
+                "marks as compulsory, whose own attachment text contains no demand "
+                "for the BIS Standard Mark, a licence number or certified material. "
+                "Only the absence is counted: it is unambiguous, whereas a mention "
+                "of BIS somewhere in a long tender is no proof that the certified "
+                "item is covered."
+            ),
         },
         "buyers": {
             "documents_naming_a_buyer": named,
@@ -252,6 +307,17 @@ def main():
             flag = " · REVIEW OVERDUE" if str(r["overdue"]).lower() == "yes" else ""
             print(f"  {r['documents']:>3} of {r['of']:<4} {r['is_number']:<24} "
                   f"{str(r['title'])[:40]}{flag}")
+
+    g = d.get("certification_gap") or {}
+    if g.get("scanned"):
+        print("\ncompulsory certification, not demanded:")
+        print(f"  {g['no_standard_mark_clause']} of the {g['scanned']} documents that cite a "
+              f"product under compulsory BIS")
+        print("  certification and whose text could be read never demand the Standard Mark.")
+        print(f"  ({g['documents_citing_a_compulsory_item']} cite such a product in all; "
+              f"{g['not_scanned']} had no readable attachment)")
+        for r in g.get("top_families") or []:
+            print(f"    {r['documents']:>4}  {r['family'][:52]}")
 
     b = d.get("buyers") or {}
     if b.get("ministry"):

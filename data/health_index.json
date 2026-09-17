@@ -12,6 +12,44 @@
     "documents_citing_a_standard_not_in_the_register": 96,
     "distinct_dead_standards_in_circulation": 354
   },
+  "certification_gap": {
+    "documents_citing_a_compulsory_item": 161,
+    "of_documents": 1172,
+    "scanned": 104,
+    "no_standard_mark_clause": 47,
+    "not_scanned": 57,
+    "top_families": [
+      {
+        "family": "ETD — Electrotechnical Department",
+        "documents": 19
+      },
+      {
+        "family": "CED — Civil Engineering Department",
+        "documents": 11
+      },
+      {
+        "family": "Electrical cables and wiring",
+        "documents": 7
+      },
+      {
+        "family": "MED — Mechanical Engineering Department",
+        "documents": 5
+      },
+      {
+        "family": "FAD — Food And Agriculture Department",
+        "documents": 2
+      },
+      {
+        "family": "MTD — Metallurgical Engineering Department",
+        "documents": 2
+      },
+      {
+        "family": "LED lighting",
+        "documents": 1
+      }
+    ],
+    "note": "Documents citing at least one standard the certification register marks as compulsory, whose own attachment text contains no demand for the BIS Standard Mark, a licence number or certified material. Only the absence is counted: it is unambiguous, whereas a mention of BIS somewhere in a long tender is no proof that the certified item is covered."
+  },
   "buyers": {
     "documents_naming_a_buyer": 1036,
     "of_documents": 1172,
