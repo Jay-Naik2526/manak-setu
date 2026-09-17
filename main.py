@@ -368,6 +368,18 @@ def pipelines():
         "queries": board.get("queries"),
         "recall_at": board.get("recall_at"),
         "note": board.get("note"),
+        # These figures are not the ones on the Coverage screen, and the
+        # difference is not an error. eval_pipelines measures the retriever:
+        # raw candidates, before the voltage, material, role and status filters
+        # and before the gate. eval_retrieval measures the product: what an
+        # officer is actually shown after all of that. The retriever finds the
+        # right standard more often than the product shows it, which is the
+        # filters doing their job — and saying so here is cheaper than letting
+        # two numbers for one fact sit on two screens.
+        "measures": ("the retriever alone — raw candidates, before the voltage, "
+                     "material, role and status filters and before the confidence "
+                     "gate. The end-to-end figures on Coverage measure what an "
+                     "officer is shown after all of those, and are lower."),
         "pipelines": [{**row, **measured.get(row["pipeline"], {})} for row in registry],
     }
 

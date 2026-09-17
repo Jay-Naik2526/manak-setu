@@ -1871,6 +1871,71 @@ function drawBench() {
         <td class="mono xs">${r.dead_hits.map(h => `${esc(h.is_number)} (${esc(h.status)})`).join(', ') || '—'}</td></tr>`).join('')}
       </tbody></table></div></div>`;
   runCounts();
+  drawPipelines();
+}
+
+/* ── retrieval pipelines ───────────────────────────────────────────────────
+   The mentor's question — "what about alternative RAG pipelines?" — answered
+   with a table rather than an opinion. Every row ran the same 621 queries
+   against the same register, so the columns are comparable and the default is
+   whatever this justifies.
+
+   Two columns need their caveat printed next to them rather than in a footnote.
+   Abstention is only meaningful where the score is calibrated enough to decline
+   on, so a pipeline without a gate says so instead of showing a zero. And
+   "outside the register" is zero for every retrieval pipeline by construction —
+   they can only return rows that exist — which is the whole argument for
+   retrieval, and is worth stating as a property rather than as a score. */
+
+async function drawPipelines() {
+  const el = $('#bm-pipelines');
+  if (!el) return;
+  let d;
+  try { d = await api('/pipelines'); } catch (e) { el.innerHTML = ''; return; }
+  const rows = (d.pipelines || []);
+  if (!rows.length) { el.innerHTML = ''; return; }
+
+  const cell = (r) => {
+    if (!r.measured) {
+      return `<tr class="dimmer">
+        <td class="mono">${esc(r.pipeline)}</td>
+        <td>${esc(r.label)}</td>
+        <td colspan="4"><span class="pill mute">not measured</span>
+          <span class="xs">${esc(r.why_not_measured || 'no measurement on file')}</span></td></tr>`;
+    }
+    const n = r.queries;
+    const pct = v => `${((v / n) * 100).toFixed(1)}%`;
+    return `<tr${r.pipeline === d.default ? ' class="hit"' : ''}>
+      <td class="mono">${esc(r.pipeline)}${r.pipeline === d.default
+        ? ' <span class="pill info xs">default</span>' : ''}</td>
+      <td>${esc(r.label)}</td>
+      <td class="mono r">${r.rank_1}<span class="dimmer"> of ${n}</span>
+        <div class="xs dimmer">${pct(r.rank_1)}</div></td>
+      <td class="mono r">${r.recall_hits}<span class="dimmer"> of ${n}</span>
+        <div class="xs dimmer">${pct(r.recall_hits)}</div></td>
+      <td class="mono r">${r.gate ? `${r.abstained} of ${n}` : '<span class="dimmer">no gate</span>'}</td>
+      <td class="mono r">${r.mean_latency_ms != null ? Math.round(r.mean_latency_ms) : '—'}</td>
+    </tr>`;
+  };
+
+  el.innerHTML = `<div class="tbl" style="margin-top:16px">
+    <div class="toolbar"><h3 style="flex:1">Retrieval pipelines, measured on the same queries</h3>
+      <span class="xs dimmer">${d.queries ? `n = ${d.queries}` : ''}${
+        d.generated ? ` · ${esc(d.generated)}` : ''}</span></div>
+    <div class="scroll"><table><thead><tr>
+      <th>Pipeline</th><th>What it does</th><th class="r">Rank 1</th>
+      <th class="r">Recall@${d.recall_at || 10}</th><th class="r">Abstained</th>
+      <th class="r">ms/query</th></tr></thead>
+      <tbody>${rows.map(cell).join('')}</tbody></table></div>
+    <div class="ft">${d.measures ? `<b>What these measure:</b> ${esc(d.measures)}<br>` : ''}
+      ${esc(d.note || '')}</div>
+  </div>
+  <div class="grid c2" style="margin-top:12px">
+    ${rows.filter(r => r.note).map(r => `<div class="card"><div class="in">
+      <div class="mono xs" style="color:var(--accent)">${esc(r.pipeline)}</div>
+      <div class="xs" style="margin-top:4px;color:var(--ink-2)">${esc(r.note)}</div>
+    </div></div>`).join('')}
+  </div>`;
 }
 
 

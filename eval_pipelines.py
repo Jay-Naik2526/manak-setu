@@ -67,15 +67,28 @@ def run_pipeline(name: str, rows: list[tuple[str, str]]) -> dict:
     latencies = []
     held = _register_numbers()
     outside = 0
+    correct_at_1 = []          # per query, for the paired comparison below
 
     for query, expected in rows:
         t0 = time.perf_counter()
         candidates = retrieval.search(query, pipeline=name)
         latencies.append(time.perf_counter() - t0)
+
+        # The gate has to actually run, or the abstention column is a lie. The
+        # first version of this script only counted an empty candidate list,
+        # which reported 0 of 621 abstentions for every gated pipeline — as if
+        # the system never declines, when in truth it had never been asked to.
+        if cfg.get("gate"):
+            decision = retrieval._gate(candidates)
+            if decision["decision"] == "abstain":
+                abstained += 1
+
         if not candidates:
-            abstained += 1
+            correct_at_1.append(0)
             continue
-        if _same(candidates[0]["is_number"], expected):
+        first = _same(candidates[0]["is_number"], expected)
+        correct_at_1.append(1 if first else 0)
+        if first:
             hits1 += 1
         if any(_same(c["is_number"], expected) for c in candidates[:RECALL_AT]):
             hitsk += 1
@@ -100,6 +113,7 @@ def run_pipeline(name: str, rows: list[tuple[str, str]]) -> dict:
         "peak_rss_mb": round(_peak_rss_mb(), 1),
         "answers_outside_the_register": outside,
         "measured": True,
+        "_correct_at_1": correct_at_1,
     }
 
 
@@ -165,6 +179,43 @@ def _llm_only(name: str, cfg: dict, rows: list[tuple[str, str]]) -> dict:
     }
 
 
+
+def _compare(results: list[dict], default: str) -> None:
+    """Paired comparison of every measured pipeline against the default."""
+    import math
+
+    base = next((r for r in results
+                 if r["pipeline"] == default and r.get("_correct_at_1")), None)
+    if base is None:
+        return
+    others = [r for r in results
+              if r.get("_correct_at_1") and r["pipeline"] != default]
+    if not others:
+        return
+
+    print(f"\nagainst the default ({default}), on the same queries:")
+    for r in others:
+        a, b = base["_correct_at_1"], r["_correct_at_1"]
+        if len(a) != len(b):
+            continue
+        only_default = sum(1 for x, y in zip(a, b) if x and not y)
+        only_other = sum(1 for x, y in zip(a, b) if y and not x)
+        n = only_default + only_other
+        if n == 0:
+            print(f"  {r['pipeline']:<14} identical on every query")
+            continue
+        # Exact two-sided binomial p at q=0.5 over the discordant pairs.
+        k = min(only_default, only_other)
+        tail = sum(math.comb(n, i) for i in range(0, k + 1)) / (2 ** n)
+        p = min(1.0, 2 * tail)
+        verdict = ("the difference is within noise" if p > 0.05
+                   else f"{default} wins" if only_default > only_other
+                   else f"{r['pipeline']} wins")
+        print(f"  {r['pipeline']:<14} {default} alone right on {only_default}, "
+              f"{r['pipeline']} alone right on {only_other} "
+              f"→ p={p:.3f}, {verdict}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=0, help="use only the first N queries")
@@ -206,6 +257,12 @@ def main():
         print(f"{r['pipeline']:<14}{r1:>12}{rk:>12}{ab:>10}"
               f"{r['mean_latency_ms']:>10.0f}{r['answers_outside_the_register']:>18}")
 
+    # Is a seven-query difference over 621 a finding or noise? The pipelines
+    # answer the same queries, so the comparison is paired: only the queries
+    # where exactly one of them is right carry information. McNemar's test on
+    # those, exact under the binomial, says whether to believe the gap.
+    _compare(results, retrieval.DEFAULT_PIPELINE)
+
     print("\nabstain 'no gate' means the pipeline's score is not calibrated enough "
           "to decline on;\nsee retrieval.PIPELINES for which and why. "
           "'outside register' is 0 by construction for\nevery retrieval pipeline — "
@@ -222,10 +279,17 @@ def main():
             "default_pipeline": retrieval.DEFAULT_PIPELINE,
             "pipelines": results,
             "note": ("Every pipeline ran the same queries against the same register. "
+                     "These measure the retriever alone — raw candidates, before "
+                     "the voltage, material, role and status filters and before the "
+                     "confidence gate — so they are higher than the end-to-end "
+                     "figures eval_retrieval.py reports for the same set. "
                      "Abstention is reported only where the score is calibrated "
                      "enough to decline on. Answers outside the register are zero "
                      "for retrieval pipelines by construction, not by care."),
         }
+        # The per-query vector is for the paired test, not for the page.
+        for r in payload["pipelines"]:
+            r.pop("_correct_at_1", None)
         with open(OUT, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=1)
         print(f"\nwrote {OUT}")
