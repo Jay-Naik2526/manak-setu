@@ -2094,7 +2094,7 @@ function tokens() {
   const cs = getComputedStyle(document.documentElement);
   const get = v => cs.getPropertyValue(v).trim() || '#888';
   return {
-    edge: get('--line-hard'), ink: get('--ink-3'), pickC: get('--amber'),
+    edge: get('--graph-edge') || get('--line-hard'), ink: get('--ink-3'), pickC: get('--amber'),
     surface: get('--surface'), fam: G.fams.map((_, i) => get(KC[i % 8].replace(/var\(|\)/g, ''))),
     other: get('--k8'),
   };
@@ -2110,6 +2110,21 @@ const famIndex = f => { const i = G.fams.indexOf(f); return i < 0 ? -1 : i; };
    The stagger is over product family only because the legend is already grouped
    that way — the clusters the eye sees are the eigenvectors' doing, not this
    animation's. Nothing here changes a position. */
+/* Alpha per confidence band, weakest first. Two things had to change together
+   here: the edges were drawn in --line-hard, a border colour, which on a white
+   ground is invisible however it is composited — so the graph read as a field
+   of dots with no relationships in it, and the relationships are the evidence.
+   They now use --graph-edge, which is dark enough to see.
+
+   That made the alpha matter. With 13,602 lines over one canvas the overlaps
+   compound, and the first darker version at .20/.30/.44 turned the whole panel
+   into a grey wash — more ink than the old version, and less readable. These
+   are set against measured coverage of the drawn canvas, not by eye.
+
+   The gradient stays: a pair cited together twice out of twice must not look as
+   certain as one cited together forty times out of fifty. */
+const EDGE_ALPHA = [0.07, 0.11, 0.19];
+
 const INTRO_MS = 600;            // matches --t-reveal
 const INTRO_STAGGER = 60;
 const INTRO_NODE_MS = 300;
@@ -2143,6 +2158,16 @@ function drawGraph(intro) {
   const t0 = performance.now();
 
   const maxDeg = Math.max(...g.nodes.map(n => n.degree || 0), 1);
+  /* Node size has to answer to how many nodes there are. A fixed 4–17 px was
+     right for 319 standards and far too heavy for 1,858, where the typical node
+     sits about 16 px from its nearest neighbour — discs that size touch, and
+     the picture reads as a smear instead of a set of points. `k` is the ideal
+     spacing for this many nodes in this canvas, so sizing off it keeps the
+     ratio of disc to gap roughly constant however dense the graph gets. */
+  const k = Math.sqrt(GW * GH / Math.max(g.nodes.length, 1));
+  const baseR = Math.max(2.1, Math.min(4.6, k * 0.16));
+  const degR = Math.max(4, Math.min(13, k * 0.42));
+
   G.n = g.nodes.map(n => ({
     ...n,
     // A node the layout has never seen (a graph rebuilt without re-running
@@ -2150,7 +2175,7 @@ function drawGraph(intro) {
     // layout degrades to a worse picture instead of a blank panel.
     x: n.x == null ? GW / 2 : n.x,
     y: n.y == null ? GH / 2 : n.y,
-    r: 4 + (n.degree || 0) / maxDeg * 13,
+    r: baseR + (n.degree || 0) / maxDeg * degR,
     hidden: false, dim: false,
   }));
   G.by = Object.fromEntries(G.n.map(n => [n.id, n]));
@@ -2232,9 +2257,9 @@ function paint() {
   // Edges in three passes bucketed by confidence — the entire edge set is
   // three stroke() calls instead of 4,916 DOM nodes.
   const buckets = [
-    { max: 0.5, w: 0.5, a: 0.13 },
-    { max: 0.8, w: 1.0, a: 0.20 },
-    { max: 1.01, w: 1.7, a: 0.30 },
+    { max: 0.5, w: 0.5, a: EDGE_ALPHA[0] },
+    { max: 0.8, w: 1.0, a: EDGE_ALPHA[1] },
+    { max: 1.01, w: 1.7, a: EDGE_ALPHA[2] },
   ];
   // A dash longer than any edge, walked from fully-offset to zero, makes every
   // segment draw itself from its own start — the dash phase restarts per

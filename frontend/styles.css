@@ -44,6 +44,14 @@
   --ink-3:     var(--n-500);
   --ink-4:     var(--n-300);
 
+  /* The co-citation graph's edges. They used to borrow --line-hard, which is a
+     border colour: #C7D6DD on a white ground is all but invisible once it is
+     drawn at the low alpha thousands of overlapping lines require, so the graph
+     read as a field of dots with no relationships in it — and the edges are the
+     evidence. Its own token, dark enough to see and light enough that 13,000 of
+     them do not turn the canvas into a solid block. */
+  --graph-edge: #8DA2B2;
+
   --accent:    var(--amber);
   --accent-bg: var(--amber-bg);
   --ok:        var(--green);
@@ -94,6 +102,8 @@
   --ink-2:     #A0B4C4;
   --ink-3:     #7A8FA1;
   --ink-4:     #55697B;
+  /* Lighter than the dark ground, by the same reasoning as the light theme. */
+  --graph-edge: #4E7A92;
 
   --accent:    #F0913E;
   --accent-bg: #33210F;

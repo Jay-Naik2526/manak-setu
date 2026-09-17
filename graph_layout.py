@@ -33,9 +33,20 @@ OUT = "data/graph_layout.json"
 WIDTH, HEIGHT, PAD = 1040, 660, 26
 
 SEED = 7
-# Passes of the overlap-separation step. Few are needed: rank-spreading has
-# already given every node room on each axis.
-SEPARATION_STEPS = 60
+# Passes of the overlap-separation step, and how hard it pushes.
+#
+# These were tuned for 319 nodes. At 1,858 the same settings left the median
+# node 11 px from its nearest neighbour, which is less than two node radii —
+# the picture read as a smear rather than a set of points. Raising the
+# neighbourhood these three values define lifts that to 15.9 px.
+#
+# Pushing harder than this makes it worse, not better, which is why the numbers
+# stop here: at close=1.30 the median gap falls back to 15.1 and the count of
+# pairs closer than 4 px rises from 22 to 336, because strong repulsion packs a
+# dense rim against the frame. Measured, not guessed — `--stats` prints both.
+SEPARATION_STEPS = 120
+SEPARATION_RADIUS = 0.90     # multiples of k, the ideal node spacing
+SEPARATION_PUSH = 0.08
 
 
 def _edges(conn) -> list[tuple[str, str, float]]:
@@ -112,11 +123,11 @@ def compute(edges: list[tuple[str, str, float]]) -> dict[str, list[float]]:
         delta = pos[:, None, :] - pos[None, :, :]
         dist = np.sqrt((delta ** 2).sum(-1))
         np.fill_diagonal(dist, np.inf)
-        close = dist < k * 0.55
+        close = dist < k * SEPARATION_RADIUS
         if not close.any():
             break
         push = np.where(close[..., None], delta / np.maximum(dist, 1e-6)[..., None], 0.0)
-        pos += push.sum(axis=1) * (k * 0.06)
+        pos += push.sum(axis=1) * (k * SEPARATION_PUSH)
 
     lo, hi = pos.min(axis=0), pos.max(axis=0)
     span = np.maximum(hi - lo, 1e-6)
@@ -162,6 +173,16 @@ def main():
     outside = sum(1 for p in layout.values()
                   if not (PAD <= p[0] <= WIDTH - PAD and PAD <= p[1] <= HEIGHT - PAD))
     print(f"  outside the frame: {outside}")
+
+    # How far the typical node sits from its nearest neighbour. The IQR says the
+    # cloud fills the frame; this says whether the points inside it are
+    # distinguishable, which is the thing that actually reads as crowded.
+    pts = np.array(list(layout.values()))
+    gaps = np.sqrt(((pts[:, None, :] - pts[None, :, :]) ** 2).sum(-1))
+    np.fill_diagonal(gaps, np.inf)
+    nearest = gaps.min(axis=1)
+    print(f"  nearest neighbour: median {np.median(nearest):.1f} px · "
+          f"{int((nearest < 4).sum())} pairs closer than 4 px")
 
     if args.stats:
         print("\n--stats — nothing written")
