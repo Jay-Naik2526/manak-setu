@@ -1929,7 +1929,8 @@ async function drawPeers(query) {
 function healthBars(d) {
   const fams = (d.by_family || []).filter(f => f.documents >= 20).slice(0, 8);
   const years = (d.by_year || []).filter(y => y.documents >= 10);
-  if (!fams.length && !years.length) return '';
+  const mins = ((d.buyers || {}).ministry || []).slice(0, 8);
+  if (!fams.length && !years.length && !mins.length) return '';
   const widest = Math.max(...fams.map(f => f.documents), 1);
 
   const famRow = (f, i) => {
@@ -1954,12 +1955,49 @@ function healthBars(d) {
     </div>`;
   };
 
-  return `<div class="grid c2" style="margin-top:14px">
-    ${fams.length ? `<div class="card"><div class="hd"><h3>By buying department</h3>
+  const buyers = d.buyers || {};
+  const widestMin = Math.max(...mins.map(m => m.documents), 1);
+  const minRow = (m, i) => {
+    const share = m.documents ? m.with_dead_citation / m.documents : 0;
+    return `<div class="hix" style="animation-delay:${i * 40}ms">
+      <div class="hb-label" title="${esc(m.name)}">${esc(String(m.name).slice(0, 34))}</div>
+      <div class="hb-track"><div class="hb-total" style="width:${(m.documents / widestMin * 100).toFixed(1)}%">
+        <div class="hb-dead" style="width:${(share * 100).toFixed(1)}%"></div></div></div>
+      <div class="hb-n"><b>${m.with_dead_citation}</b> of ${m.documents}</div>
+    </div>`;
+  };
+
+  /* The buyer is the reason this screen exists for the Department of Consumer
+     Affairs rather than for a standards librarian: it names which parts of
+     government are specifying against standards BIS has already withdrawn. */
+  const ministryCard = mins.length ? `<div class="card" style="margin-top:14px">
+    <div class="hd"><h3>By buying ministry</h3>
+      <span class="hint">read from the GeM bid form</span></div>
+    <div class="in"><div class="hbars">${mins.map(minRow).join('')}</div>
+    <table style="margin-top:12px"><thead><tr><th>Ministry or state</th>
+      <th class="r">Documents</th><th class="r">Cite a dead standard</th>
+      <th>Most-cited dead standard</th></tr></thead><tbody>
+      ${mins.map(m => `<tr><td>${esc(m.name)}</td>
+        <td class="mono r">${m.documents}</td>
+        <td class="mono r">${m.with_dead_citation} <span class="dimmer">of ${m.documents}</span></td>
+        <td>${m.top_dead_standard
+          ? `<span class="mono jump" data-go="${esc(m.top_dead_standard)}">${esc(m.top_dead_standard)}</span>
+             <span class="dimmer xs">in ${m.top_dead_standard_documents}</span>`
+          : '<span class="dimmer">—</span>'}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="xs dimmer" style="margin-top:9px">Buyer named on
+      ${buyers.documents_naming_a_buyer} of ${buyers.of_documents} machine-readable documents;
+      ministries with at least 10 shown. ${esc(buyers.note || '')}
+      A share over fewer documents is a fact about those documents, not about the ministry.</p>
+    </div></div>` : '';
+
+  return ministryCard + `<div class="grid c2" style="margin-top:14px">
+    ${fams.length ? `<div class="card"><div class="hd"><h3>By product family</h3>
       <span class="hint">bar length = documents read</span></div>
       <div class="in"><div class="hbars">${fams.map(famRow).join('')}</div>
-      <p class="xs dimmer" style="margin-top:9px">Departments with at least 20 machine-readable
-        documents in this corpus. The darker part of each bar is the documents citing a
+      <p class="xs dimmer" style="margin-top:9px">Product families with at least 20
+        machine-readable documents in this corpus — the kind of thing being bought, derived from
+        the citations themselves. The darker part of each bar is the documents citing a
         withdrawn or superseded standard.</p></div></div>` : ''}
     ${years.length ? `<div class="card"><div class="hd"><h3>By year the bid was floated</h3>
       <span class="hint">from the GeM bid number</span></div>

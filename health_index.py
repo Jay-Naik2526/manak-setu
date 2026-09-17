@@ -32,6 +32,8 @@ import sqlite3
 DB = "manak_setu.db"
 OUT = "data/health_index.json"
 TOP_N = 15
+# Below this a share is a fact about a handful of tenders, not about a buyer.
+MIN_BUYER_DOCUMENTS = 10
 
 # GeM bid numbers carry the year they were floated: GEM/2025/B/6183459.
 YEAR_RE = re.compile(r"\b(20\d{2})\b")
@@ -69,9 +71,12 @@ def build() -> dict:
     conn = sqlite3.connect(DB)
     try:
         reg = _register(conn)
+        columns = {r[1] for r in conn.execute("PRAGMA table_info(tenders)")}
+        buyer_cols = [c for c in ("Ministry", "Department") if c in columns]
+        select = ", ".join(f'"{c}"' for c in
+                           ["Tender ID", "Product Family", "IS Numbers Cited"] + buyer_cols)
         rows = conn.execute(
-            'SELECT "Tender ID", "Product Family", "IS Numbers Cited" '
-            'FROM tenders WHERE "Usability" = ?', ("Usable",)
+            f'SELECT {select} FROM tenders WHERE "Usability" = ?', ("Usable",)
         ).fetchall()
         total_documents = conn.execute("SELECT COUNT(*) FROM tenders").fetchone()[0]
     finally:
@@ -85,7 +90,16 @@ def build() -> dict:
     documents_with_dead = 0
     citations_total = 0
 
-    for tender_id, family, cited in rows:
+    # Who was buying. Only GeM rows carry this — the original 220-document set
+    # has no bid form — so every buyer figure states its own denominator rather
+    # than borrowing the corpus total.
+    by_buyer = {c: collections.defaultdict(lambda: [0, 0, collections.Counter()])
+                for c in buyer_cols}
+    named = 0
+
+    for row in rows:
+        tender_id, family, cited = row[0], row[1], row[2]
+        buyers = dict(zip(buyer_cols, row[3:]))
         citations = [c.strip() for c in str(cited or "").split(";") if c.strip()]
         citations_total += len(citations)
         year = _year_of(tender_id)
@@ -108,10 +122,25 @@ def build() -> dict:
             if hit["status"] in ("Withdrawn", "Superseded"):
                 has_dead = True
                 dead_by_doc[hit["is_number"]] += 1
+        if any(str(v or "").strip() for v in buyers.values()):
+            named += 1
+        for col, value in buyers.items():
+            name = str(value or "").strip()
+            if name:
+                by_buyer[col][name][0] += 1
+
         if has_dead:
             documents_with_dead += 1  # cross-checked against engine.dead_citation_documents
             by_year[year][1] += 1
             by_family[fam][1] += 1
+            for col, value in buyers.items():
+                name = str(value or "").strip()
+                if name:
+                    by_buyer[col][name][1] += 1
+                    for c in citations:
+                        hit = reg.get(base_of(c))
+                        if hit and hit["status"] in ("Withdrawn", "Superseded"):
+                            by_buyer[col][name][2][hit["is_number"]] += 1
         if has_unresolved:
             unresolved_docs += 1
 
@@ -150,6 +179,35 @@ def build() -> dict:
             "of_documents": usable,
             "documents_citing_a_standard_not_in_the_register": unresolved_docs,
             "distinct_dead_standards_in_circulation": len(dead_by_doc),
+        },
+        "buyers": {
+            "documents_naming_a_buyer": named,
+            "of_documents": usable,
+            "note": (
+                "Read from the saved GeM bid form, exactly as the form prints it. "
+                "Documents collected before the GeM sweep have no bid form and name "
+                "no buyer, so they are excluded from every buyer figure rather than "
+                "counted as unknown."
+            ),
+            **{
+                col.lower(): [
+                    {
+                        "name": name,
+                        "documents": n,
+                        "with_dead_citation": dead,
+                        "top_dead_standard": (top.most_common(1)[0][0] if top else None),
+                        "top_dead_standard_documents": (top.most_common(1)[0][1] if top else 0),
+                    }
+                    # Ten documents is the floor for showing a buyer at all: a
+                    # share over three documents is not a finding about a
+                    # ministry, it is a fact about three tenders.
+                    for name, (n, dead, top) in sorted(
+                        by_buyer[col].items(), key=lambda kv: (-kv[1][1], -kv[1][0])
+                    )
+                    if n >= MIN_BUYER_DOCUMENTS
+                ][:TOP_N]
+                for col in buyer_cols
+            },
         },
         "by_year": [
             {"year": y, "documents": n, "with_dead_citation": d}
@@ -194,6 +252,16 @@ def main():
             flag = " · REVIEW OVERDUE" if str(r["overdue"]).lower() == "yes" else ""
             print(f"  {r['documents']:>3} of {r['of']:<4} {r['is_number']:<24} "
                   f"{str(r['title'])[:40]}{flag}")
+
+    b = d.get("buyers") or {}
+    if b.get("ministry"):
+        print(f"\nby ministry (buyer named on {b['documents_naming_a_buyer']} of "
+              f"{b['of_documents']} measured documents; "
+              f"{MIN_BUYER_DOCUMENTS}+ documents each):")
+        print(f"  {'documents':>9} {'with a dead citation':>21}   buyer")
+        for r in b["ministry"][:10]:
+            share = f"{r['with_dead_citation']} of {r['documents']}"
+            print(f"  {r['documents']:>9} {share:>21}   {str(r['name'])[:44]}")
 
     if args.write:
         with open(OUT, "w", encoding="utf-8") as fh:

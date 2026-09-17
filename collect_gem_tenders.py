@@ -353,9 +353,67 @@ def main():
     ap.add_argument("--ids", type=int, nargs="*", help="specific bid ids")
     ap.add_argument("--rederive", action="store_true",
                     help="recompute Item Category for collected rows from the saved bid forms")
+    ap.add_argument("--markscan", action="store_true",
+                    help="record whether each collected document demands the BIS "
+                         "Standard Mark anywhere in its attachments")
     ap.add_argument("--recite", action="store_true",
                     help="re-extract citations for collected rows from the saved attachments")
     args = ap.parse_args()
+
+    if args.markscan:
+        # Whether a tender demands certified material can only be answered by
+        # reading the tender, so this reads the saved attachments once and
+        # records the answer per row.
+        #
+        # The two answers are not equally strong, and the reporting has to
+        # respect that. "No" is solid: none of the phrases that demand a
+        # Standard Mark, a licence number or certified material appear anywhere
+        # in the specification, so as written uncertified goods meet it. "Yes"
+        # is weak: a 60-page tender mentioning BIS somewhere is not proof that
+        # it demands the mark *for the item under compulsory certification*. So
+        # every figure built on this leans on the absence, never the presence.
+        import glob
+
+        import pdfplumber
+
+        from audit import MARK_RE
+        from engine import MAX_PAGES
+
+        df = pd.read_csv(OUT, encoding="utf-8-sig")
+        if "Demands Standard Mark" not in df.columns:
+            df["Demands Standard Mark"] = ""
+        read = yes = no = 0
+        for i, bid in enumerate(df["GeM Bid Id"]):
+            paths = [q for q in sorted(glob.glob(os.path.join(PDF_DIR, f"{int(bid)}-*.pdf")))
+                     if not q.endswith("-bid.pdf")]
+            if not paths:
+                df.at[i, "Demands Standard Mark"] = "No attachment read"
+                continue
+            found = None
+            for path in paths:
+                try:
+                    with pdfplumber.open(path) as pdf:
+                        text = "\n".join((pg.extract_text() or "")
+                                         for pg in pdf.pages[:MAX_PAGES])
+                except Exception:                            # noqa: BLE001
+                    continue
+                found = bool(found) or bool(MARK_RE.search(text))
+            if found is None:
+                df.at[i, "Demands Standard Mark"] = "No attachment read"
+                continue
+            read += 1
+            df.at[i, "Demands Standard Mark"] = "Yes" if found else "No"
+            yes += bool(found)
+            no += not found
+            if read % 200 == 0:
+                df.to_csv(OUT, index=False)
+                print(f"  {read} documents read · {yes} demand the mark · {no} do not",
+                      flush=True)
+        df.to_csv(OUT, index=False)
+        print(f"read {read} documents of {len(df)} rows")
+        print(f"  demand a Standard Mark somewhere : {yes}")
+        print(f"  no such language anywhere        : {no}")
+        return
 
     if args.recite:
         # The citation pattern changed, so the stored lists were produced by the

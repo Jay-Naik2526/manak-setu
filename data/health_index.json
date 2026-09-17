@@ -12,6 +12,211 @@
     "documents_citing_a_standard_not_in_the_register": 96,
     "distinct_dead_standards_in_circulation": 354
   },
+  "buyers": {
+    "documents_naming_a_buyer": 1036,
+    "of_documents": 1172,
+    "note": "Read from the saved GeM bid form, exactly as the form prints it. Documents collected before the GeM sweep have no bid form and name no buyer, so they are excluded from every buyer figure rather than counted as unknown.",
+    "ministry": [
+      {
+        "name": "Ministry Of Defence",
+        "documents": 268,
+        "with_dead_citation": 124,
+        "top_dead_standard": "IS 303",
+        "top_dead_standard_documents": 32
+      },
+      {
+        "name": "Ministry Of Heavy Industries And Public Enterprises",
+        "documents": 166,
+        "with_dead_citation": 55,
+        "top_dead_standard": "IS 2705",
+        "top_dead_standard_documents": 6
+      },
+      {
+        "name": "Ministry Of Power",
+        "documents": 101,
+        "with_dead_citation": 34,
+        "top_dead_standard": "IS 13947",
+        "top_dead_standard_documents": 6
+      },
+      {
+        "name": "Ministry Of Petroleum And Natural Gas",
+        "documents": 116,
+        "with_dead_citation": 33,
+        "top_dead_standard": "IS 2148",
+        "top_dead_standard_documents": 4
+      },
+      {
+        "name": "Ministry Of Steel",
+        "documents": 75,
+        "with_dead_citation": 26,
+        "top_dead_standard": "IS 325",
+        "top_dead_standard_documents": 6
+      },
+      {
+        "name": "Ministry Of Chemicals And Fertilizers",
+        "documents": 41,
+        "with_dead_citation": 23,
+        "top_dead_standard": "IS 4379",
+        "top_dead_standard_documents": 18
+      },
+      {
+        "name": "Pmo",
+        "documents": 53,
+        "with_dead_citation": 14,
+        "top_dead_standard": "IS 14665 (Part 1)",
+        "top_dead_standard_documents": 5
+      },
+      {
+        "name": "Ministry Of Coal",
+        "documents": 26,
+        "with_dead_citation": 10,
+        "top_dead_standard": "IS 1570 (Part 1)",
+        "top_dead_standard_documents": 4
+      },
+      {
+        "name": "Uttar Pradesh",
+        "documents": 17,
+        "with_dead_citation": 8,
+        "top_dead_standard": "IS 13947",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Gujarat",
+        "documents": 16,
+        "with_dead_citation": 5,
+        "top_dead_standard": "IS 8828",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Ministry Of Education",
+        "documents": 25,
+        "with_dead_citation": 4,
+        "top_dead_standard": "IS 14858",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Ministry Of Mines",
+        "documents": 27,
+        "with_dead_citation": 3,
+        "top_dead_standard": "IS 2705",
+        "top_dead_standard_documents": 1
+      },
+      {
+        "name": "Ministry Of Railways",
+        "documents": 15,
+        "with_dead_citation": 0,
+        "top_dead_standard": null,
+        "top_dead_standard_documents": 0
+      }
+    ],
+    "department": [
+      {
+        "name": "Department Of Military Affairs",
+        "documents": 134,
+        "with_dead_citation": 67,
+        "top_dead_standard": "IS 303",
+        "top_dead_standard_documents": 30
+      },
+      {
+        "name": "Department Of Heavy Industry",
+        "documents": 166,
+        "with_dead_citation": 55,
+        "top_dead_standard": "IS 2705",
+        "top_dead_standard_documents": 6
+      },
+      {
+        "name": "Department Of Defence Production",
+        "documents": 119,
+        "with_dead_citation": 50,
+        "top_dead_standard": "IS 138",
+        "top_dead_standard_documents": 9
+      },
+      {
+        "name": "Na",
+        "documents": 100,
+        "with_dead_citation": 25,
+        "top_dead_standard": "IS 9283",
+        "top_dead_standard_documents": 6
+      },
+      {
+        "name": "Department Of Fertilizers",
+        "documents": 39,
+        "with_dead_citation": 23,
+        "top_dead_standard": "IS 4379",
+        "top_dead_standard_documents": 18
+      },
+      {
+        "name": "Steel Authority Of India Limited",
+        "documents": 47,
+        "with_dead_citation": 18,
+        "top_dead_standard": "IS 325",
+        "top_dead_standard_documents": 5
+      },
+      {
+        "name": "Department Of Atomic Energy",
+        "documents": 53,
+        "with_dead_citation": 14,
+        "top_dead_standard": "IS 14665 (Part 1)",
+        "top_dead_standard_documents": 5
+      },
+      {
+        "name": "Indian Oil Corporation Limited",
+        "documents": 38,
+        "with_dead_citation": 14,
+        "top_dead_standard": "IS 1391 (Part 1)",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Bharat Petroleum Corporation Ltd",
+        "documents": 26,
+        "with_dead_citation": 8,
+        "top_dead_standard": "IS 2148",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Coal India Limited",
+        "documents": 20,
+        "with_dead_citation": 7,
+        "top_dead_standard": "IS 325",
+        "top_dead_standard_documents": 3
+      },
+      {
+        "name": "Nmdc Limited",
+        "documents": 10,
+        "with_dead_citation": 6,
+        "top_dead_standard": "IS 8623",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Power Grid Corporation Of India Limited",
+        "documents": 10,
+        "with_dead_citation": 6,
+        "top_dead_standard": "IS 325",
+        "top_dead_standard_documents": 3
+      },
+      {
+        "name": "Contracts And Materials",
+        "documents": 14,
+        "with_dead_citation": 5,
+        "top_dead_standard": "IS 1391 (Part 1)",
+        "top_dead_standard_documents": 1
+      },
+      {
+        "name": "Department Of Higher Education",
+        "documents": 13,
+        "with_dead_citation": 4,
+        "top_dead_standard": "IS 14858",
+        "top_dead_standard_documents": 2
+      },
+      {
+        "name": "Department Of Defence",
+        "documents": 11,
+        "with_dead_citation": 4,
+        "top_dead_standard": "IS 4759",
+        "top_dead_standard_documents": 1
+      }
+    ]
+  },
   "by_year": [
     {
       "year": "2021",
