@@ -37,13 +37,20 @@ SUGGEST_MAX_TOTAL = 8
 
 # Phrases a tender uses when it does demand certified material. Absence of all of
 # them is what makes a mandatory-certification citation an omission.
+# This is the single definition. llm.py had a second one under the name
+# MARK_CLAIM, used to check that a generated clause actually demands the mark;
+# the two overlapped but were not the same, so a phrase could satisfy the guard
+# and not the finding, or the reverse. Every copy of one fact in this codebase
+# has eventually disagreed with itself, so llm.py now imports this.
 MARK_PATTERNS = [
     r"standard\s*mark",
     r"\bISI\s*mark",
+    r"certification\s+mark",
     r"BIS\s*(certifi|registrat|licen|mark)",
     r"\bCM\s*/\s*L\b",
-    r"licence\s+(no|number)",
+    r"licen[cs]e\s+(no|number)",
     r"certified\s+under\s+.{0,30}BIS",
+    r"shall\s+be\s+certified",
     r"\bQCO\b",
     r"quality\s+control\s+order",
 ]

@@ -32,7 +32,11 @@ MASTER_COLUMNS = [
     "Count", "Outdated Citations", "Any Outdated", "Document Type", "Usability",
     "Source Link", "Unmatched Citations",
 ]
-EXTRA_COLUMNS = ["Item Category", "GeM Bid Id"]
+EXTRA_COLUMNS = ["Item Category", "GeM Bid Id",
+                 # Who was buying, read from the saved bid form. The original
+                 # 220-row set has no bid form, so these stay empty there and
+                 # every buyer figure carries "of N GeM documents".
+                 "Ministry", "Department", "Organisation", "Office"]
 
 
 def main():

@@ -214,12 +214,11 @@ PERMISSIVE = re.compile(
 # pipes shall bear the certification mark as specified in IS 4985". Inventing a
 # statutory duty is as damaging as inventing a standard, so it is checked here
 # rather than requested in the prompt.
-MARK_CLAIM = re.compile(
-    r"\b(?:BIS\s+)?standard\s*mark\b|\bISI\s*mark\b|\bcertification\s+mark\b"
-    r"|\bshall\s+be\s+certified\b|\bBIS\s+certifi\w+|\bquality\s+control\s+order\b"
-    r"|\bQCO\b|\blicen[cs]e\s+(?:no|number)\b",
-    re.I,
-)
+# One pattern, defined in audit.py. This used to be a second regex covering the
+# same phrases in different words: a clause could pass this guard and still be
+# reported as a missing Standard Mark clause by the audit, because the two lists
+# were not identical.
+from audit import MARK_RE as MARK_CLAIM
 
 
 def phrase(governing: dict, related: list[dict], cert: dict, allowed: list[str],

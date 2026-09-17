@@ -154,6 +154,58 @@ def classify(citations: list[str], reg: dict[str, dict]) -> tuple[str, list[str]
     return family, outdated, unmatched
 
 
+# The bid form's buyer block is bilingual on one line: the English label, its
+# Devanagari translation, then the value.
+#
+#     Ministry/State Name/<devanagari> Ministry Of Chemicals And Fertilizers
+#
+# CID_RE has already removed the Devanagari by the time this runs, leaving the
+# label, some stray slashes, and the value. So the value is what follows the
+# English label on its own line. That is a property of how GeM lays the form
+# out, not a guess about the buyer, and it means the value is stored exactly as
+# printed.
+BUYER_LABELS = {
+    "Ministry": "Ministry/State Name",
+    "Department": "Department Name",
+    "Organisation": "Organisation Name",
+    "Office": "Office Name",
+}
+# GeM redacts some office names to a run of asterisks. That is not a value.
+_REDACTED = re.compile(r"^[*\s]+$")
+
+
+def buyer_field(bid_text: str, label: str) -> str:
+    """The value GeM prints against one buyer label, or "" when it is absent.
+
+    Nothing is normalised and nothing is inferred: "Pmo" stays "Pmo" rather than
+    becoming "Prime Minister's Office", because a ministry name this system
+    invented would be indistinguishable on screen from one a buyer wrote. An
+    absent or redacted label yields an empty string, which every downstream
+    figure counts as unknown rather than folding into a total.
+    """
+    lines = [re.sub(r"\s+", " ", ln).strip()
+             for ln in CID_RE.sub(" ", bid_text).splitlines()]
+    for i, line in enumerate(lines):
+        if label not in line:
+            continue
+        value = line.split(label, 1)[1].strip(" :/-,")
+        if not value:
+            # The value wrapped onto the next line; take it unless it is
+            # another label.
+            nxt = lines[i + 1] if i + 1 < len(lines) else ""
+            if nxt and not LABEL_LINE_RE.search(nxt):
+                value = nxt.strip(" :/-,")
+        if not value or _REDACTED.match(value):
+            return ""
+        return value[:120]
+    return ""
+
+
+def extract_buyer(bid_text: str) -> dict[str, str]:
+    """All four buyer fields from one saved bid form."""
+    return {col: buyer_field(bid_text, label) for col, label in BUYER_LABELS.items()}
+
+
 def extract_category(bid_text: str) -> str:
     """The bid's "Item Category" as GeM prints it.
 
@@ -212,6 +264,7 @@ def collect_bid(bid: int, reg: dict[str, dict]) -> dict | None:
     bid_text = extract_document(pdf, f"{bid}.pdf").get("text", "")
     number = (BID_NUMBER_RE.search(bid_text) or [None])[0] if BID_NUMBER_RE.search(bid_text) else f"GEM-bid-{bid}"
     category = extract_category(bid_text)
+    buyer = extract_buyer(bid_text)
     if category and SERVICE_RE.search(category):
         return {"bid": bid, "outcome": "service bid", "category": category}
 
@@ -276,6 +329,10 @@ def collect_bid(bid: int, reg: dict[str, dict]) -> dict | None:
             "Source Link": source or links[0],
             "Unmatched Citations": "; ".join(unmatched),
             "Item Category": category,
+            "Ministry": buyer["Ministry"],
+            "Department": buyer["Department"],
+            "Organisation": buyer["Organisation"],
+            "Office": buyer["Office"],
             "GeM Bid Id": bid,
             "Attachments Read": text_docs + scanned_docs,
         },
@@ -354,20 +411,40 @@ def main():
         return
 
     if args.rederive:
+        # The saved bid form is the only record of who was buying. Re-reading it
+        # costs no round trip, and the four buyer fields are read the same way
+        # the category is — from the label GeM prints, exactly as printed.
         df = pd.read_csv(OUT, encoding="utf-8-sig")
-        changed = 0
+        for col in ("Ministry", "Department", "Organisation", "Office"):
+            if col not in df.columns:
+                df[col] = ""
+        changed = buyers = read = 0
         for i, bid in enumerate(df["GeM Bid Id"]):
             path = os.path.join(PDF_DIR, f"{int(bid)}-bid.pdf")
             if not os.path.exists(path):
                 continue
+            read += 1
             with open(path, "rb") as fh:
-                cat = extract_category(extract_document(fh.read(), path).get("text", ""))
+                text = extract_document(fh.read(), path).get("text", "")
+            cat = extract_category(text)
             if cat and cat != str(df.at[i, "Item Category"]):
                 df.at[i, "Item Category"] = cat
                 changed += 1
+            found = extract_buyer(text)
+            if any(found.values()):
+                buyers += 1
+            for col, value in found.items():
+                df.at[i, col] = value
+            if read % 400 == 0:
+                df.to_csv(OUT, index=False)
+                print(f"  {read} bid forms read · {buyers} carry a buyer", flush=True)
         df.to_csv(OUT, index=False)
         titled = int(df["Item Category"].fillna("").astype(str).str.strip().astype(bool).sum())
-        print(f"re-derived {changed} titles from saved bid forms; {titled}/{len(df)} rows now carry one")
+        named = int(df["Ministry"].fillna("").astype(str).str.strip().astype(bool).sum())
+        print(f"read {read} saved bid forms of {len(df)} rows")
+        print(f"re-derived {changed} titles; {titled}/{len(df)} rows carry one")
+        print(f"buyer named on {named}/{len(df)} rows "
+              f"({read - buyers} of the {read} forms read carried no buyer block)")
         return
 
     rng = random.Random(args.seed)
