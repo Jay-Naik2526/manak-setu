@@ -119,6 +119,21 @@ def main() -> None:
           not numeric, f"typed figures: {numeric}" if numeric else
           f"{len(typed)} placeholders checked")
 
+    # ── the hidden attribute actually hides ───────────────────────────────
+    # A component with its own `display` outranks the user-agent rule for
+    # [hidden], so an element the markup ships hidden renders anyway and the
+    # code that sets `el.hidden = true` to dismiss it does nothing. That
+    # shipped: the shortcuts overlay covered the page from load, empty, with a
+    # close button that could not close it.
+    css = open("frontend/styles.css", encoding="utf-8").read()
+    has_rule = re.search(r"\[hidden\]\s*\{[^}]*display:\s*none\s*!important", css)
+    hidden_els = re.findall(r'id="([^"]+)"[^>]*\shidden', html)
+    check("the hidden attribute outranks component display rules",
+          bool(has_rule),
+          "styles.css needs [hidden] { display: none !important }"
+          if not has_rule else
+          f"{len(hidden_els)} elements ship hidden and rely on it")
+
     print(f"\n{len(PASS)} passed · {len(FAIL)} failed")
     if FAIL:
         print("\nfailures:")

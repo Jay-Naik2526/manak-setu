@@ -1344,6 +1344,14 @@ tr.hit:focus { outline: none; }
 /* ── Keyboard shortcuts ────────────────────────────────────────────────────
    Opened with "?", closed with Escape or the button. A list, not a grid of
    cards: it is read once and dismissed. */
+/* The hidden attribute has to win. `.keys-scrim { display: grid }` outranks the
+   user-agent rule for [hidden], so this overlay was visible from page load —
+   empty, covering the page, and un-closable, because the close button sets
+   `hidden` and `hidden` was doing nothing. Declared globally rather than only
+   here: any element this page hides with the attribute has the same problem the
+   moment it is given a display of its own. */
+[hidden] { display: none !important; }
+
 .keys-scrim {
   position: fixed; inset: 0; z-index: 95; display: grid; place-items: center;
   background: color-mix(in srgb, var(--pet-900) 46%, transparent);
