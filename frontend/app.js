@@ -2906,12 +2906,68 @@ function paintPal() {
 
 /* ── init ──────────────────────────────────────────────────────────────── */
 
+
+/* The shortcuts, listed from one place so the overlay cannot drift from what
+   wireKeys actually binds. Adding a shortcut without adding it here is the
+   drift this project keeps finding; adding it here without binding it is
+   worse, because it tells the officer something untrue. */
+/* The destinations G can reach. `d` used to open the Audit screen and there was
+   no way to reach Draft at all, which is the screen the system is named for.
+   One map, read by both the handler and the list below, so they cannot disagree
+   about what a key does. */
+const GO_KEYS = {
+  d: 'draft', a: 'analyze', t: 'tenders', s: 'standards',
+  g: 'graph', o: 'overview', c: 'certs', b: 'benchmark', e: 'evidence',
+};
+
+const SHORTCUTS = [
+  ['Search', [
+    ['⌘K  /  Ctrl K', 'Open the command palette'],
+    ['/', 'Open the palette from anywhere'],
+    ['↑ ↓', 'Move through palette results'],
+    ['Enter', 'Open the highlighted result'],
+  ]],
+  // Built from GO_KEYS itself rather than typed out again, so a key that is
+  // rebound cannot keep its old description here.
+  ['Go to', Object.entries(GO_KEYS).map(([k, v]) =>
+    [`G then ${k.toUpperCase()}`, (NAV.find(n => n.id === v) || {}).full || v])],
+  ['Result tables', [
+    ['↑ ↓', 'Walk the rows'],
+    ['Home / End', 'First or last row'],
+    ['Enter', 'Open the row’s detail drawer'],
+  ]],
+  ['Run demo', [
+    ['Space', 'Finish the caption, then pause or resume'],
+    ['← →', 'Previous or next step'],
+    ['Esc', 'Stop the walkthrough'],
+  ]],
+  ['Everywhere', [
+    ['?', 'This list'],
+    ['Esc', 'Close the drawer, palette or this list'],
+  ]],
+];
+
+function keysOpen() {
+  const host = $('#keys-body');
+  if (!host) return;
+  host.innerHTML = SHORTCUTS.map(([group, rows]) => `<div class="keys-group">
+    <h4>${esc(group)}</h4>
+    ${rows.map(([k, what]) =>
+      `<div class="keys-row"><kbd>${esc(k)}</kbd><span>${esc(what)}</span></div>`).join('')}
+  </div>`).join('');
+  $('#keys').hidden = false;
+  $('#keys-x').focus();
+}
+
+const keysShut = () => { const el = $('#keys'); if (el) el.hidden = true; };
+
 function wireKeys() {
   let g = false;
   window.addEventListener('keydown', e => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPal(); return; }
     if (e.key === 'Escape') {
+      if (!$('#keys').hidden) { keysShut(); return; }
       if (D.on) { demoStop(false); return; }
       shutPal(); shut(); closePins(); return;
     }
@@ -2927,14 +2983,22 @@ function wireKeys() {
       if (e.key === 'ArrowLeft') { e.preventDefault(); D.paused = false; demoGo(D.i - 1); return; }
     }
     if (typing) return;
+    if (e.key === '?') { e.preventDefault(); keysOpen(); return; }
     if (e.key === '/') { e.preventDefault(); openPal(); return; }
-    if (e.key.toLowerCase() === 'g') { g = true; setTimeout(() => g = false, 900); return; }
+    // The pending-prefix check has to come first. It did not, so a second "g"
+    // matched the prefix branch again and returned — which meant G-then-G, the
+    // one shortcut for the graph, could never fire. Nothing said so, because
+    // nothing listed the shortcuts to check against.
     if (g) {
-      const map = { o: 'overview', d: 'analyze', t: 'tenders', g: 'graph', s: 'standards', c: 'certs', b: 'benchmark', e: 'evidence' };
-      const v = map[e.key.toLowerCase()];
-      if (v) { go(v); g = false; }
+      const v = GO_KEYS[e.key.toLowerCase()];
+      g = false;
+      if (v) { go(v); return; }
     }
+    if (e.key.toLowerCase() === 'g') { g = true; setTimeout(() => g = false, 900); return; }
   });
+  $('#keys-x').addEventListener('click', keysShut);
+  $('#keys').addEventListener('click', e => { if (e.target.id === 'keys') keysShut(); });
+
   $('#pal-in').addEventListener('input', e => buildPal(e.target.value.trim()));
   $('#pal-in').addEventListener('keydown', e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); pi = Math.min(pal.length - 1, pi + 1); paintPal(); }

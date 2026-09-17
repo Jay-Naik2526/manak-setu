@@ -299,6 +299,7 @@ places holding the same fact and drifting apart.
 |---|---|
 | `consistency_check.py` | The backlog disagreeing with the coverage figure; a graph node that resolves to nothing and is declared nowhere; a citation that is neither held nor logged as a gap; a stored citation the designation pattern refuses; a golden-set label naming a readable standard the register lacks; `/stats` row counts that do not match `COUNT(*)`. |
 | `qa_adversarial.py` | 28 cases that must fail safely — a corrupt PDF, a scanned page with no text layer, an override with no rationale, a phantom citation with no graph support, a peer lookup with nothing comparable. |
+| `qa_frontend.py` | A view loader, command-palette entry or demo step calling a function that is not at module scope; a selector pointing at an id nothing creates; a duplicated id; a live figure typed into the markup. `node --check` passes on all of these — a function declared inside the wrong function is valid JavaScript and still throws when the screen loads. |
 | `eval_retrieval.py --min-recall` | Retrieval getting worse than a level already demonstrated. A floor, not a target: tuning toward a number is how an evaluation set gets gamed. Run locally — it needs both encoders and does not fit a free runner's budget. |
 
 `consistency_check.py --quick` skips the re-extraction pass, which re-reads

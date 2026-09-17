@@ -543,6 +543,18 @@
   </div>
 </div>
 
+<!-- The console has more keyboard than anything on screen admits: a palette,
+     go-to shortcuts, arrow navigation through result rows, and demo controls.
+     None of it is discoverable, so "?" lists it. -->
+<div class="keys-scrim" id="keys" hidden>
+  <div class="keys-card" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <div class="hd"><span class="eyebrow">Keyboard</span>
+      <button class="ibtn" id="keys-x" aria-label="Close">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="in" id="keys-body"></div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts"></div>
 
 <script src="locales.js?v=1" onerror="void 0"></script>

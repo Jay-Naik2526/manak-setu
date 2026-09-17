@@ -38,6 +38,11 @@ jobs:
       - name: Invariants
         run: python consistency_check.py --quick
 
+      - name: Frontend
+        # Things node --check cannot see: a function declared in the wrong
+        # scope is valid JavaScript and still breaks the screen that calls it.
+        run: python qa_frontend.py
+
       - name: Start the API
         run: |
           nohup uvicorn main:app --port 8000 > /tmp/uvicorn.log 2>&1 &
