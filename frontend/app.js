@@ -258,9 +258,47 @@ function buildNav() {
 
 let view = 'overview';
 
+/* Reduced motion is a setting, not a preference to be talked out of: every
+   transition below is skipped entirely when it is on, and the page still
+   arrives at the same state. */
+const REDUCED = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* The View Transitions API animates between two states the browser has already
+   painted, so the cross-fade costs no layout work of ours and cannot leave the
+   page half-rendered if it is unsupported — startViewTransition simply does not
+   exist and the callback runs as it always did. */
+/* A transition started while another is still running is aborted by the
+   browser, and the rejection it hands back is unhandled by default — four of
+   them appeared in the console just from navigating quickly. So: one at a
+   time, and the promises are always consumed. An aborted transition is not an
+   error worth reporting; the state change it carried has already happened. */
+let vtBusy = false;
+
+/* startViewTransition hands back three promises — ready, updateCallbackDone and
+   finished — and an aborted transition rejects more than one of them. Catching
+   only `finished` still left the others unhandled, which is why the console
+   filled up again. Every one is consumed here. */
+function vtSettle(t, done) {
+  const hush = p => p && p.catch(() => {});
+  hush(t.ready);
+  hush(t.updateCallbackDone);
+  hush(t.finished).finally(done);
+}
+
+function transition(apply) {
+  if (REDUCED() || !document.startViewTransition || vtBusy) { apply(); return; }
+  vtBusy = true;
+  vtSettle(document.startViewTransition(apply), () => { vtBusy = false; });
+}
+
 function go(v, entity) {
   if (!TITLE[v]) v = 'draft';
   if (ROLE !== 'admin' && NAV.find(n => n.id === v)?.admin) v = 'draft';
+  if (v === view) { paintView(v, entity); return; }
+  transition(() => paintView(v, entity));
+}
+
+function paintView(v, entity) {
   view = v;
   $$('.tab').forEach(e => {
     const on = e.dataset.v === v;
@@ -2467,11 +2505,33 @@ async function boot() {
 
   const th = localStorage.getItem('manak.theme') || 'light';
   document.documentElement.dataset.theme = th;
-  $('#theme').addEventListener('click', () => {
-    const n = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = n;
-    localStorage.setItem('manak.theme', n);
-    if (S.graph && ready.has('graph')) drawGraph();
+  /* The theme change is instant to understand, so it is the one place worth a
+     flourish: the new theme is revealed by a circle growing from the button
+     that caused it. The circle's radius is the distance to the furthest corner,
+     so it always finishes covering the viewport. Everything is feature-detected
+     and skipped under reduced motion — the theme still changes, without the
+     wipe. */
+  $('#theme').addEventListener('click', e => {
+    const swap = () => {
+      const n = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = n;
+      localStorage.setItem('manak.theme', n);
+      if (S.graph && ready.has('graph')) drawGraph();
+    };
+    if (REDUCED() || !document.startViewTransition || vtBusy) { swap(); return; }
+
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const reach = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    document.documentElement.style.setProperty('--wipe-x', `${x}px`);
+    document.documentElement.style.setProperty('--wipe-y', `${y}px`);
+    document.documentElement.style.setProperty('--wipe-r', `${reach}px`);
+    document.documentElement.classList.add('wiping');
+    vtBusy = true;
+    vtSettle(document.startViewTransition(swap), () => {
+      document.documentElement.classList.remove('wiping');
+      vtBusy = false;
+    });
   });
 
   await resolveApi();

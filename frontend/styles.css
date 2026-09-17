@@ -1148,3 +1148,31 @@ tr.hit:focus-visible {
   background: var(--surface-2);
 }
 tr.hit:focus { outline: none; }
+
+/* ── view and theme transitions (H7) ──────────────────────────────────────
+   Both are feature-detected in app.js and both are skipped entirely under
+   reduced motion, so this block only ever runs for a browser that asked for
+   it. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: vt-out var(--t-base) var(--ease-out) both;
+  }
+  ::view-transition-new(root) {
+    animation: vt-in var(--t-base) var(--ease-out) both;
+  }
+  @keyframes vt-out { to { opacity: .4; transform: translateY(-6px); } }
+  @keyframes vt-in { from { opacity: 0; transform: translateY(6px); } }
+
+  /* The theme wipe replaces the cross-fade: the incoming theme is revealed by
+     a circle growing from the toggle, and the outgoing one simply waits
+     underneath rather than fading, or the two would show through each other. */
+  .wiping::view-transition-old(root) { animation: none; }
+  .wiping::view-transition-new(root) {
+    animation: theme-wipe 400ms var(--ease-out) both;
+    transform: none;
+  }
+  @keyframes theme-wipe {
+    from { clip-path: circle(0 at var(--wipe-x) var(--wipe-y)); }
+    to { clip-path: circle(var(--wipe-r) at var(--wipe-x) var(--wipe-y)); }
+  }
+}
