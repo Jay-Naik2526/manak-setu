@@ -247,6 +247,37 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   Only a small number of standards carry a recorded successor; the rest have
   `Replaced By = "UNKNOWN"` (no recorded successor), and `check_dead_citation`
   surfaces that value as-is rather than inventing a replacement.
+- **Template propagation — measured, and not found.** Dead citations plausibly
+  spread by copying: an officer starts from last year's tender and inherits its
+  standards. If that were the main mechanism, one circular aimed at one template
+  would fix many tenders at once, and the remedy would be administrative rather
+  than technical. `tender_lineage.py` tested it directly — 5-word shingles, a
+  128-permutation MinHash, LSH banding, candidate pairs verified exactly —
+  across the 1,036 machine-readable documents whose attachments are saved.
+
+  Text reuse exists but is modest, and it does not explain the dead citations:
+
+  | Jaccard | Clusters | Documents in a cluster |
+  |---|---|---|
+  | ≥ 0.80 | 22 | 58 of 1,036 (5.6%) |
+  | ≥ 0.65 | 32 | 99 of 1,036 (9.6%) |
+  | ≥ 0.50 | 48 | 171 of 1,036 (16.5%) |
+  | ≥ 0.35 | 52 | 213 of 1,036 (20.6%) |
+
+  Four thresholds, because 0.80 only tests whether whole documents were copied
+  wholesale and a shared *clause* inside otherwise different tenders would look
+  nothing like that. Even at 0.35 — documents sharing barely a third of their
+  wording — four fifths of the corpus shares text with nothing. And no dead
+  standard has more than **3** of its citing documents inside one cluster:
+  IS 303 is cited in 32 documents and at most 2 of them share a specification;
+  IS 2705 in 17, at most 3.
+
+  So the answer is that these are largely independent choices, not one template
+  copied 422 times. The card this was going to feed is **not shipped**, because
+  the finding does not support it. It does change the recommendation, though:
+  if copying is not the mechanism, the fix cannot be a circular aimed at a
+  template — it has to be a check at the moment the clause is drafted, which is
+  what this system is.
 - **Citation extraction**: citations are read literally from document text, and
   the pattern has been narrowed twice against real documents. It no longer reads
   the English word "is" followed by a number ("purchase preference is 20%"), nor

@@ -403,6 +403,13 @@ They strengthen the case rather than weaken it.
   working.
 - **Ten of twelve interface languages are machine-translated and unreviewed.**
   Hindi and English are checked.
+- **We tested whether dead citations are copied between tenders, and they are
+  not.** MinHash over 1,036 documents: even at a loose 0.35 similarity, four
+  fifths share text with nothing, and no dead standard has more than 3 of its
+  citing documents in one cluster. We do not ship a finding the measurement
+  does not support. It sharpens the pitch rather than weakening it — if these
+  were copied, a circular would fix them; because they are independent choices,
+  the fix has to happen where the clause is written, which is this system.
 - **Confidence is concentrated, not calibrated.** 569 of 621 queries score
   between 0.9 and 1.0, and in that band the answer is right 453 times — 80%,
   not 97%. The score behaves like a decision, not a probability. It is still

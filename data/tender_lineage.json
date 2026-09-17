@@ -1,0 +1,135 @@
+{
+ "generated": "2026-09-17",
+ "documents_compared": 1036,
+ "clusters": 22,
+ "documents_in_a_cluster": 58,
+ "jaccard_threshold": 0.8,
+ "threshold_sweep": [
+  {
+   "jaccard": 0.8,
+   "clusters": 22,
+   "documents_in_a_cluster": 58
+  },
+  {
+   "jaccard": 0.65,
+   "clusters": 32,
+   "documents_in_a_cluster": 99
+  },
+  {
+   "jaccard": 0.5,
+   "clusters": 48,
+   "documents_in_a_cluster": 171
+  },
+  {
+   "jaccard": 0.35,
+   "clusters": 52,
+   "documents_in_a_cluster": 213
+  }
+ ],
+ "shingle_words": 5,
+ "findings": [
+  {
+   "is_number": "IS 2705",
+   "documents": 17,
+   "sharing_one_template": 3,
+   "cluster_size": 3
+  },
+  {
+   "is_number": "IS 9283",
+   "documents": 8,
+   "sharing_one_template": 3,
+   "cluster_size": 3
+  },
+  {
+   "is_number": "IS 303",
+   "documents": 32,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 14246",
+   "documents": 32,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 13489",
+   "documents": 23,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 1000",
+   "documents": 22,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 373",
+   "documents": 21,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 8112",
+   "documents": 21,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 13983",
+   "documents": 21,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 4379",
+   "documents": 19,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 2209",
+   "documents": 19,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 4077",
+   "documents": 18,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 2787",
+   "documents": 14,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 7372",
+   "documents": 5,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 15477",
+   "documents": 5,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 8828",
+   "documents": 3,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  },
+  {
+   "is_number": "IS 758",
+   "documents": 2,
+   "sharing_one_template": 2,
+   "cluster_size": 2
+  }
+ ],
+ "note": "Shared wording between two tender documents, measured on 5-word shingles with a 128-permutation MinHash and verified exactly at Jaccard >= 0.8. A cluster is evidence that documents share specification text, not proof that one was copied from another, and counts are over the documents whose text could be read."
+}

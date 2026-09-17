@@ -71,7 +71,8 @@ def signature(shingle_set: set[int], a: np.ndarray, b: np.ndarray) -> np.ndarray
     return hashed.min(axis=1)
 
 
-def cluster(signatures: dict[str, np.ndarray], sets: dict[str, set[int]]) -> list[list[str]]:
+def cluster(signatures: dict[str, np.ndarray], sets: dict[str, set[int]],
+            threshold: float = JACCARD_MIN) -> list[list[str]]:
     """LSH candidates, verified exactly, then connected components."""
     buckets: dict[tuple, list[str]] = collections.defaultdict(list)
     for doc, sig in signatures.items():
@@ -106,7 +107,7 @@ def cluster(signatures: dict[str, np.ndarray], sets: dict[str, set[int]]) -> lis
                 checked.add(pair)
                 a, b = sets[pair[0]], sets[pair[1]]
                 inter = len(a & b)
-                if inter and inter / len(a | b) >= JACCARD_MIN:
+                if inter and inter / len(a | b) >= threshold:
                     union(*pair)
 
     groups: dict[str, list[str]] = collections.defaultdict(list)
@@ -180,11 +181,22 @@ def main():
     a = rng.integers(1, PRIME, size=PERMS, dtype=np.int64)
     b = rng.integers(0, PRIME, size=PERMS, dtype=np.int64)
     signatures = {doc: signature(s, a, b) for doc, s in sets.items()}
-    groups = cluster(signatures, sets)
 
+    # Reading the documents is the expensive part, so every threshold worth
+    # asking about is answered from the same read. 0.8 is near-identical
+    # documents; 0.5 is documents that share half their wording, which is what
+    # a shared section inside otherwise different tenders looks like.
+    print(f"\ntext reuse across {len(sets)} documents:")
+    sweep = []
+    for t in (0.8, 0.65, 0.5, 0.35):
+        gs = cluster(signatures, sets, t)
+        covered = len({d for g in gs for d in g})
+        sweep.append({"jaccard": t, "clusters": len(gs), "documents_in_a_cluster": covered})
+        print(f"  Jaccard >= {t:.2f}   {len(gs):>3} clusters   "
+              f"{covered:>4} of {len(sets)} documents ({covered / len(sets):.1%})")
+
+    groups = cluster(signatures, sets, JACCARD_MIN)
     in_cluster = {doc for g in groups for doc in g}
-    print(f"\n{len(groups)} clusters covering {len(in_cluster)} of {len(sets)} documents "
-          f"at Jaccard >= {JACCARD_MIN}")
 
     # Which dead standards travel with a template.
     conn = sqlite3.connect(DB)
@@ -236,6 +248,7 @@ def main():
         "clusters": len(groups),
         "documents_in_a_cluster": len(in_cluster),
         "jaccard_threshold": JACCARD_MIN,
+        "threshold_sweep": sweep,
         "shingle_words": SHINGLE,
         "findings": findings[:20],
         "note": (
