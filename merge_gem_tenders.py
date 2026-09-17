@@ -21,6 +21,7 @@ After a merge with --write, the derived tables are stale until rebuilt:
 """
 
 import argparse
+import collections
 
 import pandas as pd
 
@@ -39,9 +40,65 @@ EXTRA_COLUMNS = ["Item Category", "GeM Bid Id",
                  "Ministry", "Department", "Organisation", "Office"]
 
 
+# Columns the collector owns — the ones re-read from the saved bid form and its
+# attachments. A refresh rewrites only these, and only on rows that came from
+# GeM, so anything curated by hand elsewhere in the master is untouched.
+COLLECTOR_OWNED = [
+    "IS Numbers Cited", "Foreign Standards Cited", "Count", "Product Family",
+    "Outdated Citations", "Any Outdated", "Unmatched Citations", "Usability",
+    "Document Type", "Item Category",
+    "Ministry", "Department", "Organisation", "Office",
+]
+
+
+def refresh(master, new, write: bool) -> int:
+    """Carry corrections on rows the master already holds.
+
+    The merge is additive on purpose: the rule is that nothing overwrites a row
+    that is already in data/. But a re-extraction exists precisely to correct
+    rows already collected — when the citation pattern was found to be reading
+    "IS 201619" out of "IS:2016-1967", leaving that in the master would mean
+    knowingly keeping a fabricated designation rather than the one the document
+    prints.
+
+    So a refresh is allowed, and it is explicit, narrow and reported: opt-in
+    with --refresh, matched on the GeM bid id, limited to COLLECTOR_OWNED
+    columns, and every changed field is counted before anything is written.
+    """
+    key = "GeM Bid Id"
+    if key not in master.columns or key not in new.columns:
+        print("no GeM Bid Id column on both sides — nothing to refresh")
+        return 0
+    src = new.dropna(subset=[key]).drop_duplicates(subset=[key]).set_index(key)
+    fields = collections.Counter()
+    rows = set()
+    for i, bid in master[key].items():
+        if pd.isna(bid) or bid not in src.index:
+            continue
+        for col in COLLECTOR_OWNED:
+            if col not in src.columns:
+                continue
+            before, after = master.at[i, col], src.at[bid, col]
+            if str(before) == str(after) or (pd.isna(before) and pd.isna(after)):
+                continue
+            fields[col] += 1
+            rows.add(i)
+            if write:
+                master.at[i, col] = after
+    print(f"\nrefresh  : {len(rows)} existing rows differ from the re-read collection")
+    for col, n in fields.most_common():
+        print(f"  {n:>5}  {col}")
+    if not write and rows:
+        print("  (dry run — add --write to apply)")
+    return len(rows)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--refresh", action="store_true",
+                    help="also carry corrections onto rows the master already "
+                         "holds, for the columns the collector owns")
     ap.add_argument("--collected", default=COLLECTED)
     args = ap.parse_args()
 
@@ -69,14 +126,25 @@ def main():
     for fam, n in keep["Product Family"].value_counts().head(12).items():
         print(f"  {n:>4}  {fam}")
 
+    touched = refresh(master, new, args.write) if args.refresh else 0
+
     if not args.write:
         print("\ndry run — nothing written. Re-run with --write to merge.")
         return
 
     merged = pd.concat([master, keep[MASTER_COLUMNS + EXTRA_COLUMNS]], ignore_index=True)
     merged.to_csv(MASTER, index=False)
-    print(f"\nwrote {MASTER}: {len(merged)} documents")
-    print("now run: python rebuild_graph.py && python rebuild_backlog.py && python load_db.py")
+    print(f"\nwrote {MASTER}: {len(merged)} documents"
+          + (f" ({touched} existing rows refreshed)" if touched else ""))
+    # Order matters and used to be wrong here: rebuild_backlog reads the
+    # database, not the CSV, so running it before load_db recomputes the
+    # backlog against the register as it was before this merge — which is how
+    # a backlog listing eight citations no longer in the corpus survived a
+    # full rebuild. load_db runs first, and again at the end to pick up the
+    # files the rebuilds wrote.
+    print("now run: python load_db.py --allow-shrink && python rebuild_graph.py "
+          "&& python rebuild_backlog.py && python load_db.py --allow-shrink "
+          "&& python graph_layout.py && python health_index.py --write")
 
 
 if __name__ == "__main__":

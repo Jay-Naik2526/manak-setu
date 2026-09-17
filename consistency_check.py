@@ -157,17 +157,29 @@ def check_reextraction(conn, sample):
     except ImportError:
         return True, ["skipped — pdfplumber is not installed"]
 
+    # The attachments are saved under the GeM bid id, which is a different
+    # number from the Tender ID — deriving one from the other's digits turned
+    # "GEM/2025/B/6232081" into "20256232081" and found no files, so this check
+    # silently verified one document instead of fifty. Silence from a check is
+    # not the same as a pass, so it now reports how many it actually read and
+    # fails if that is nothing.
+    columns = {r[1] for r in conn.execute("PRAGMA table_info(tenders)")}
+    key = "GeM Bid Id" if "GeM Bid Id" in columns else None
+    if not key:
+        return True, ["no GeM Bid Id column — attachments cannot be located"]
     rows = [r for r in conn.execute(
-        'SELECT "Tender ID", "IS Numbers Cited" FROM tenders WHERE "Usability" = ?',
-        ("Usable",)) if str(r[0]).strip()]
+        f'SELECT "{key}", "IS Numbers Cited" FROM tenders WHERE "Usability" = ?',
+        ("Usable",)) if str(r[0]).strip() and str(r[0]).lower() != "nan"]
     random.Random(SEED).shuffle(rows)
 
     checked, diffs = 0, []
-    for tender_id, raw in rows:
-        # The Tender ID is the saved filename's stem; the bid id is its digits.
-        digits = "".join(ch for ch in str(tender_id) if ch.isdigit())
+    for bid, raw in rows:
+        try:
+            digits = str(int(float(bid)))
+        except (TypeError, ValueError):
+            continue
         paths = [p for p in sorted(glob.glob(os.path.join(PDF_DIR, f"{digits}-*.pdf")))
-                 if not p.endswith("-bid.pdf")] if digits else []
+                 if not p.endswith("-bid.pdf")]
         if not paths:
             continue
         found: list[str] = []
@@ -184,15 +196,16 @@ def check_reextraction(conn, sample):
         stored = _split(raw)
         checked += 1
         if set(found) != set(stored):
-            diffs.append((tender_id,
+            diffs.append((digits,
                           sorted(set(found) - set(stored)),
                           sorted(set(stored) - set(found))))
         if checked >= sample:
             break
 
-    lines = [f"re-read {checked} documents from {PDF_DIR}"]
+    lines = [f"re-read {checked} documents of the {sample} asked for, from {PDF_DIR}"]
     if not checked:
         lines.append("no saved attachments found — nothing was verified")
+        return False, lines
     for tid, extra, gone in diffs[:6]:
         lines.append(f"  {tid}: pattern now reads {extra or '—'}, stored has {gone or '—'}")
     if diffs:

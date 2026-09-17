@@ -1,15 +1,15 @@
 {
-  "generated": "2026-09-16",
+  "generated": "2026-09-17",
   "corpus": {
     "documents_collected": 4917,
     "documents_measured": 1172,
-    "citations_read": 6085,
+    "citations_read": 6083,
     "note": "Counts over the tender documents in this corpus whose text could be read (Usability='Usable'). A sample of Indian public procurement, not a census — these are not national rates."
   },
   "headline": {
     "documents_with_a_dead_citation": 422,
     "of_documents": 1172,
-    "documents_citing_a_standard_not_in_the_register": 97,
+    "documents_citing_a_standard_not_in_the_register": 96,
     "distinct_dead_standards_in_circulation": 354
   },
   "by_year": [
@@ -52,8 +52,8 @@
   "by_family": [
     {
       "family": "MTD — Metallurgical Engineering Department",
-      "documents": 251,
-      "with_dead_citation": 83
+      "documents": 250,
+      "with_dead_citation": 82
     },
     {
       "family": "CED — Civil Engineering Department",
@@ -67,7 +67,7 @@
     },
     {
       "family": "Unclassified",
-      "documents": 246,
+      "documents": 245,
       "with_dead_citation": 54
     },
     {
@@ -92,8 +92,8 @@
     },
     {
       "family": "PGD — Production And General Engineering Department",
-      "documents": 42,
-      "with_dead_citation": 10
+      "documents": 43,
+      "with_dead_citation": 11
     },
     {
       "family": "PCD — Petroleum, Coal And Related Products Department",
@@ -112,7 +112,7 @@
     },
     {
       "family": "FAD — Food And Agriculture Department",
-      "documents": 6,
+      "documents": 7,
       "with_dead_citation": 3
     },
     {
@@ -286,7 +286,7 @@
       "replaced_by": "UNKNOWN",
       "review_due": "2030-12-29",
       "overdue": "No",
-      "documents": 144,
+      "documents": 145,
       "of": 1172
     },
     {

@@ -67,10 +67,10 @@ no build step, no framework. Ten pages:
 | **Dashboard** | Live corpus aggregates — status donut, coverage meter, decade histogram, family/degree/gap bars. Recomputed from SQLite on every load. |
 | **Analyze Tender** | Drag-drop a tender PDF (parsed server-side by pdfplumber), paste spec text, or enter IS numbers. One-click presets load real corpus examples. Severity-sorted findings. |
 | **Tender Corpus** | Browse and filter all 4,917 real tenders; click any row to run a live compliance check on its actual citations. |
-| **Knowledge Graph** | Animated force-directed graph of the 319 co-cited standards / 4,916 edges. Family filter, confidence threshold, node drill-down with real evidence statements. |
+| **Knowledge Graph** | Canvas graph of the 320 co-cited standards / 4,904 edges, laid out server-side. Family filter, confidence threshold, node drill-down with real evidence statements. |
 | **Standards** | All 27,687 rows, searchable/filterable, with a detail drawer (record + certification + co-citations). |
 | **Certifications** | All 737 rules across ISI Mark Scheme I, CRS, QCO and Hallmarking. |
-| **Coverage & Gaps** | The 98.6% coverage figure with its exact denominator, and the 27-row remaining collection backlog. |
+| **Coverage & Gaps** | The 99.0% coverage figure with its exact denominator, and the 20-row remaining collection backlog. |
 | **Benchmark** | Runs the golden benchmark live and shows the confusion matrix, with an explicit warning against quoting a bare accuracy percentage. |
 
 Also: dark mode, ⌘K command palette, and a print stylesheet (⎙ exports the
@@ -145,7 +145,7 @@ specs like "PVC insulated cable" score High, e.g. matching `IS 5831` at 0.77).
 `GET /health` returns row counts per table, e.g.:
 
 ```json
-{"status": "ok", "row_counts": {"standards": 27687, "tenders": 4917, "co_citation": 4916, "certification_rules": 737, "coverage_gap_backlog": 27}}
+{"status": "ok", "row_counts": {"standards": 27687, "tenders": 4917, "co_citation": 4904, "certification_rules": 737, "coverage_gap_backlog": 20}}
 ```
 
 ## Known Data Gaps
@@ -158,11 +158,13 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   `collect_catalogue.py` (34,884 records swept, 29,939 new). Of the 4,917 tender
   rows, **1,172 are `Usability = Usable`** — the rest are service bids, scans, or
   specifications naming no standard, and are excluded from every coverage and
-  accuracy statistic. Those 1,172 usable tenders cite **1,991 distinct IS
-  numbers**, of which **1,964 (98.6%)** are present in the register. The figure
+  accuracy statistic. Those 1,172 usable tenders cite **1,986 distinct IS
+  numbers**, of which **1,966 (99.0%)** are present in the register. The figure
   was 84 (17%) at the start of the project and 483 of 488 (99.0%) against the
-  old 2,087-row register; it fell to 891 of 1,237 (72.0%) when the corpus grew
-  and the catalogue harvest closed it again. The remaining **27** correctly
+  old 2,087-row register; it fell to 891 of 1,237 (72.0%) when the corpus grew,
+  the catalogue harvest closed it again to 1,964 of 1,991 (98.6%), and fixing
+  the citation pattern that was reading "IS 201619" out of "IS:2016-1967"
+  removed eight fabricated gaps and added five real citations. The remaining **20** correctly
   return `found: false` and are the rows in `coverage_gap_backlog_current.csv`.
   That gap is closed by collection, never by writing synthetic rows into the
   CSVs.
