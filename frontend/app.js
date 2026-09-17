@@ -210,18 +210,26 @@ const blank = (t, s) => `<div class="blank">${ic('empty')}<div class="t">${esc(t
 
 /* ── navigation ────────────────────────────────────────────────────────── */
 
+/* The ten sections are three different kinds of thing, and presenting them as
+   one flat list said otherwise. `group` is not decoration: WORK is what an
+   officer does, REGISTER is what they look a standard up in, and EVIDENCE is
+   the system's account of itself — the screens that exist so a claim can be
+   checked. The order within each group is the order they are used in. */
 const NAV = [
-  { id: 'draft',     label: 'Draft',       full: 'Draft clause',        icon: 'scan' },
-  { id: 'analyze',   label: 'Audit',       full: 'Tender audit',        icon: 'files' },
-  { id: 'evidence',  label: 'Evidence',    full: 'Corpus evidence',     icon: 'doc' },
-  { id: 'overview',  label: 'Overview',    full: 'Overview',            icon: 'gauge',  admin: true },
-  { id: 'tenders',   label: 'Tenders',     full: 'Tender corpus',       icon: 'doc',    admin: true, count: 'tenders' },
-  { id: 'standards', label: 'Standards',   full: 'Standards register',  icon: 'book',   admin: true, count: 'standards' },
-  { id: 'certs',     label: 'Certification', full: 'Certification duties', icon: 'badge', admin: true, count: 'certification_rules' },
-  { id: 'graph',     label: 'Graph',       full: 'Co-citation graph',   icon: 'net',    admin: true },
-  { id: 'coverage',  label: 'Coverage',    full: 'Coverage',            icon: 'pie',    admin: true },
-  { id: 'benchmark', label: 'Benchmark',   full: 'Detection benchmark', icon: 'target', admin: true },
+  { id: 'draft',     label: 'Draft',       full: 'Draft clause',        icon: 'scan',   group: 'Work' },
+  { id: 'analyze',   label: 'Audit',       full: 'Tender audit',        icon: 'files',  group: 'Work' },
+
+  { id: 'standards', label: 'Standards',   full: 'Standards register',  icon: 'book',   admin: true, count: 'standards', group: 'Register' },
+  { id: 'certs',     label: 'Certification', full: 'Certification duties', icon: 'badge', admin: true, count: 'certification_rules', group: 'Register' },
+  { id: 'tenders',   label: 'Tenders',     full: 'Tender corpus',       icon: 'doc',    admin: true, count: 'tenders', group: 'Register' },
+
+  { id: 'overview',  label: 'Overview',    full: 'Overview',            icon: 'gauge',  admin: true, group: 'Evidence' },
+  { id: 'graph',     label: 'Graph',       full: 'Co-citation graph',   icon: 'net',    admin: true, group: 'Evidence' },
+  { id: 'evidence',  label: 'Evidence',    full: 'Corpus evidence',     icon: 'doc',    group: 'Evidence' },
+  { id: 'coverage',  label: 'Coverage',    full: 'Coverage',            icon: 'pie',    admin: true, group: 'Evidence' },
+  { id: 'benchmark', label: 'Benchmark',   full: 'Detection benchmark', icon: 'target', admin: true, group: 'Evidence' },
 ];
+const NAV_GROUPS = ['Work', 'Register', 'Evidence'];
 
 /* Officers get the two screens they actually work in. Admin adds the corpus,
    the register and the integrity views — useful to the team, noise to a user. */
@@ -238,10 +246,23 @@ const LOAD = {
   coverage: loadCoverage, benchmark: () => loadBench(false),
 };
 
+/* Typographic, not iconographic. Ten icons in a row carried no information a
+   word did not carry better, and an icon-and-badge strip is the shape every
+   generated dashboard has — the labels are the content, so they are the nav.
+   The group eyebrow is the only structural device here and it earns its place
+   by saying something true about what follows it. */
 function buildNav() {
-  $('#tabs').innerHTML = visibleNav().map(n =>
-    `<div class="tab" data-v="${n.id}" role="tab" tabindex="0" aria-selected="false" title="${esc(navFull(n))}">${ic(n.icon, 'sm')}<span>${esc(navLabel(n))}</span>
-      ${n.count ? `<span class="ct" data-ct="${n.count}"></span>` : ''}</div>`).join('');
+  const rows = visibleNav();
+  $('#tabs').innerHTML = NAV_GROUPS.map(group => {
+    const items = rows.filter(n => (n.group || 'Work') === group);
+    if (!items.length) return '';
+    return `<div class="navgroup" role="presentation">
+      <span class="navgroup-lb" aria-hidden="true">${esc(group)}</span>
+      ${items.map(n => `<div class="tab" data-v="${n.id}" role="tab" tabindex="0"
+        aria-selected="false" title="${esc(navFull(n))}"><span>${esc(navLabel(n))}</span>${
+        n.count ? `<span class="ct" data-ct="${n.count}"></span>` : ''}</div>`).join('')}
+    </div>`;
+  }).join('');
   $$('.tab').forEach(el => {
     el.addEventListener('click', () => go(el.dataset.v));
     el.addEventListener('keydown', e => {

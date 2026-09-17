@@ -190,89 +190,99 @@ svg.i.lg { width: 20px; height: 20px; }
 .brand-sep { width: 1px; height: 24px; background: var(--nav-line); flex: none; }
 
 /* ── Navigation ────────────────────────────────────────────────────────────
-   Two shapes for one nav. Below 1000px it is the horizontal strip it has
-   always been — a rail on a phone is a drawer nobody opens, and the strip
-   already handles overflow by scrolling with a spill shadow. At 1000px and up
-   it is a left rail: the sections are a list, not a sequence, and a vertical
-   list carries ten of them with the labels always legible instead of scrolling
-   sideways past them. The markup does not change between the two. */
+   Typographic, and grouped. Ten icons in a row carried no information the word
+   beside them did not carry better, and an icon-plus-badge strip is the shape
+   every generated dashboard has. The labels are the content, so the labels are
+   the nav.
 
-.shell-row { display: flex; flex: 1; min-height: 0; }
-.topnav-gap { flex: 1; min-width: 0; }
+   The three group eyebrows are the only structural device here, and they say
+   something true: Work is what an officer does, Register is what they look a
+   standard up in, Evidence is the system's account of itself. Hairline rules
+   separate the groups rather than boxes, because the groups are a reading
+   order, not three containers. */
 
-/* Phone and small tablet: the original strip, sitting above the content. */
-.rail {
-  position: relative; flex: none; background: var(--nav);
-  border-bottom: 1px solid var(--nav-line);
+.tabwrap { position: relative; flex: 1; min-width: 0; display: flex; }
+.tabwrap::after {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 28px;
+  pointer-events: none; opacity: 0; transition: opacity .18s;
+  background: linear-gradient(90deg, transparent, var(--nav));
 }
+.tabwrap.spill::after { opacity: 1; }
 .tabs {
-  display: flex; align-items: stretch; overflow-x: auto;
-  scrollbar-width: none; height: 48px;
+  display: flex; align-items: stretch; flex: 1; min-width: 0;
+  overflow-x: auto; scrollbar-width: none; height: 52px;
 }
 .tabs::-webkit-scrollbar { display: none; }
+
+.navgroup { display: flex; align-items: stretch; position: relative; padding-left: 12px; }
+.navgroup + .navgroup { margin-left: 4px; }
+/* A hairline, not a border-box: the rule belongs between groups, not around
+   them, and it stops short of the bar's full height so it reads as a divider
+   rather than a frame. */
+.navgroup + .navgroup::before {
+  content: ''; position: absolute; left: 0; top: 16px; bottom: 16px;
+  width: 1px; background: var(--nav-line);
+}
+.navgroup-lb {
+  position: absolute; left: 12px; top: 7px;
+  font: 700 8px/1 'JetBrains Mono', monospace; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--nav-ink-2); opacity: .62;
+  pointer-events: none; white-space: nowrap;
+}
+
 .tab {
-  display: flex; align-items: center; gap: 7px; height: 48px; padding: 0 11px;
-  color: var(--nav-ink-2); font-size: 12.6px; cursor: pointer; white-space: nowrap;
-  border-bottom: 2px solid transparent; border-left: 3px solid transparent;
-  user-select: none; background: none; text-align: left;
-  transition: color .12s, background .12s, border-color .12s;
+  display: flex; align-items: flex-end; gap: 5px; height: 52px;
+  padding: 0 7px 11px; color: var(--nav-ink-2); font-size: 12.5px;
+  cursor: pointer; white-space: nowrap; user-select: none;
+  border-bottom: 2px solid transparent; background: none;
+  transition: color .12s, border-color .12s;
 }
-.tab:hover { color: #fff; background: rgba(255,255,255,.055); }
-.tab.on { color: #fff; font-weight: 600; border-bottom-color: var(--accent); background: rgba(255,255,255,.04); }
-.tab .i { opacity: .8; flex: none; }
-.tab.on .i { color: var(--accent); opacity: 1; }
-/* The row counts. --nav-ink-2 on a 9% white chip measured 3.19:1 against the
-   nav — under the 4.5 a small 9.5px numeral needs, and these are numbers
-   someone is meant to read, not decoration. */
+.tab:first-child { padding-left: 0; }
+.tab:hover { color: #fff; }
+.tab.on { color: #fff; font-weight: 600; border-bottom-color: var(--accent); }
+/* The row counts, inline and mono — a numeral beside its label, not a pill.
+   --nav-ink-2 on a 9% chip measured 3.19:1 against the nav, under the 4.5 a
+   small numeral needs; plain text on the bar itself is far clearer. */
 .tab .ct {
-  font: 500 9.5px/1 'JetBrains Mono', monospace; color: rgba(255,255,255,.88);
-  background: rgba(255,255,255,.14); padding: 2px 5px; border-radius: 8px;
-  font-variant-numeric: tabular-nums;
+  font: 500 10px/1 'JetBrains Mono', monospace; color: var(--nav-ink-2);
+  font-variant-numeric: tabular-nums; opacity: .75;
+}
+.tab.on .ct { color: #fff; opacity: .8; }
+
+/* Narrow screens: the eyebrows would cost a row of height they cannot pay for,
+   so the groups keep their dividers and lose their labels. */
+@media (max-width: 860px) {
+  .navgroup-lb { display: none; }
+  .navgroup { padding-left: 10px; }
+  .tab { align-items: center; padding-bottom: 0; }
 }
 
-/* The strip lives inside the row on small screens, so the row stacks. */
-@media (max-width: 999.98px) {
-  .shell-row { flex-direction: column; }
-  .rail { width: 100%; }
-  .tabwrap.spill::after {
-    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 28px;
-    pointer-events: none; background: linear-gradient(90deg, transparent, var(--nav));
-  }
+/* The sections are the navigation; the right-hand controls are conveniences,
+   so they are what gives ground when the bar runs short. The keyboard hint
+   stays because it is the thing the label was advertising. */
+@media (max-width: 1340px) {
+  .navsearch span:not(.kbd) { display: none; }
+  .navsearch { padding: 0 8px; }
+  .demo-btn span { display: none; }
+  .demo-btn { padding: 0 9px; }
 }
 
-/* Desktop: the rail. 72px of icons, labels underneath, widening to 220px with
-   the label beside the icon where there is room for it. */
-@media (min-width: 1000px) {
-  .rail {
-    width: 76px; border-bottom: none; border-right: 1px solid var(--nav-line);
-    position: sticky; top: 52px; align-self: flex-start;
-    height: calc(100vh - 52px); overflow-y: auto; overflow-x: hidden;
-    scrollbar-width: none;
-  }
-  .rail::-webkit-scrollbar { display: none; }
-  .tabs { flex-direction: column; height: auto; overflow: visible; padding: 8px 0; }
-  .tab {
-    flex-direction: column; justify-content: center; gap: 4px;
-    height: auto; padding: 9px 6px; min-height: 54px;
-    font-size: 10.5px; line-height: 1.2; text-align: center; white-space: normal;
-    border-bottom: none;
-  }
-  /* The active item's 3px amber bar — the only amber in the chrome. */
-  .tab.on { border-left-color: var(--accent); background: rgba(255,255,255,.05); }
-  .tab .ct { position: absolute; top: 6px; right: 8px; }
-  .tab { position: relative; }
+/* Below this the row counts are what has to go for all ten sections to stay
+   reachable without scrolling. Hidden, not abbreviated: "27.7k" would be the
+   one rounded number in a project that reports exact counts with their
+   denominators everywhere else, and the exact figures are on the Standards,
+   Certification and Tenders screens and in the sources footer regardless. */
+@media (max-width: 1400px) {
+  .tab .ct { display: none; }
 }
 
-@media (min-width: 1440px) {
-  .rail { width: 216px; }
-  .tabs { padding: 10px 8px; }
-  .tab {
-    flex-direction: row; justify-content: flex-start; gap: 10px;
-    min-height: 40px; padding: 8px 12px; font-size: 12.6px;
-    text-align: left; white-space: nowrap; border-radius: var(--r-1);
-    border-left-width: 3px;
-  }
-  .tab .ct { position: static; margin-left: auto; }
+/* The last of the slack, spent so all ten sections stay on screen down to a
+   1200px laptop. Below that the strip scrolls, which is what the spill shadow
+   on the right edge is for. */
+@media (max-width: 1300px) {
+  .navgroup { padding-left: 9px; }
+  .navgroup-lb { left: 9px; }
+  .tab { padding-left: 6px; padding-right: 6px; }
 }
 
 .role-btn {
