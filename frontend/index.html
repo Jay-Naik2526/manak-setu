@@ -143,22 +143,32 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="hd"><h3 data-i18n="draft.specText">Specification text</h3><span class="hint">what the officer wants to buy</span></div>
-          <div class="in">
-            <textarea id="fw-spec" placeholder="1.1 kV 4 core PVC insulated armoured aluminium power cable for underground distribution…"></textarea>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px" id="fw-presets">
-              <button class="btn tiny" data-q="PVC insulated heavy duty electric cable for working voltage 1.1 kV">LT cable 1.1 kV</button>
-              <button class="btn tiny" data-q="PVC insulated heavy duty electric cable for working voltage 11 kV">Same cable, 11 kV</button>
-              <button class="btn tiny" data-q="LED luminaire for road and street lighting">LED street light</button>
-              <button class="btn tiny" data-q="unplasticized PVC rigid pipes for potable water supply">PVC water pipe</button>
-              <button class="btn tiny" data-q="catering and housekeeping services for departmental canteen">Out of scope</button>
+        <!-- Two columns on a wide screen: what the officer typed stays in
+             view on the left while the answer and its trace fill the right, so
+             they never scroll away from their own query to read the result.
+             Below 1200px it stacks, query first. -->
+        <div class="split">
+          <div class="split-q">
+            <div class="card">
+              <div class="hd"><h3 data-i18n="draft.specText">Specification text</h3><span class="hint">what the officer wants to buy</span></div>
+              <div class="in">
+                <textarea id="fw-spec" placeholder="1.1 kV 4 core PVC insulated armoured aluminium power cable for underground distribution…"></textarea>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px" id="fw-presets">
+                  <button class="btn tiny" data-q="PVC insulated heavy duty electric cable for working voltage 1.1 kV">LT cable 1.1 kV</button>
+                  <button class="btn tiny" data-q="PVC insulated heavy duty electric cable for working voltage 11 kV">Same cable, 11 kV</button>
+                  <button class="btn tiny" data-q="LED luminaire for road and street lighting">LED street light</button>
+                  <button class="btn tiny" data-q="unplasticized PVC rigid pipes for potable water supply">PVC water pipe</button>
+                  <button class="btn tiny" data-q="catering and housekeeping services for departmental canteen">Out of scope</button>
+                </div>
+                <button class="btn acc wide" id="fw-run" style="margin-top:13px">Find governing standard</button>
+              </div>
             </div>
-            <button class="btn acc wide" id="fw-run" style="margin-top:13px">Find governing standard</button>
+          </div>
+          <div class="split-a">
+            <div id="fw-out"></div>
+            <div id="fw-peers"></div>
           </div>
         </div>
-        <div id="fw-out"></div>
-        <div id="fw-peers"></div>
       </section>
 
       <!-- ══ ANALYZE ══ -->

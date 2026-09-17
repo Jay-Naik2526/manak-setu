@@ -1186,3 +1186,19 @@ tr.hit:focus { outline: none; }
     to { clip-path: circle(var(--wipe-r) at var(--wipe-x) var(--wipe-y)); }
   }
 }
+
+/* ── Draft, two columns (H1) ───────────────────────────────────────────────
+   The officer's own words on the left, the answer on the right. Sticky only
+   where there is room to be sticky: on a narrow screen a stuck column eats
+   the viewport, so below 1200px this is one stack with the query first. */
+.split { display: grid; gap: 14px; }
+@media (min-width: 1200px) {
+  .split { grid-template-columns: minmax(360px, 34%) 1fr; align-items: start; }
+  .split-q { position: sticky; top: 14px; }
+  /* A sticky column must never be taller than the viewport or its bottom
+     becomes unreachable — the presets and the run button live down there. */
+  .split-q { max-height: calc(100vh - 28px); overflow-y: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .split-q { scroll-behavior: auto; }
+}
