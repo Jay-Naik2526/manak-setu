@@ -1829,6 +1829,56 @@ async function drawPeers(query) {
    withdrawn. Every figure carries the count it was taken from, because the
    corpus is a sample of Indian procurement and not a census of it. */
 
+/* The health index as a picture.
+   A table of "83 of 251" reads as data; a bar reads as a finding. Width is the
+   number of documents, the filled part is how many of them cite something dead,
+   and the count stays printed at the end — a share on its own hides whether it
+   was measured over eleven documents or five hundred. */
+
+function healthBars(d) {
+  const fams = (d.by_family || []).filter(f => f.documents >= 20).slice(0, 8);
+  const years = (d.by_year || []).filter(y => y.documents >= 10);
+  if (!fams.length && !years.length) return '';
+  const widest = Math.max(...fams.map(f => f.documents), 1);
+
+  const famRow = (f, i) => {
+    const share = f.documents ? f.with_dead_citation / f.documents : 0;
+    return `<div class="hix" style="animation-delay:${i * 40}ms">
+      <div class="hb-label" title="${esc(f.family)}">${esc(String(f.family).slice(0, 34))}</div>
+      <div class="hb-track"><div class="hb-total" style="width:${(f.documents / widest * 100).toFixed(1)}%">
+        <div class="hb-dead" style="width:${(share * 100).toFixed(1)}%"></div></div></div>
+      <div class="hb-n"><b>${f.with_dead_citation}</b> of ${f.documents}</div>
+    </div>`;
+  };
+
+  const tallest = Math.max(...years.map(y => y.documents), 1);
+  const yearCol = (y, i) => {
+    const share = y.documents ? y.with_dead_citation / y.documents : 0;
+    return `<div class="ycol" style="animation-delay:${i * 40}ms"
+                 title="${esc(y.year)}: ${y.with_dead_citation} of ${y.documents} cite a dead standard">
+      <div class="yc-bar" style="height:${(y.documents / tallest * 100).toFixed(1)}%">
+        <div class="yc-dead" style="height:${(share * 100).toFixed(1)}%"></div></div>
+      <div class="yc-lb">${esc(y.year)}</div>
+      <div class="yc-n">${y.with_dead_citation}/${y.documents}</div>
+    </div>`;
+  };
+
+  return `<div class="grid c2" style="margin-top:14px">
+    ${fams.length ? `<div class="card"><div class="hd"><h3>By buying department</h3>
+      <span class="hint">bar length = documents read</span></div>
+      <div class="in"><div class="hbars">${fams.map(famRow).join('')}</div>
+      <p class="xs dimmer" style="margin-top:9px">Departments with at least 20 machine-readable
+        documents in this corpus. The darker part of each bar is the documents citing a
+        withdrawn or superseded standard.</p></div></div>` : ''}
+    ${years.length ? `<div class="card"><div class="hd"><h3>By year the bid was floated</h3>
+      <span class="hint">from the GeM bid number</span></div>
+      <div class="in"><div class="ycols">${years.map(yearCol).join('')}</div>
+      <p class="xs dimmer" style="margin-top:9px">Years with at least 10 documents. The year comes
+        from the bid number itself; documents whose identifier carries no year are not shown.</p>
+      </div></div>` : ''}
+  </div>`;
+}
+
 async function drawHealthIndex() {
   const el = $('#ov-health');
   if (!el) return;
@@ -1871,7 +1921,11 @@ async function drawHealthIndex() {
           <th style="text-align:right">Documents</th></tr></thead>
           <tbody>${demand.map(row).join('')}</tbody></table></div></div>
     </div>
+    ${healthBars(d)}
     <p class="xs dimmer" style="margin-top:11px">${esc(c.note)}</p>`;
+  // The KPI helper renders a span that counts up to data-n; without this the
+  // card showed three zeroes.
+  runCounts();
 }
 
 /* ── graph ─────────────────────────────────────────────────────────────────
