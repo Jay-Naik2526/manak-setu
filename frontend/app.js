@@ -3207,9 +3207,12 @@ function renderFindings(a) {
 
   /* The audit is a list of edits to make to the tender, not a queue of things to
      approve. The officer changes their document; the document is the record. */
-  const block = (title, icon, tone, rows) => rows.length ? `
+  // `count` is separate from rows.length because one block's rows are groups,
+  // not findings: grouping the co-citation suggestions made the badge count
+  // branches and report 2 where there were 4 suggestions.
+  const block = (title, icon, tone, rows, count) => rows.length ? `
     <div class="card" style="margin-top:14px"><div class="hd">${ic(icon, 'sm')}
-      <h3>${esc(title)}</h3><span class="pill ${tone}">${rows.length}</span></div>
+      <h3>${esc(title)}</h3><span class="pill ${tone}">${count ?? rows.length}</span></div>
       <div class="in">${rows.join('')}</div></div>` : '';
 
   h += block('Replace these citations', 'alert', 'bad', S.replace.map(r => `
@@ -3227,17 +3230,36 @@ function renderFindings(a) {
         target="_blank" rel="noopener">BIS record</a></div>` : ''}
     </div>`));
 
-  h += block('Consider adding these standards', 'net', 'warn', S.add.map(r => `
-    <div class="edit" data-finding="${esc(r.cite)}">
-      <div class="top">
-        <span class="mono jump" data-go="${esc(r.cite)}">${esc(r.cite)}</span>
-        ${r.confidence != null ? `<span class="pill mute">${(r.confidence * 100).toFixed(0)}% of comparable tenders</span>` : ''}
-        ${r.in_register === false ? '<span class="pill warn">not in register</span>' : ''}
-      </div>
-      ${r.title ? `<div class="std-title why">${esc(r.title)}</div>` : ''}
-      <div class="why">${esc(r.why)}</div>
-      <div class="src"><span class="jump" data-ev="${esc(r.cite)}">see citing tenders</span></div>
-    </div>`));
+  /* Grouped by the citation that pulled each suggestion in, because a flat
+     list was genuinely misleading. A tender for LT power cable was being told
+     to consider "PVC-U pipes for soil and waste discharge systems inside
+     buildings" — a real co-citation, but of the cement in the same document,
+     not of the cable. The statistic was never wrong; the shape of the list
+     implied it was about the document as a whole. Under a heading naming the
+     branch, the officer can take or dismiss a whole line of reasoning at once. */
+  const byWhy = new Map();
+  (S.add || []).forEach(r => {
+    const key = r.because_of || 'your citations';
+    if (!byWhy.has(key)) byWhy.set(key, []);
+    byWhy.get(key).push(r);
+  });
+  const addRows = [...byWhy.entries()].map(([source, items]) => `
+    <div class="addgroup">
+      <div class="addgroup-lb">Because this document cites
+        <span class="mono jump" data-go="${esc(source)}">${esc(source)}</span></div>
+      ${items.map(r => `<div class="edit" data-finding="${esc(r.cite)}">
+        <div class="top">
+          <span class="mono jump" data-go="${esc(r.cite)}">${esc(r.cite)}</span>
+          ${r.confidence != null ? `<span class="pill mute">${(r.confidence * 100).toFixed(0)}% of those tenders</span>` : ''}
+          ${r.in_register === false ? '<span class="pill warn">not in register</span>' : ''}
+        </div>
+        ${r.title ? `<div class="std-title why">${esc(r.title)}</div>` : ''}
+        <div class="why">${esc(r.why)}</div>
+        <div class="src"><span class="jump" data-ev="${esc(r.cite)}">see citing tenders</span></div>
+      </div>`).join('')}
+    </div>`);
+  h += block('Standards that usually travel with these', 'net', 'warn',
+             addRows, (S.add || []).length);
 
   /* Two different statements, and the difference is whether we read the
      document. With the text, we found no Standard Mark clause in it. Without

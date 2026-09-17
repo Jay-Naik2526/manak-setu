@@ -583,6 +583,13 @@ def _suggestions(findings: list[dict]) -> dict:
             add.append({
                 "cite": f["is_number"],
                 "title": f.get("title"),
+                # Which of this document's own citations pulled the suggestion
+                # in. It was only ever inside the sentence, so the screen could
+                # not group by it — and a flat list put "PVC-U pipes for soil
+                # and waste discharge" under a tender for power cable, because
+                # documents citing cement also cite drainage. True, and
+                # unreadable without the branch it came from.
+                "because_of": f.get("because_of"),
                 "why": (f"{f['co_citation_count']} of {f['tenders_citing_source']} comparable "
                         f"tenders that cite {f['because_of']} also cite this."),
                 "confidence": f.get("confidence"),
@@ -651,7 +658,10 @@ def _summary(cited: list[str], findings: list[dict], high: int) -> str:
         )
     if "missing_connected" in kinds:
         n = sum(1 for f in findings if f["kind"] == "missing_connected")
-        parts.append(f"{n} standard{'s' if n > 1 else ''} comparable tenders cite but this one omits")
+        # "omits" reads as a fault. These are standards that usually travel with
+        # the ones already cited — worth a look, not a finding against the
+        # document, and the heading they appear under says the same thing.
+        parts.append(f"{n} standard{'s' if n > 1 else ''} that usually travel with these")
     if "not_in_register" in kinds:
         n = sum(1 for f in findings if f["kind"] == "not_in_register")
         parts.append(f"{n} citation{'s' if n > 1 else ''} not in the register")

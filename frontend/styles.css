@@ -1375,3 +1375,12 @@ tr.hit:focus { outline: none; }
   border-bottom-width: 2px; border-radius: var(--r-1); padding: 1px 7px;
   color: var(--ink);
 }
+
+/* Co-citation suggestions, grouped by the citation that pulled them in. */
+.addgroup { margin-bottom: 14px; }
+.addgroup:last-child { margin-bottom: 0; }
+.addgroup-lb {
+  font-size: 11.5px; color: var(--ink-3); margin-bottom: 6px;
+  padding-bottom: 5px; border-bottom: 1px solid var(--line);
+}
+.addgroup-lb .mono { color: var(--ink); font-size: 12px; }
