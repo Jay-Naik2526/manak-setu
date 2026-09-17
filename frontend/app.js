@@ -1089,6 +1089,40 @@ function documentXray(text, status) {
     </div></div>`;
 }
 
+/* One officer's document is a case; the corpus is the pattern. A dead citation
+   in front of them is worth fixing — the same dead citation in forty other live
+   tenders is worth a circular, and until now nothing on this screen said which
+   of the two they were looking at.
+
+   The count is of documents in this corpus, so it is a sample of Indian public
+   procurement and not a national figure; the line says "in this corpus" for
+   that reason. Loaded after the findings render, because it is context rather
+   than the answer and must never delay it. */
+async function drawBlastRadius() {
+  const slots = $$('#an-out [data-blast]');
+  await Promise.all(slots.map(async el => {
+    const number = el.dataset.blast;
+    try {
+      const d = await api('/evidence?is_number=' + encodeURIComponent(number));
+      const n = d.tenders_citing || 0;
+      if (n <= 1) {
+        el.innerHTML = `<span class="dimmer">No other document in this corpus cites it.</span>`;
+        return;
+      }
+      el.innerHTML = `<span class="dimmer">Still cited by </span>
+        <b class="mono">${(n - 1).toLocaleString()}</b>
+        <span class="dimmer">other document${n - 1 === 1 ? '' : 's'} in this corpus of
+        ${d.corpus_size.toLocaleString()} — </span><span class="jump" data-ev="${esc(number)}">see which</span>`;
+      el.querySelector('[data-ev]').addEventListener('click', e => {
+        e.stopPropagation();
+        loadEvidence(number);
+      });
+    } catch (_) {
+      el.innerHTML = '';
+    }
+  }));
+}
+
 function wireXray() {
   $$('#an-xray .xcite').forEach(el => {
     const go = () => {
@@ -1184,6 +1218,7 @@ function renderAudit(d) {
 
   $('#an-out').innerHTML = h || blank(t('msg.nothingYet'), t('msg.queueFirst'));
   wireXray();
+  drawBlastRadius();
   setTimeout(translatePage, 60);
   runCounts();
   $$('#an-out [data-go]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); openStandard(el.dataset.go); }));
@@ -3083,6 +3118,7 @@ function renderFindings(a) {
                  : '<span class="pill warn">no successor on file</span>'}
       </div>
       <div class="why">${esc(r.why)}</div>
+      <div class="blast xs" data-blast="${esc(r.cite)}"></div>
       ${r.evidence && r.evidence.link ? `<div class="src"><a href="${esc(r.evidence.link)}"
         target="_blank" rel="noopener">BIS record</a></div>` : ''}
     </div>`));

@@ -1326,3 +1326,8 @@ tr.hit:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   .demobar .txt .p.typing::after { display: none; }
 }
+
+/* How far a dead citation reaches beyond the document in front of you. */
+.edit .blast { margin-top: 4px; color: var(--ink-2); line-height: 1.5; }
+.edit .blast:empty { display: none; }
+.edit .blast b { color: var(--bad); }
