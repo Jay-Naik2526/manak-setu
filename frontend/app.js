@@ -1252,7 +1252,13 @@ function renderAudit(d) {
           <td>${esc(x.title || '—')}</td><td class="mono r">${x.score.toFixed(4)}</td>
           <td class="rowgo">${ic('arrow','sm')}</td></tr>`;
       }).join('')}</tbody></table></div>
-      <div class="ft">Cosine similarity over embeddings of ${S.stats ? S.stats.row_counts.standards : ''} held standards. Returns existing rows only.</div>
+      <div class="ft">${all.length ? `This text already cites
+        ${all.slice(0, 4).map(k => `<span class="mono">${esc(k)}</span>`).join(', ')}${
+          all.length > 4 ? ` and ${all.length - 4} more` : ''}. The list above is what the
+        <i>words</i> match, with the citations ignored — so it will often not contain them, and
+        that is not a disagreement. Use it to check whether the wording points somewhere the
+        citation does not.<br>` : ''}
+        Cosine similarity over embeddings of ${S.stats ? S.stats.row_counts.standards.toLocaleString() : ''} held standards. Returns existing rows only.</div>
     </div>`;
   }
 

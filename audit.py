@@ -639,7 +639,8 @@ def _summary(cited: list[str], findings: list[dict], high: int) -> str:
         )
     if not findings:
         return (
-            f"{len(cited)} citations checked against the register, the certification rules and "
+            f"{len(cited)} citation{'s' if len(cited) != 1 else ''} checked against the "
+            "register, the certification rules and "
             "the co-citation graph. Nothing flagged."
         )
     parts = []
@@ -666,7 +667,8 @@ def _summary(cited: list[str], findings: list[dict], high: int) -> str:
         n = sum(1 for f in findings if f["kind"] == "not_in_register")
         parts.append(f"{n} citation{'s' if n > 1 else ''} not in the register")
     lead = "Blocking issues found. " if high else "Review recommended. "
-    return lead + f"{len(cited)} citations checked: " + "; ".join(parts) + "."
+    return (lead + f"{len(cited)} citation{'s' if len(cited) != 1 else ''} checked: "
+            + "; ".join(parts) + ".")
 
 
 # ---------------------------------------------------------------- decision log
