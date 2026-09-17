@@ -67,15 +67,26 @@
   --nav-ink:    #D2E6ED;
   --nav-ink-2:  #83AEBE;
 
-  --sh-1: 0 1px 2px rgba(4,34,46,.05);
-  --sh-2: 0 1px 3px rgba(4,34,46,.07), 0 6px 16px -6px rgba(4,34,46,.10);
-  --sh-3: 0 24px 60px -18px rgba(4,34,46,.35);
+  /* Brutalist: structure is drawn, not implied. A soft shadow suggests an edge
+     without committing to one; these are hard offsets in ink, so a raised
+     surface reads as a block sitting on the page rather than a card floating
+     above it. --sh-3 stays a real shadow because a modal genuinely is in front
+     of the page and has to say so. */
+  --sh-1: 2px 2px 0 var(--line-hard);
+  --sh-2: 3px 3px 0 var(--ink);
+  --sh-3: 8px 8px 0 rgba(4,34,46,.28);
 
-  --r-1: 5px;
-  --r-2: 8px;
-  --r-3: 12px;
+  /* No radii. A government form is a set of boxes and this one says so. */
+  --r-1: 0px;
+  --r-2: 0px;
+  --r-3: 0px;
+
+  /* One border weight, used everywhere structure matters. */
+  --bw: 2px;
 
   --bar-h: 52px;
+  /* The second row of the masthead, where the sections live. */
+  --nav-row-h: 47px;
 
   --k1:#135A73; --k2:#C25A0D; --k3:#1B6E30; --k4:#0E7078;
   --k5:#6B4C9A; --k6:#96731A; --k7:#A34468; --k8:#5B6B7C;
@@ -120,9 +131,9 @@
   --nav-ink:    #C2DDE6;
   --nav-ink-2:  #6E96A6;
 
-  --sh-1: 0 1px 2px rgba(0,0,0,.5);
-  --sh-2: 0 1px 3px rgba(0,0,0,.55), 0 8px 20px -8px rgba(0,0,0,.6);
-  --sh-3: 0 24px 64px -16px rgba(0,0,0,.75);
+  --sh-1: 2px 2px 0 var(--line-hard);
+  --sh-2: 3px 3px 0 #000;
+  --sh-3: 8px 8px 0 rgba(0,0,0,.6);
 
   --k1:#3FA6C4; --k2:#F0913E; --k3:#4FB86E; --k4:#35A9B4;
   --k5:#9C82D4; --k6:#CBA93C; --k7:#DB809B; --k8:#7E93A6;
@@ -179,7 +190,7 @@ svg.i.lg { width: 20px; height: 20px; }
 /* Brand bar: petrol blue, deliberately cyan-shifted so it doesn't read as
    stock corporate navy. Amber is the only accent allowed against it. */
 .topnav {
-  height: 52px; flex: none; position: sticky; top: 0; z-index: 45;
+  min-height: 52px; flex: none; position: sticky; top: 0; z-index: 45;
   background: var(--nav); border-bottom: 1px solid var(--nav-line);
   display: flex; align-items: center; gap: 16px; padding: 0 16px;
 }
@@ -260,7 +271,10 @@ svg.i.lg { width: 20px; height: 20px; }
 /* The sections are the navigation; the right-hand controls are conveniences,
    so they are what gives ground when the bar runs short. The keyboard hint
    stays because it is the thing the label was advertising. */
-@media (max-width: 1340px) {
+/* These labels were dropped to buy width for ten tabs sharing this row. The
+   tabs have their own row now, so the identity row keeps its words until a
+   screen genuinely cannot hold them. */
+@media (max-width: 900px) {
   .navsearch span:not(.kbd) { display: none; }
   .navsearch { padding: 0 8px; }
   .demo-btn span { display: none; }
@@ -272,17 +286,22 @@ svg.i.lg { width: 20px; height: 20px; }
    one rounded number in a project that reports exact counts with their
    denominators everywhere else, and the exact figures are on the Standards,
    Certification and Tenders screens and in the sources footer regardless. */
-@media (max-width: 1400px) {
+/* Same reasoning for the row counts: they cost width the tabs no longer have
+   to compete for, so they stay down to a small tablet. */
+/* The counts cost about 120px across three tabs. With them on, ten labels stop
+   fitting a 1000px window and Benchmark falls off the end — so they appear
+   where there is room for them and the labels always win. */
+@media (max-width: 1150px) {
   .tab .ct { display: none; }
 }
 
 /* The last of the slack, spent so all ten sections stay on screen down to a
    1200px laptop. Below that the strip scrolls, which is what the spill shadow
    on the right edge is for. */
-@media (max-width: 1300px) {
-  .navgroup { padding-left: 9px; }
-  .navgroup-lb { left: 9px; }
-  .tab { padding-left: 6px; padding-right: 6px; }
+@media (max-width: 1100px) {
+  .navgroup { padding-left: 11px; }
+  .navgroup-lb { left: 11px; }
+  .tab { padding-left: 9px; padding-right: 9px; }
 }
 
 .role-btn {
@@ -322,7 +341,7 @@ svg.i.lg { width: 20px; height: 20px; }
 
 /* Contextual strip under the brand bar */
 .subbar {
-  height: 44px; flex: none; position: sticky; top: 52px; z-index: 35;
+  height: 44px; flex: none; position: sticky; top: calc(var(--bar-h) + var(--nav-row-h)); z-index: 35;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   backdrop-filter: saturate(1.5) blur(9px);
   border-bottom: 1px solid var(--line);
@@ -1392,3 +1411,116 @@ tr.hit:focus { outline: none; }
   padding-bottom: 5px; border-bottom: 1px solid var(--line);
 }
 .addgroup-lb .mono { color: var(--ink); font-size: 12px; }
+
+/* ── Brutalist treatment ───────────────────────────────────────────────────
+   Bigger, heavier, squarer. A procurement console is an administrative
+   instrument and the closer it reads to a government form the more legible its
+   authority is — so: one grotesque at heavy weights, structure drawn in 2px
+   rules rather than implied by shadow, no rounded corners anywhere, and a type
+   scale large enough to read across a room during a demo.
+
+   The palette does not change. Petrol carries structure and amber still means
+   "needs a human"; what changes is how hard the edges are.
+
+   This block sits last so it wins on cascade order without needing !important
+   or raised specificity — the rules above stay readable as the base design. */
+
+body { font-size: 16px; line-height: 1.6; }
+
+h1, h2, h3, h4 {
+  font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800; letter-spacing: -.02em;
+}
+h1 { font-size: 30px; line-height: 1.15; }
+h2 { font-size: 22px; }
+h3 { font-size: 16.5px; letter-spacing: .01em; }
+
+/* Section labels are structure, so they are set like structure: uppercase,
+   tracked out, and in the mono face that carries every other machine-read
+   value on the page. */
+.eyebrow, .navgroup-lb, .keys-group h4, .bars .bl, .lb {
+  font-family: 'JetBrains Mono', monospace; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .12em;
+}
+.eyebrow { font-size: 9.5px; }
+
+.vh h1 { font-size: 34px; }
+.vh .meta { font-size: 14px; }
+
+/* Structure, drawn. */
+.card, .tbl, .drawer, .pal, .keys-card, .pins-pop, .demobar {
+  border-width: var(--bw); border-style: solid; border-color: var(--ink);
+}
+[data-theme="dark"] .card, [data-theme="dark"] .tbl, [data-theme="dark"] .drawer,
+[data-theme="dark"] .pal, [data-theme="dark"] .keys-card,
+[data-theme="dark"] .pins-pop, [data-theme="dark"] .demobar {
+  border-color: var(--line-hard);
+}
+.card .hd, .tbl .toolbar {
+  border-bottom: var(--bw) solid var(--ink);
+  background: var(--surface-3);
+}
+[data-theme="dark"] .card .hd, [data-theme="dark"] .tbl .toolbar { border-bottom-color: var(--line-hard); }
+
+/* Controls read as pressable slabs rather than soft chips. */
+.btn, .navsearch, .role-btn, .demo-btn, input[type=text], input[type=search],
+input[type=number], textarea, select {
+  border-width: var(--bw); border-radius: 0; font-weight: 600;
+}
+.btn { font-size: 14px; padding: 0 15px; height: 38px; }
+.btn.acc, .btn.pri { box-shadow: var(--sh-1); }
+.btn.acc:active, .btn.pri:active { box-shadow: none; transform: translate(2px, 2px); }
+.btn.wide { height: 40px; font-size: 14px; }
+
+/* Tables: heavier header rule, bigger figures, squarer cells. */
+table th {
+  font-family: 'JetBrains Mono', monospace; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; font-size: 10px;
+  border-bottom: var(--bw) solid var(--ink);
+}
+[data-theme="dark"] table th { border-bottom-color: var(--line-hard); }
+table td { font-size: 14.5px; }
+
+/* Status pills become tags: square, bordered, uppercase. */
+.pill {
+  border-radius: 0; border: 1.5px solid currentColor; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; font-size: 10px;
+}
+
+/* The numbers are the point of this product, so they are set like it. */
+.kpi .v, .hero-fig .n, .gstat .vl { font-weight: 900; letter-spacing: -.03em; }
+.mono { font-weight: 500; }
+
+/* The nav is a masthead. */
+/* The nav is a masthead: an amber rule under the whole bar, and a heavier one
+   under the section you are in. */
+.topnav { border-bottom: 3px solid var(--accent); }
+.tab { font-weight: 600; font-size: 13px; padding-left: 5px; padding-right: 5px; }
+.tab.on { border-bottom-width: 3px; }
+/* Heavier type costs width, and ten labels plus a brand and six controls have
+   to fit one bar. Measured after the type change: 803px wanted against 792
+   available at 1440, so the space comes back out of padding rather than out of
+   the type — the point of the change was the type. */
+/* Ten section labels at a readable size will not share a row with a brand and
+   six controls — the fit was 792px of 792 before the type grew, which is not a
+   fit, it is a coincidence. So the sections get their own full-width band under
+   the masthead, which is how a government portal is laid out anyway: identity
+   and tools on top, navigation beneath it, both spanning the page.
+
+   The bar is two rows now, so the sticky offset below it is computed rather
+   than typed: --bar-h drives both. */
+.topnav { flex-wrap: wrap; height: auto; padding: 0 16px; row-gap: 0; }
+/* min-height on a wrapping flex container sizes the container, not its first
+   row, so the identity row collapsed to 34px while the bar still measured 52.
+   The row's own contents carry the height. */
+.brand, .nav-right { min-height: 52px; }
+.tabwrap { flex-basis: 100%; order: 3; border-top: 1px solid var(--nav-line); }
+.tabs { height: 46px; }
+.tab { height: 46px; padding: 0 12px 10px; font-size: 14.5px; }
+.navgroup { padding-left: 16px; }
+.navgroup-lb { top: 5px; left: 16px; font-size: 8.5px; }
+.navgroup + .navgroup { margin-left: 6px; }
+.navgroup + .navgroup::before { top: 12px; bottom: 12px; }
+.tab .ct { font-size: 11px; }
+
+.note { border-left-width: 5px; border-radius: 0; }
