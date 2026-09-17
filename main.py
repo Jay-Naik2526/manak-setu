@@ -258,6 +258,10 @@ def audit_tender_text(req: AuditTextRequest):
 class RecommendRequest(BaseModel):
     spec_text: str
     ui_language: str | None = None
+    # Which registered retrieval pipeline to run. Absent means the default;
+    # the UI never sends it. It is here so the leaderboard's alternatives can
+    # be exercised end to end rather than only inside eval_pipelines.py.
+    pipeline: str | None = None
 
 
 class DecisionRequest(BaseModel):
@@ -287,7 +291,22 @@ def recommend(req: RecommendRequest):
         raise HTTPException(
             status_code=413, detail=f"spec_text exceeds {MAX_TEXT_CHARS:,} characters"
         )
-    return _recommend(req.spec_text.strip(), req.ui_language)
+    import retrieval as retrieval_module
+
+    pipeline = req.pipeline or retrieval_module.DEFAULT_PIPELINE
+    if pipeline not in retrieval_module.PIPELINES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown pipeline {pipeline!r}. "
+                   f"Registered: {', '.join(retrieval_module.PIPELINES)}",
+        )
+    if not retrieval_module.PIPELINES[pipeline].get("retrieval", True):
+        raise HTTPException(
+            status_code=400,
+            detail=f"{pipeline!r} is a measurement baseline with no retrieval; "
+                   "it is not served here.",
+        )
+    return _recommend(req.spec_text.strip(), req.ui_language, pipeline=pipeline)
 
 
 class ReportRequest(BaseModel):
@@ -319,6 +338,38 @@ def compliance_report(req: ReportRequest):
                           cited=cited)
     return Response(content=report_module.render(result, _bis_check()),
                     media_type="text/html; charset=utf-8")
+
+
+@app.get("/pipelines")
+def pipelines():
+    """The retrieval pipelines on offer, and the last measurement of each.
+
+    The registry is the source of truth for what exists; the leaderboard file
+    is the source of truth for how each one scored. Serving them together means
+    a pipeline that has never been measured shows up as exactly that rather
+    than being quietly omitted."""
+    import retrieval as retrieval_module
+
+    registry = [
+        {"pipeline": name, "label": cfg["label"], "note": cfg["note"],
+         "gate": bool(cfg.get("gate"))}
+        for name, cfg in retrieval_module.PIPELINES.items()
+    ]
+    board = {}
+    try:
+        with open("data/pipeline_leaderboard.json", encoding="utf-8") as fh:
+            board = json.load(fh)
+    except (OSError, ValueError):
+        board = {}
+    measured = {r["pipeline"]: r for r in board.get("pipelines") or []}
+    return {
+        "default": retrieval_module.DEFAULT_PIPELINE,
+        "generated": board.get("generated"),
+        "queries": board.get("queries"),
+        "recall_at": board.get("recall_at"),
+        "note": board.get("note"),
+        "pipelines": [{**row, **measured.get(row["pipeline"], {})} for row in registry],
+    }
 
 
 @app.get("/graph")

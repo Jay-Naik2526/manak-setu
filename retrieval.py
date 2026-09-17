@@ -212,6 +212,17 @@ FUSED_SCORE_GAIN = 12.0
 LEXICAL_SCORE_SCALE = 14.0
 LEXICAL_SCORE_GAIN = 4.0
 
+# Dense-only. Measured the same way as the two above, over 250 golden queries
+# against all 27,687 standards: where the embedding's top hit was correct it
+# scored median 0.851 (min 0.537, p10 0.727); where it was wrong, median 0.771
+# (min 0.573, max 0.954). The distributions overlap almost completely, so no
+# threshold on this score separates a right answer from a wrong one — which is
+# why the `dense` pipeline is registered with gate: False. The midpoint below
+# sits between the two medians and is used only to put the score on a 0-1 scale
+# for display and ordering; nothing decides anything on it.
+DENSE_SCORE_MIDPOINT = 0.81
+DENSE_SCORE_GAIN = 12.0
+
 
 def _cross():
     if LIGHT_MODE or LEXICAL_MODE:
@@ -272,9 +283,98 @@ def clip_query(query: str) -> tuple[str, dict]:
     }
 
 
+
+# ── pipeline registry ──────────────────────────────────────────────────────
+#
+# "Alternative RAG pipelines" is a question about engineering judgement, so the
+# answer is a registry and a leaderboard rather than a second chatbot. Every
+# entry runs the same query against the same 27,687 rows and is measured on the
+# same 621 pairs; eval_pipelines.py prints the table and the default is whatever
+# the table justifies.
+#
+# `gate` records whether the confidence gate can run on that pipeline's scores.
+# It is False where the score is not bounded or not calibrated — BM25 scores
+# grow with query length, so no fixed threshold separates a real match from a
+# coincidence across queries of different shapes, and a gate on them would
+# abstain by accident rather than by judgement.
+PIPELINES = {
+    "hybrid_ce": {
+        "dense": True, "bm25": True, "rerank": True, "graph": False, "gate": True,
+        "label": "Dense ∥ BM25 → RRF → cross-encoder",
+        "note": "The default. Two retrievers vote, a cross-encoder reads the "
+                "shortlist against the query, the gate decides.",
+    },
+    "hybrid_rrf": {
+        "dense": True, "bm25": True, "rerank": False, "graph": False, "gate": True,
+        "label": "Dense ∥ BM25 → RRF",
+        "note": "The same without the cross-encoder. Fused rank is bounded, so "
+                "the gate still has a scale to work against.",
+    },
+    "dense": {
+        "dense": True, "bm25": False, "rerank": False, "graph": False, "gate": False,
+        "label": "MiniLM embeddings only",
+        "note": "No gate. Cosine similarity is bounded, but bounded is not the "
+                "same as discriminating: over 250 golden queries a correct top "
+                "hit scored median 0.851 and a wrong one 0.771, with ranges that "
+                "overlap almost completely. A threshold there would abstain by "
+                "accident.",
+    },
+    "bm25": {
+        "dense": False, "bm25": True, "rerank": False, "graph": False, "gate": False,
+        "label": "BM25 lexical only",
+        "note": "No gate: BM25 scores are unbounded and scale with query length, "
+                "so no fixed threshold means the same thing across queries.",
+    },
+    "graph_expand": {
+        "dense": True, "bm25": True, "rerank": True, "graph": True, "gate": True,
+        "label": "Hybrid + co-citation neighbours",
+        "note": "GraphRAG in the honest sense: the candidate set is widened by "
+                "what real tenders cite alongside the top hits, not by a model.",
+    },
+    "llm_only": {
+        "retrieval": False, "gate": False,
+        "label": "Local model, no retrieval",
+        "note": "The baseline that shows why the rest exists. Measured only when "
+                "Ollama is running; never estimated.",
+    },
+}
+DEFAULT_PIPELINE = "hybrid_ce"
+
+# How many co-citation neighbours of the top hits graph_expand adds.
+GRAPH_EXPAND_FROM = 3
+GRAPH_EXPAND_EACH = 5
+
+
+def _graph_neighbours(is_numbers: list[str]) -> list[str]:
+    """What real tenders cite alongside these standards. Read from the
+    co-citation table — evidence, not an embedding neighbourhood."""
+    import sqlite3
+
+    if not is_numbers:
+        return []
+    out: list[str] = []
+    try:
+        conn = sqlite3.connect("manak_setu.db")
+        try:
+            for number in is_numbers:
+                for row in conn.execute(
+                    'SELECT "Target IS" FROM co_citation WHERE "Source IS" = ? '
+                    'ORDER BY "Co-citation Count" DESC LIMIT ?',
+                    (number, GRAPH_EXPAND_EACH),
+                ):
+                    if row[0] and row[0] not in out:
+                        out.append(row[0])
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return []
+    return out
+
+
 def search(query: str, boost: str | None = None,
            extra_rankings: list[list[int]] | None = None,
-           rerank: bool = True, english: bool = True) -> list[dict]:
+           rerank: bool = True, english: bool = True,
+           pipeline: str = DEFAULT_PIPELINE) -> list[dict]:
     """Fused, reranked candidates. Highest calibrated relevance first.
 
     `boost` is the register's own vocabulary for any abbreviation in the query.
@@ -284,6 +384,10 @@ def search(query: str, boost: str | None = None,
     expansion gets a vote instead of a whisper."""
     s = _load()
     corpus, vectors = s["corpus"], s["vectors"]
+    cfg = PIPELINES.get(pipeline) or PIPELINES[DEFAULT_PIPELINE]
+    use_dense = cfg.get("dense", True)
+    use_bm25 = cfg.get("bm25", True)
+    rerank = rerank and cfg.get("rerank", True)
 
     # `english=False` means the query never reached English — translation was
     # unavailable and the text is still in its own script. The dense and lexical
@@ -292,21 +396,20 @@ def search(query: str, boost: str | None = None,
     # one good one put the same irrelevant standard on top of every query.
     dense_rank: list[int] = []
     bm_rank: list[int] = []
+    dense_scores = None
     rankings = []
-    if english and not LEXICAL_MODE:
+    if english and use_dense and not LEXICAL_MODE:
         qv = _bi().encode([query], normalize_embeddings=True)[0]
         # float16 storage, float32 arithmetic: the dot product accumulates over
         # 384 terms and half precision would lose the low bits that separate
         # close candidates.
         dense_scores = (vectors @ qv.astype(vectors.dtype)).astype(np.float32)
         dense_rank = list(np.argsort(dense_scores)[::-1][:FUSE_DEPTH])
+        rankings.append(dense_rank)
+    if english and use_bm25:
         bm_scores = s["bm25"].get_scores(_tokens(query))
         bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
-        rankings = [dense_rank, bm_rank]
-    elif english:
-        bm_scores = s["bm25"].get_scores(_tokens(query))
-        bm_rank = list(np.argsort(bm_scores)[::-1][:FUSE_DEPTH])
-        rankings = [bm_rank]
+        rankings.append(bm_rank)
     # A ranking computed elsewhere — today, BIS's Hindi titles — gets a vote in
     # the fusion rather than a veto, exactly like the vocabulary expansion.
     rankings += [r for r in (extra_rankings or []) if r]
@@ -318,6 +421,22 @@ def search(query: str, boost: str | None = None,
     fused = _rrf(rankings)
     shortlist = sorted(fused, key=fused.get, reverse=True)[:RERANK_DEPTH]
 
+    # graph_expand widens the candidate set with what real tenders cite
+    # alongside the current top hits, before the reranker sees it. The
+    # neighbours join the shortlist as candidates — they do not jump the queue;
+    # the reranker still has to prefer them on the query.
+    if cfg.get("graph") and shortlist:
+        by_number = {corpus[i]["IS Number"]: i for i in range(len(corpus))}
+        top = [corpus[i]["IS Number"] for i in shortlist[:GRAPH_EXPAND_FROM]]
+        added = 0
+        for number in _graph_neighbours(top):
+            idx = by_number.get(number)
+            if idx is not None and idx not in fused:
+                fused[idx] = 0.0          # a candidate, with no fused evidence
+                shortlist.append(idx)
+                added += 1
+        _state["graph_added"] = added
+
     # The cross-encoder reads the query and an English title together. Handed a
     # query still in Devanagari — which is what happens when translation is
     # unreachable and the Hindi titles are carrying the search — it scores noise
@@ -325,7 +444,14 @@ def search(query: str, boost: str | None = None,
     # index had found correctly. The fused rank stands in, as it does in light
     # mode.
     cross = _cross() if rerank else None
-    if cross is None:
+    if cross is None and dense_scores is not None and not use_bm25:
+        # Dense-only: cosine similarity is already bounded in [-1, 1] and means
+        # the same thing across queries, so it is the score. Passing it through
+        # the fused-rank path instead would calibrate a rank against a scale it
+        # never came from.
+        logits = [DENSE_SCORE_GAIN * (float(dense_scores[i]) - DENSE_SCORE_MIDPOINT)
+                  for i in shortlist]
+    elif cross is None:
         # Fused rank stands in for a reranked score. It must be calibrated
         # against what a good match *could* score, not against the best match
         # actually found — dividing by the observed top gives the leader 1.0
@@ -384,6 +510,7 @@ def search(query: str, boost: str | None = None,
         "fused_candidates": len(fused),
         "reranked": len(shortlist),
         "reranker": "cross-encoder" if cross is not None else "fused rank",
+        "pipeline": pipeline,
     }
     out, _ = _apply_voltage_filter(query, out)
     _rank_candidates(out)
@@ -538,8 +665,14 @@ def compose_clause(governing: dict, related: list[dict], cert: dict, use_llm: bo
     return result
 
 
-def recommend(query: str, ui_language: str | None = None) -> dict:
-    """Forward flow end to end."""
+def recommend(query: str, ui_language: str | None = None,
+              pipeline: str = DEFAULT_PIPELINE) -> dict:
+    """Forward flow end to end.
+
+    `pipeline` selects a registered retrieval strategy. It exists so the same
+    end-to-end path — filters, gate, certification, co-citations — can be run
+    over an alternative retriever and measured, rather than comparing a
+    retriever in isolation against the product. Default is unchanged."""
     from engine import check_certification, related_standards
 
     import multilingual
@@ -615,7 +748,8 @@ def recommend(query: str, ui_language: str | None = None) -> dict:
     hindi_only = bool(hindi_rank) and not lang.get("applied") and lang.get("source_language")
     candidates = search(expanded,
                         extra_rankings=[hindi_rank] if hindi_rank else None,
-                        rerank=not hindi_only, english=not hindi_only)
+                        rerank=not hindi_only, english=not hindi_only,
+                        pipeline=pipeline)
     candidates, voltage_filter = _apply_voltage_filter(query, candidates)
     candidates, material_filter = _apply_material_filter(query, candidates)
     candidates, role_filter = _apply_role_filter(query, candidates)
