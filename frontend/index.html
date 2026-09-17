@@ -28,7 +28,7 @@
     </div>
     <div class="brand-sep"></div>
 
-    <div class="tabwrap" id="tabwrap"><nav class="tabs" id="tabs" role="tablist" aria-label="Console sections"></nav></div>
+    <div class="topnav-gap"></div>
 
     <div class="nav-right">
       <button class="demo-btn" id="demo-btn" title="Play the scripted walkthrough">
@@ -63,7 +63,16 @@
     <div id="pins-list"></div>
   </div>
 
-  <div class="body">
+  <div class="shell-row">
+    <!-- Navigation is a left rail. The sections are a list, not a sequence, and
+         a vertical list carries ten of them without the horizontal scroll the
+         tab strip needed. Below 1000px it becomes that strip again, because a
+         rail on a phone is a drawer nobody opens. -->
+    <aside class="rail" id="tabwrap">
+      <nav class="tabs" id="tabs" role="tablist" aria-label="Console sections"></nav>
+    </aside>
+
+    <div class="body">
     <div class="subbar">
       <div class="crumbs">
         <span  data-i18n="ui.console">Console</span>
@@ -470,6 +479,7 @@
       <span class="mono">coverage_gap_backlog</span> <span id="prov-bl">—</span>.
       Records trace to standards.bis.gov.in and published tender documents. Absent data returns <span class="mono">found: false</span>.
       <div id="prov-bis" class="xs dimmer" style="margin-top:6px"></div>
+    </div>
     </div>
   </div>
 </div>

@@ -189,26 +189,91 @@ svg.i.lg { width: 20px; height: 20px; }
 .brand .dv { font-size: 9.5px; color: var(--nav-ink-2); letter-spacing: .03em; margin-top: 1px; }
 .brand-sep { width: 1px; height: 24px; background: var(--nav-line); flex: none; }
 
-.tabwrap { position: relative; flex: 1; min-width: 0; display: flex; }
-.tabwrap::after {
-  content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 28px;
-  pointer-events: none; opacity: 0; transition: opacity .18s;
-  background: linear-gradient(90deg, transparent, var(--nav));
+/* ── Navigation ────────────────────────────────────────────────────────────
+   Two shapes for one nav. Below 1000px it is the horizontal strip it has
+   always been — a rail on a phone is a drawer nobody opens, and the strip
+   already handles overflow by scrolling with a spill shadow. At 1000px and up
+   it is a left rail: the sections are a list, not a sequence, and a vertical
+   list carries ten of them with the labels always legible instead of scrolling
+   sideways past them. The markup does not change between the two. */
+
+.shell-row { display: flex; flex: 1; min-height: 0; }
+.topnav-gap { flex: 1; min-width: 0; }
+
+/* Phone and small tablet: the original strip, sitting above the content. */
+.rail {
+  position: relative; flex: none; background: var(--nav);
+  border-bottom: 1px solid var(--nav-line);
 }
-.tabwrap.spill::after { opacity: 1; }
-.tabs { display: flex; align-items: stretch; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; height: 52px; }
+.tabs {
+  display: flex; align-items: stretch; overflow-x: auto;
+  scrollbar-width: none; height: 48px;
+}
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  display: flex; align-items: center; gap: 7px; height: 52px; padding: 0 11px;
+  display: flex; align-items: center; gap: 7px; height: 48px; padding: 0 11px;
   color: var(--nav-ink-2); font-size: 12.6px; cursor: pointer; white-space: nowrap;
-  border-bottom: 2px solid transparent; user-select: none;
+  border-bottom: 2px solid transparent; border-left: 3px solid transparent;
+  user-select: none; background: none; text-align: left;
   transition: color .12s, background .12s, border-color .12s;
 }
 .tab:hover { color: #fff; background: rgba(255,255,255,.055); }
 .tab.on { color: #fff; font-weight: 600; border-bottom-color: var(--accent); background: rgba(255,255,255,.04); }
-.tab .i { opacity: .8; }
+.tab .i { opacity: .8; flex: none; }
 .tab.on .i { color: var(--accent); opacity: 1; }
-.tab .ct { font: 500 9.5px/1 'JetBrains Mono', monospace; color: var(--nav-ink-2); background: rgba(255,255,255,.09); padding: 2px 5px; border-radius: 8px; font-variant-numeric: tabular-nums; }
+/* The row counts. --nav-ink-2 on a 9% white chip measured 3.19:1 against the
+   nav — under the 4.5 a small 9.5px numeral needs, and these are numbers
+   someone is meant to read, not decoration. */
+.tab .ct {
+  font: 500 9.5px/1 'JetBrains Mono', monospace; color: rgba(255,255,255,.88);
+  background: rgba(255,255,255,.14); padding: 2px 5px; border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The strip lives inside the row on small screens, so the row stacks. */
+@media (max-width: 999.98px) {
+  .shell-row { flex-direction: column; }
+  .rail { width: 100%; }
+  .tabwrap.spill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 28px;
+    pointer-events: none; background: linear-gradient(90deg, transparent, var(--nav));
+  }
+}
+
+/* Desktop: the rail. 72px of icons, labels underneath, widening to 220px with
+   the label beside the icon where there is room for it. */
+@media (min-width: 1000px) {
+  .rail {
+    width: 76px; border-bottom: none; border-right: 1px solid var(--nav-line);
+    position: sticky; top: 52px; align-self: flex-start;
+    height: calc(100vh - 52px); overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .tabs { flex-direction: column; height: auto; overflow: visible; padding: 8px 0; }
+  .tab {
+    flex-direction: column; justify-content: center; gap: 4px;
+    height: auto; padding: 9px 6px; min-height: 54px;
+    font-size: 10.5px; line-height: 1.2; text-align: center; white-space: normal;
+    border-bottom: none;
+  }
+  /* The active item's 3px amber bar — the only amber in the chrome. */
+  .tab.on { border-left-color: var(--accent); background: rgba(255,255,255,.05); }
+  .tab .ct { position: absolute; top: 6px; right: 8px; }
+  .tab { position: relative; }
+}
+
+@media (min-width: 1440px) {
+  .rail { width: 216px; }
+  .tabs { padding: 10px 8px; }
+  .tab {
+    flex-direction: row; justify-content: flex-start; gap: 10px;
+    min-height: 40px; padding: 8px 12px; font-size: 12.6px;
+    text-align: left; white-space: nowrap; border-radius: var(--r-1);
+    border-left-width: 3px;
+  }
+  .tab .ct { position: static; margin-left: auto; }
+}
 
 .role-btn {
   height: 30px; padding: 0 11px; border-radius: 15px; cursor: pointer;
@@ -282,7 +347,11 @@ svg.i.lg { width: 20px; height: 20px; }
 
 /* ── Page frame ──────────────────────────────────────────────────────────── */
 
-.sheet { padding: 20px; max-width: 1520px; width: 100%; margin: 0 auto; }
+.sheet {
+  padding: 20px; max-width: 1520px; width: 100%; margin: 0 auto;
+  /* Named so children can size against this column rather than the window. */
+  container: sheet / inline-size;
+}
 
 .view { display: none; }
 .view.on { display: block; animation: rise .24s cubic-bezier(.2,.7,.3,1); }
@@ -1192,8 +1261,13 @@ tr.hit:focus { outline: none; }
    where there is room to be sticky: on a narrow screen a stuck column eats
    the viewport, so below 1200px this is one stack with the query first. */
 .split { display: grid; gap: 14px; }
-@media (min-width: 1200px) {
-  .split { grid-template-columns: minmax(360px, 34%) 1fr; align-items: start; }
+/* A container query, not a viewport one. The left rail takes 216px at desktop
+   width, so a viewport breakpoint measured the wrong thing: at 1440px the
+   content column is about 1184px and the two-column layout silently stopped
+   applying on exactly the screens it was built for. This asks the column it
+   actually lives in. */
+@container sheet (min-width: 940px) {
+  .split { grid-template-columns: minmax(340px, 34%) 1fr; align-items: start; }
   .split-q { position: sticky; top: 14px; }
   /* A sticky column must never be taller than the viewport or its bottom
      becomes unreachable — the presets and the run button live down there. */
