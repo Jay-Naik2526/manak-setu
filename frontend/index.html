@@ -508,11 +508,15 @@
 <div class="demobar" id="demobar">
   <div class="track"><i id="demo-prog"></i></div>
   <div class="row">
-    <div class="step" id="demo-step"></div>
+    <!-- Seven dots and an elapsed clock: where you are in the walkthrough and
+         how long it has been running, which is what a presenter watching their
+         own four-minute slot actually needs. -->
+    <div class="dots" id="demo-dots" role="presentation"></div>
     <div class="txt">
       <div class="h" id="demo-h">—</div>
       <div class="p" id="demo-p">—</div>
     </div>
+    <div class="clock mono" id="demo-clock">0:00</div>
     <div class="ctl">
       <button id="demo-prev" title="Previous"><svg class="i sm" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></svg></button>
       <button id="demo-play" title="Pause"><svg class="i sm" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button>

@@ -436,7 +436,7 @@ async function loadOverview(force) {
   $('#hero-figs').innerHTML = [
     { n: st.row_counts.standards, l: 'standards indexed' },
     { n: cv.usable_tenders, l: 'tenders parsed' },
-    { n: st.graph.edges, l: 'graph edges' },
+    { n: st.graph.edges.toLocaleString(), l: 'co-citation pairs' },
     { n: cv.pct + '%', l: 'citation coverage', hot: true },
   ].map(f => `<div class="hero-fig ${f.hot ? 'hot' : ''}"><div class="n">${f.n}</div><div class="l">${f.l}</div></div>`).join('');
   heroGraph();
@@ -1288,7 +1288,8 @@ const DEMO = [
   },
 ];
 
-const D = { on: false, i: 0, timer: null, paused: false, t0: 0, left: 0, lang: null };
+const D = { on: false, i: 0, timer: null, paused: false, t0: 0, left: 0, lang: null,
+            type: null, caption: '', startedAt: 0, clock: null };
 
 /* Raise one panel above the blur veil. Bare containers get promoted to their
    nearest solid surface so the blurred page cannot show through the lit area. */
@@ -1304,11 +1305,66 @@ function demoSpot(sel) {
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
+/* The caption types itself. 35ms a character is close to a confident reading
+   pace, which makes the words land with the thing being pointed at rather than
+   arriving all at once before it. Under reduced motion the whole caption
+   appears immediately — the walkthrough is information, and the typing is the
+   part that is decoration.
+
+   Space completes the line while it is still typing and pauses the walkthrough
+   once it has finished, so the key does the obvious thing at each moment
+   instead of needing two keys. */
+const TYPE_MS = 35;
+/* 35ms a character is a good pace and a bad rule. The longest caption here is
+   233 characters, which at 35ms is 8.2 seconds of a step that holds for ten —
+   the officer would still be watching words arrive when the walkthrough moved
+   on. The per-character delay is therefore capped by a budget for the whole
+   line: short captions type at 35ms, long ones speed up to finish inside it,
+   and every caption is on screen long enough to be read. */
+const TYPE_BUDGET_MS = 2400;
+
+function typeCaption(text) {
+  clearInterval(D.type);
+  const el = $('#demo-p');
+  D.caption = text;
+  if (REDUCED()) { el.classList.remove('typing'); el.textContent = text; return; }
+  el.classList.add('typing');
+  el.textContent = '';
+  const per = Math.max(6, Math.min(TYPE_MS, TYPE_BUDGET_MS / Math.max(text.length, 1)));
+  let i = 0;
+  D.type = setInterval(() => {
+    el.textContent = text.slice(0, ++i);
+    if (i >= text.length) finishCaption();
+  }, per);
+}
+
+function finishCaption() {
+  clearInterval(D.type);
+  D.type = null;
+  const el = $('#demo-p');
+  el.classList.remove('typing');
+  if (D.caption) el.textContent = D.caption;
+}
+
+function demoDots() {
+  const host = $('#demo-dots');
+  if (!host) return;
+  host.innerHTML = DEMO.map((_, n) =>
+    `<i class="${n === D.i ? 'now' : n < D.i ? 'done' : ''}"></i>`).join('');
+}
+
+function demoClock() {
+  const el = $('#demo-clock');
+  if (!el || !D.startedAt) return;
+  const secs = Math.floor((Date.now() - D.startedAt) / 1000);
+  el.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
 function demoPaint() {
   const s = DEMO[D.i];
-  $('#demo-step').textContent = `${D.i + 1} / ${DEMO.length}`;
+  demoDots();
   $('#demo-h').textContent = s.h;
-  $('#demo-p').textContent = typeof s.p === 'function' ? s.p() : s.p;
+  typeCaption(typeof s.p === 'function' ? s.p() : s.p);
   $('#demo-play').innerHTML = D.paused
     ? '<svg class="i sm" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>'
     : '<svg class="i sm" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>';
@@ -1349,6 +1405,10 @@ function demoStart() {
   // multilingual input, and stopping on that step must not strand them there.
   D.lang = document.documentElement.lang || 'en';
   D.on = true; D.paused = false; D.i = -1;
+  D.startedAt = Date.now();
+  clearInterval(D.clock);
+  D.clock = setInterval(demoClock, 1000);
+  demoClock();
   $('#demobar').classList.add('on');
   $('#demo-btn').classList.add('live');
   $('#demo-btn').querySelector('span').textContent = 'Demo running';
@@ -1358,6 +1418,9 @@ function demoStart() {
 
 function demoStop(finished) {
   clearTimeout(D.timer);
+  clearInterval(D.type); D.type = null; D.caption = '';
+  clearInterval(D.clock); D.clock = null;
+  $('#demo-p').classList.remove('typing');
   D.on = false; D.paused = false;
   $('#demobar').classList.remove('on');
   $('#demo-btn').classList.remove('live');
@@ -2747,7 +2810,13 @@ function wireKeys() {
       shutPal(); shut(); closePins(); return;
     }
     if (D.on && !typing) {
-      if (e.key === ' ') { e.preventDefault(); demoPause(); return; }
+      if (e.key === ' ') {
+        e.preventDefault();
+        // While the caption is still typing, Space completes it; once it has
+        // finished, Space pauses. One key, the obvious meaning at each moment.
+        if (D.type) { finishCaption(); return; }
+        demoPause(); return;
+      }
       if (e.key === 'ArrowRight') { e.preventDefault(); D.paused = false; demoGo(D.i + 1); return; }
       if (e.key === 'ArrowLeft') { e.preventDefault(); D.paused = false; demoGo(D.i - 1); return; }
     }

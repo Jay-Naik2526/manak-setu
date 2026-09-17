@@ -834,7 +834,20 @@ label.ck input { width: auto; height: auto; accent-color: var(--brand); }
   background: var(--surface); border-radius: var(--r-2);
   box-shadow: 0 0 0 2px var(--accent), 0 0 0 9px color-mix(in srgb, var(--accent) 18%, transparent),
               0 28px 70px -14px rgba(4,34,46,.55);
-  transition: box-shadow .28s ease;
+  /* The lit panel used to appear at full strength the instant the class
+     landed, which read as a cut rather than a move. It now rises into the
+     light over --t-slow, so the eye follows it from the previous target. */
+  transition: box-shadow var(--t-slow) var(--ease-out),
+              transform var(--t-slow) var(--ease-out);
+  animation: spot-in var(--t-slow) var(--ease-out) both;
+}
+@keyframes spot-in {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent),
+                     0 0 0 0 transparent, 0 10px 24px -14px rgba(4,34,46,.3);
+         transform: scale(.994); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot { animation: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1285,4 +1298,31 @@ tr.hit:focus { outline: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .split-q { scroll-behavior: auto; }
+}
+
+/* ── Run demo, as a film (H9) ──────────────────────────────────────────────
+   The step counter said "3 / 7", which is a fact about a list. The dots say
+   the same thing as a shape you can read without counting, and the clock says
+   the one thing a presenter with a four-minute slot actually needs to know. */
+.demobar .dots { display: flex; gap: 5px; flex: none; align-items: center; }
+.demobar .dots i {
+  width: 6px; height: 6px; border-radius: 50%; display: block;
+  background: rgba(255,255,255,.26); transition: background .2s, transform .2s;
+}
+[data-theme="dark"] .demobar .dots i { background: var(--line-hard); }
+.demobar .dots i.done { background: rgba(255,255,255,.5); }
+.demobar .dots i.now { background: var(--accent); transform: scale(1.5); }
+.demobar .clock {
+  flex: none; font: 500 11px/1 'JetBrains Mono', monospace;
+  opacity: .62; font-variant-numeric: tabular-nums;
+}
+/* The caret only exists while the caption is still being typed. */
+.demobar .txt .p.typing::after {
+  content: ''; display: inline-block; width: 6px; height: 1em;
+  margin-left: 1px; vertical-align: -2px; background: var(--accent);
+  animation: caret 1s steps(2) infinite;
+}
+@keyframes caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .demobar .txt .p.typing::after { display: none; }
 }

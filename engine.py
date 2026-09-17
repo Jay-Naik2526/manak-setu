@@ -782,7 +782,13 @@ def corpus_stats() -> dict:
             },
             "graph": {
                 "nodes": len(degree),
-                "edges": len(edges),
+                # The table stores a row per direction because confidence is
+                # directional. len(edges) is therefore rows, not relationships,
+                # and reporting it as "graph edges" doubled the size of the
+                # graph on the hero — 65,872 against the 35,806 pairs the Graph
+                # screen names for the same data. One fact, one number.
+                "edges": len({tuple(sorted((e["s"], e["t"]))) for e in edges}),
+                "edge_rows": len(edges),
                 "top_degree": [{"is_number": k, "degree": v} for k, v in top_degree],
             },
             "backlog_top": [
