@@ -1918,7 +1918,9 @@ async function drawPipelines() {
     </tr>`;
   };
 
-  el.innerHTML = `<div class="tbl" style="margin-top:16px">
+  el.innerHTML = `${d.decision ? `<div class="note info" style="margin-top:16px">${ic('info')}
+    <div><b>Why this one is the default.</b> ${esc(d.decision)}</div></div>` : ''}
+  <div class="tbl" style="margin-top:16px">
     <div class="toolbar"><h3 style="flex:1">Retrieval pipelines, measured on the same queries</h3>
       <span class="xs dimmer">${d.queries ? `n = ${d.queries}` : ''}${
         d.generated ? ` · ${esc(d.generated)}` : ''}</span></div>

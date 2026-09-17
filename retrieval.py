@@ -301,14 +301,20 @@ PIPELINES = {
     "hybrid_ce": {
         "dense": True, "bm25": True, "rerank": True, "graph": False, "gate": True,
         "label": "Dense ∥ BM25 → RRF → cross-encoder",
-        "note": "The default. Two retrievers vote, a cross-encoder reads the "
-                "shortlist against the query, the gate decides.",
+        "note": "The default — and it keeps that place for the right to decline, "
+                "not for accuracy. Against hybrid_rrf the rank-1 difference is 7 "
+                "queries in 621 and does not survive a paired test (p=0.296). "
+                "What does not survive removing the cross-encoder is abstention: "
+                "38 of 621 here against 1.",
     },
     "hybrid_rrf": {
         "dense": True, "bm25": True, "rerank": False, "graph": False, "gate": True,
         "label": "Dense ∥ BM25 → RRF",
-        "note": "The same without the cross-encoder. Fused rank is bounded, so "
-                "the gate still has a scale to work against.",
+        "note": "The same without the cross-encoder, and as accurate at rank 1 to "
+                "within noise — at half the latency. It is not the default because "
+                "of what it does on the 38 queries hybrid_ce declines: it answers "
+                "37 of them confidently, and is wrong on 30. Fused rank is bounded "
+                "but flat, so almost nothing scores low enough to stop.",
     },
     "dense": {
         "dense": True, "bm25": False, "rerank": False, "graph": False, "gate": False,
@@ -328,8 +334,12 @@ PIPELINES = {
     "graph_expand": {
         "dense": True, "bm25": True, "rerank": True, "graph": True, "gate": True,
         "label": "Hybrid + co-citation neighbours",
-        "note": "GraphRAG in the honest sense: the candidate set is widened by "
-                "what real tenders cite alongside the top hits, not by a model.",
+        "note": "GraphRAG in the honest sense — the candidate set widened by what "
+                "real tenders cite alongside the top hits, not by a model. "
+                "Measured, it does not help: identical to hybrid_ce on all 621 "
+                "queries at rank 1, and recall@10 falls from 608 to 591 because "
+                "the neighbours displace correct answers further down the list. "
+                "Kept in the registry as the measurement, not as a recommendation.",
     },
     "llm_only": {
         "retrieval": False, "gate": False,

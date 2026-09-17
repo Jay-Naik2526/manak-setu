@@ -376,6 +376,20 @@ def pipelines():
         # right standard more often than the product shows it, which is the
         # filters doing their job — and saying so here is cheaper than letting
         # two numbers for one fact sit on two screens.
+        # The decision this table produced, recorded where the table is read.
+        "decision": (
+            "hybrid_ce stays the default, and not for accuracy. Its rank-1 lead "
+            "over hybrid_rrf is 7 queries in 621 and does not survive a paired "
+            "test (p=0.296); hybrid_rrf is half the latency and dense is a "
+            "quarter. It keeps the place because it is the only configuration "
+            "where the confidence gate can still decline: it abstains on 38 of "
+            "621, hybrid_rrf on 1. On those same 38 queries hybrid_rrf answers "
+            "37 confidently and is wrong on 30 — so dropping the cross-encoder "
+            "would trade 30 honest abstentions for 30 confident wrong answers. "
+            "In 34 of the 38 the correct standard was in the candidate list "
+            "anyway, which is what the abstention is for: show the officer the "
+            "shortlist, do not pick for them."
+        ),
         "measures": ("the retriever alone — raw candidates, before the voltage, "
                      "material, role and status filters and before the confidence "
                      "gate. The end-to-end figures on Coverage measure what an "

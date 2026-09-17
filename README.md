@@ -200,6 +200,25 @@ bugs. Do not try to "fix" them by adding synthetic rows to the CSVs.
   like a decision than a probability. It is still the right input to the gate,
   which compares it against fixed thresholds, but it should not be presented as
   "the system is 97% sure".
+- **Which retriever, and why**: `eval_pipelines.py` runs six registered
+  pipelines over the same 621 pairs and writes `data/pipeline_leaderboard.json`.
+  The cross-encoder keeps its place as the default **for the right to decline,
+  not for accuracy**. Its rank-1 lead over the same pipeline without it is 7
+  queries in 621 and does not survive a paired McNemar test (p=0.296), and it
+  costs nearly double the latency (122 ms against 69 ms; embeddings alone are
+  32 ms). What does not survive removing it is abstention: **38 of 621 against
+  1**. On those same 38 queries the cross-encoder-free pipeline answers 37
+  confidently and is **wrong on 30** — so dropping it would trade 30 honest
+  abstentions for 30 confident wrong answers. In 34 of the 38 the correct
+  standard was in the candidate list anyway, which is what the abstention is
+  for: show the officer the shortlist, do not pick for them.
+  `graph_expand` is a measured negative result and is kept as one — identical
+  to the default on all 621 queries at rank 1, with recall@10 falling from 608
+  to 591 because co-citation neighbours displace correct answers down the list.
+  `llm_only`, the no-retrieval baseline, reads "not measured" unless a local
+  model is running; it is never estimated.
+  These are retriever figures — raw candidates, before the filters and the
+  gate — and are higher than the end-to-end numbers below for the same set.
 - **Evaluation set**: 621 query/standard pairs in `golden_queries.csv`, built by
   `build_golden.py` from BIS's own certification notifications — the
   notification names a product in its own words and states the standard it
