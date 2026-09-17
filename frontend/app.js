@@ -2044,7 +2044,7 @@ async function loadGraph() {
   ready.add('graph');
   G.fams = [...new Set(S.graph.nodes.map(n => n.product_family))].filter(f => f && f !== 'N/A').sort();
   fillSel('#g-fam', G.fams);
-  drawGraph();
+  drawGraph(true);   // the one time the entry sweep plays
 }
 
 const famColor = f => { const i = G.fams.indexOf(f); return i < 0 ? 'var(--k8)' : KC[i % 8]; };
@@ -2063,7 +2063,43 @@ function tokens() {
 }
 const famIndex = f => { const i = G.fams.indexOf(f); return i < 0 ? -1 : i; };
 
-function drawGraph() {
+/* The graph arrives once, then sits still — a picture that keeps moving is a
+   picture nobody reads. The arrival is worth animating because it says what the
+   graph is made of: edges draw themselves along their own length, and nodes
+   appear family by family, 60 ms apart, so eight clusters land in sequence
+   rather than 319 dots appearing at once.
+
+   The stagger is over product family only because the legend is already grouped
+   that way — the clusters the eye sees are the eigenvectors' doing, not this
+   animation's. Nothing here changes a position. */
+const INTRO_MS = 600;            // matches --t-reveal
+const INTRO_STAGGER = 60;
+const INTRO_NODE_MS = 300;
+const INTRO_DASH = 2200;         // longer than any edge, so one dash covers it
+const INTRO_END = INTRO_MS + INTRO_STAGGER * 8 + INTRO_NODE_MS;
+let introAt = 0, introOn = false;
+
+function playGraphIntro() {
+  introOn = false;
+  if (REDUCED()) { paint(); return; }
+  introOn = true;
+  introAt = performance.now();
+  // requestAnimationFrame does not fire at all in a tab that is never
+  // composited — a hidden pane, a capture harness, a backgrounded window. The
+  // sweep would then stop at its first frame and the graph would sit
+  // part-drawn until something else forced a repaint. A timer is not throttled
+  // to nothing, so it guarantees the settled scene arrives either way.
+  setTimeout(() => { if (introOn) { introOn = false; paint(); } }, INTRO_END + 400);
+  const step = () => {
+    if (!introOn) { paint(); return; }          // paint() ended it on elapsed time
+    paint();
+    if (introOn) requestAnimationFrame(step);
+    else paint();                                // one last frame, fully settled
+  };
+  requestAnimationFrame(step);
+}
+
+function drawGraph(intro) {
   const g = S.graph;
   if (!g || !g.edges) return;
   const t0 = performance.now();
@@ -2094,6 +2130,7 @@ function drawGraph() {
     <div><div class="lb">Density</div><div class="vl">${dens.toFixed(3)}</div></div>`;
 
   resizeGraph();
+  if (intro) playGraphIntro();
   console.info(`graph: ${G.n.length} nodes, ${G.e.length} edges drawn in ${(performance.now() - t0).toFixed(0)} ms`);
 }
 
@@ -2122,11 +2159,26 @@ function paint() {
   if (!cv || !G.n.length) return;
   const ctx = cv.getContext('2d');
   const T = tokens();
-  const labels = $('#g-lab') ? $('#g-lab').checked : true;
+  // Labels wait for the sweep: text fading in behind moving strokes is noise.
+  const labels = (!introOn) && ($('#g-lab') ? $('#g-lab').checked : true);
   const anyFocus = !!(G.pick || G.hover || G.path);
 
   ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
   ctx.clearRect(0, 0, G.cw, G.ch);
+
+  // Entry sweep progress. Off the intro path both of these are constant, so
+  // the steady-state paint is the same work it was before.
+  // Ending the sweep on elapsed time rather than on the next animation frame:
+  // a background tab suspends requestAnimationFrame, and a frame-counted intro
+  // that is suspended half-way leaves the scene stranded — edges part-drawn,
+  // labels withheld — until the tab is looked at again. Any paint after the
+  // duration finishes it.
+  if (introOn && performance.now() - introAt >= INTRO_END) introOn = false;
+  const age = introOn ? performance.now() - introAt : Infinity;
+  const edgeIn = introOn ? Math.min(1, age / INTRO_MS) : 1;
+  const famIn = fi => introOn
+    ? Math.max(0, Math.min(1, (age - Math.max(fi, 0) * INTRO_STAGGER) / INTRO_NODE_MS))
+    : 1;
 
   // Edges in three passes bucketed by confidence — the entire edge set is
   // three stroke() calls instead of 4,916 DOM nodes.
@@ -2135,6 +2187,13 @@ function paint() {
     { max: 0.8, w: 1.0, a: 0.20 },
     { max: 1.01, w: 1.7, a: 0.30 },
   ];
+  // A dash longer than any edge, walked from fully-offset to zero, makes every
+  // segment draw itself from its own start — the dash phase restarts per
+  // subpath, so one setLineDash covers a whole bucket.
+  if (introOn) {
+    ctx.setLineDash([INTRO_DASH, INTRO_DASH]);
+    ctx.lineDashOffset = INTRO_DASH * (1 - edgeIn);
+  }
   let lo = 0;
   for (const b of buckets) {
     ctx.beginPath();
@@ -2163,6 +2222,8 @@ function paint() {
     ctx.strokeStyle = T.pickC; ctx.globalAlpha = 0.85; ctx.lineWidth = 1.8; ctx.stroke();
   }
 
+  if (introOn) { ctx.setLineDash([]); ctx.lineDashOffset = 0; }
+
   ctx.globalAlpha = 1;
   ctx.lineWidth = 1.4;
   for (const n of G.n) {
@@ -2172,7 +2233,9 @@ function paint() {
     ctx.arc(sx(n.x), sy(n.y), r, 0, Math.PI * 2);
     const fi = famIndex(n.product_family);
     ctx.fillStyle = fi < 0 ? T.other : T.fam[fi];
-    ctx.globalAlpha = anyFocus && n.dim ? 0.18 : 1;
+    const arrived = famIn(fi);
+    if (!arrived) continue;
+    ctx.globalAlpha = (anyFocus && n.dim ? 0.18 : 1) * arrived;
     ctx.fill();
     ctx.strokeStyle = n === G.pick ? T.pickC : T.surface;
     ctx.lineWidth = n === G.pick ? 2.5 : 1.4;
@@ -2184,6 +2247,7 @@ function paint() {
   if (labels) {
     ctx.globalAlpha = 1;
     ctx.font = '500 10px "JetBrains Mono", ui-monospace, monospace';
+    ctx.globalAlpha = 1;
     ctx.fillStyle = T.ink;
     ctx.textBaseline = 'middle';
     const top = [...G.n].filter(n => !n.hidden && !n.dim)
