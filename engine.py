@@ -58,6 +58,26 @@ _DESIGNATION = _re_module.compile(
 )
 
 
+# Half the part references in real tenders are written without brackets — "IS
+# 1239 Part II", "IS 432 : Part 1 : 1982", "IS 13585 Part 1". The bracketed form
+# was already handled by splitting on "(", so only this spelling fell through,
+# and it fell through silently: the designation pattern saw trailing words and
+# declined, so a citation of a standard the register holds came back not found.
+_TRAILING_PART = _re_module.compile(
+    r"[\s,:;/-]*\b(?:Parts?|Pt\.?|Sections?|Sec\.?)\b.*$", _re_module.I
+)
+
+# BIS designates an adopted international text by naming both: "IS 2403 : 2014 /
+# ISO 606 : 2004". The Indian designation is the one this register holds, so the
+# foreign half is dropped. The slash after digits is what distinguishes this
+# from the "IS/IEC 60947" prefix, where the slash follows "IS" directly.
+_DUAL_DESIGNATION = _re_module.compile(
+    r"(?<=\d)\s*/\s*(?:ISO|IEC|EN|BS|ASTM|DIN|JIS)\b.*$", _re_module.I
+)
+# A footnote marker carried over from the notification table — "IS 8828 *".
+_TRAILING_JUNK = _re_module.compile(r"[\s*+#†‡.,;:/-]+$")
+
+
 def _is_digits(is_number: str) -> str:
     """The bare number, prefix and edition stripped: 'IS/IEC 60947 (Part 1):2020'
     and 'IS 60947' are the same standard and must resolve to the same row.
@@ -68,7 +88,10 @@ def _is_digits(is_number: str) -> str:
     # every colon turns "IS:694", which is how half of Indian tenders write it,
     # into "IS".
     head = str(is_number).split("(")[0]
+    head = _DUAL_DESIGNATION.sub("", head)
+    head = _TRAILING_PART.sub("", head)
     head = _re_module.sub(r":\s*(?:19|20)\d{2}\s*$", "", head)
+    head = _TRAILING_JUNK.sub("", head)
     m = _DESIGNATION.match(head)
     return m.group(1) if m else ""
 
@@ -820,10 +843,37 @@ GENERIC_IS_PHRASE = r"(?<!\brelevant )(?<!\bapplicable )(?<!\brespective )(?<!\b
 # IS/IEC and IS/ISO are how BIS designates adopted international texts, and
 # tenders cite them that way. Neither was ever matched before; the number is the
 # same one the register holds, so the prefix is consumed and the digits kept.
+# The digit run is captured whole, not capped at six. Capping it silently
+# truncated: tender PDFs routinely lose the separator between the number and the
+# edition year, so "IS:2016-1967" comes out of pdfplumber as "IS:20161967", and
+# a six-digit cap turned that into a citation of "IS 201619" — a designation
+# that exists in no document and no register. Twelve of the twenty-seven rows in
+# the coverage backlog were this, not a missing standard.
 IS_CITATION_PATTERN = (
     GENERIC_IS_PHRASE
-    + r"(?<![A-Za-z])IS(?:/(?:IEC|ISO))?(?![A-Za-z])[:\s]*(\d{2,6})(?:\s*\(([^)]{0,40})\))?"
+    + r"(?<![A-Za-z])IS(?:/(?:IEC|ISO))?(?![A-Za-z])[:\s]*(\d{2,})(?:\s*\(([^)]{0,40})\))?"
 )
+
+# An IS number is at most six digits. Anything longer is a run whose separator
+# the PDF dropped.
+_MAX_IS_DIGITS = 6
+_GLUED_YEAR = _re_module.compile(r"^(\d{2,6})((?:19|20)\d{2})$")
+
+
+def _ungloss_digits(digits: str) -> str:
+    """The IS number inside a digit run, or "" when it cannot be read.
+
+    Splitting off a trailing edition year is parsing, not inference: "IS 2062 :
+    2006" and "IS:20622006" are the same citation written with and without the
+    separator, and the year is stripped everywhere else in this module anyway.
+    Anything else over six digits is not a designation we can read, and the
+    honest output is no citation at all — a wrong number is worse than a
+    missing one, because a wrong one is quietly counted as a coverage gap.
+    """
+    if len(digits) <= _MAX_IS_DIGITS:
+        return digits
+    m = _GLUED_YEAR.match(digits)
+    return m.group(1) if m else ""
 
 
 def peer_citations(text: str, documents: int = 30, limit: int = 12) -> dict:
@@ -954,7 +1004,9 @@ def extract_citations(text: str) -> list[str]:
     seen = set()
     # Deliberately case-sensitive: see IS_CITATION_PATTERN.
     for match in re.finditer(IS_CITATION_PATTERN, text):
-        number = match.group(1)
+        number = _ungloss_digits(match.group(1))
+        if not number:
+            continue
         raw_part = re.sub(r"\s+", " ", match.group(2)).strip() if match.group(2) else ""
         citation = f"IS {number} ({raw_part})" if raw_part else f"IS {number}"
         key = f"{number}|{re.sub(r'[^a-z0-9]', '', raw_part.lower())}"

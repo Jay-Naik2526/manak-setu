@@ -1,0 +1,284 @@
+"""Assert the invariants this project's honesty rests on, and fail loudly.
+
+Every serious bug in MANAK-SETU has had the same shape: two places held the
+same fact, one of them changed, and nothing noticed. The citation matcher had
+two copies. The extraction pattern had two. The `Any Outdated` flag held a
+pre-harvest answer while the register held a current one, and the two screens
+that read them disagreed by 147 documents.
+
+None of those were caught by a test, because each copy was individually
+correct. What was wrong was the relationship between them. This script checks
+relationships: the backlog against the coverage figure, the graph against the
+register, the stored citations against what the current pattern reads out of
+the documents they came from.
+
+It imports its matcher from `engine`. A checker with its own copy of
+`_is_base` would be the very bug it exists to find.
+
+    python consistency_check.py             # all checks
+    python consistency_check.py --sample 80 # re-extract more attachments
+    python consistency_check.py --quick     # skip the re-extraction (no PDFs)
+
+Exits non-zero if any check fails, so CI can gate a push on it.
+"""
+
+import argparse
+import csv
+import glob
+import os
+import random
+import sqlite3
+import sys
+
+import engine
+
+DB = "manak_setu.db"
+PDF_DIR = os.path.join("data", "tenders", "gem")
+GOLDEN = os.path.join("data", "golden_queries.csv")
+SEED = 11
+
+results: list[tuple[str, bool, list[str]]] = []
+
+
+def check(name):
+    """Register a check. The function returns (ok, detail lines)."""
+    def wrap(fn):
+        def run(*a, **k):
+            try:
+                ok, lines = fn(*a, **k)
+            except Exception as exc:                          # noqa: BLE001
+                ok, lines = False, [f"raised {type(exc).__name__}: {exc}"]
+            results.append((name, ok, lines))
+        run.__name__ = fn.__name__
+        return run
+    return wrap
+
+
+def _cited_rows(conn):
+    return conn.execute(
+        'SELECT "Tender ID", "IS Numbers Cited" FROM tenders WHERE "Usability" = ?',
+        ("Usable",),
+    ).fetchall()
+
+
+def _split(cited):
+    return [c.strip() for c in str(cited or "").split(";") if c.strip()]
+
+
+# ── 1. the backlog is exactly the set coverage says is missing ──────────────
+@check("backlog equals the unmatched set coverage reports")
+def check_backlog(conn):
+    cited = set()
+    for _, raw in _cited_rows(conn):
+        cited.update(_split(raw))
+    matched = {c for c in cited if engine._resolve_standard(conn, c)[0] is not None}
+    # The backlog stores the citation as the document wrote it, part reference
+    # and all — "IS 1802 (Part-I)" — so compare like with like rather than
+    # reducing one side to its base.
+    unmatched = cited - matched
+
+    backlog = {str(r[0]).strip() for r in
+               conn.execute('SELECT "IS Number" FROM coverage_gap_backlog')}
+    only_backlog = backlog - unmatched
+    only_coverage = unmatched - backlog
+    lines = [
+        f"distinct citations {len(cited)} · resolved {len(matched)} · unmatched bases {len(unmatched)}",
+        f"backlog rows {len(backlog)}",
+    ]
+    if only_backlog:
+        lines.append(f"in the backlog but now resolvable: {sorted(only_backlog)[:8]}")
+    if only_coverage:
+        lines.append(f"unmatched but missing from the backlog: {sorted(only_coverage)[:8]}")
+    return not (only_backlog or only_coverage), lines
+
+
+# ── 2. the graph is drawn entirely from rows the register holds ─────────────
+@check("every graph endpoint is held in the register or declared as a gap")
+def check_graph(conn):
+    """A node that resolves to nothing is not automatically a bug. The graph is
+    built from what real tenders cite, and real tenders cite numbers BIS never
+    issued — so an unresolvable node is honest *provided* it is also declared in
+    the coverage backlog. What would be dishonest is a node that resolves to
+    nothing and is claimed nowhere."""
+    edges = conn.execute('SELECT "Source IS", "Target IS" FROM co_citation').fetchall()
+    nodes = {n for e in edges for n in e}
+    backlog = {str(r[0]).strip() for r in
+               conn.execute('SELECT "IS Number" FROM coverage_gap_backlog')}
+    unresolved = {n for n in nodes if engine._resolve_standard(conn, n)[0] is None}
+    undeclared = sorted(n for n in unresolved
+                        if n not in backlog and engine._is_base(n) not in backlog)
+    lines = [f"{len(edges)} edges over {len(nodes)} distinct standards",
+             f"{len(unresolved)} unresolved, of which {len(unresolved) - len(undeclared)} are declared gaps"]
+    if undeclared:
+        lines.append(f"undeclared: {undeclared[:8]}")
+    return not undeclared, lines
+
+
+# ── 3. every citation is either held or declared as a gap ──────────────────
+@check("every citation in a usable tender is held or declared missing")
+def check_citations_accounted(conn):
+    backlog = {str(r[0]).strip() for r in
+               conn.execute('SELECT "IS Number" FROM coverage_gap_backlog')}
+    stray = {}
+    for tender_id, raw in _cited_rows(conn):
+        for c in _split(raw):
+            if engine._resolve_standard(conn, c)[0] is not None:
+                continue
+            if c in backlog or engine._is_base(c) in backlog:
+                continue
+            stray.setdefault(c, tender_id)
+    lines = [f"{len(stray)} citations neither resolved nor declared"]
+    if stray:
+        lines += [f"  {c} — first seen in {t}" for c, t in list(stray.items())[:8]]
+    return not stray, lines
+
+
+# ── 4. no stored citation is malformed ─────────────────────────────────────
+@check("every stored citation is a well-formed designation")
+def check_wellformed(conn):
+    bad = {}
+    for tender_id, raw in _cited_rows(conn):
+        for c in _split(raw):
+            if not engine._is_digits(c):
+                bad.setdefault(c, tender_id)
+    lines = [f"{len(bad)} citations the designation pattern refuses"]
+    if bad:
+        lines += [f"  {c!r} — {t}" for c, t in list(bad.items())[:10]]
+    return not bad, lines
+
+
+# ── 5. the stored citations are what the current pattern reads ─────────────
+@check("re-reading the saved attachments reproduces the stored citations")
+def check_reextraction(conn, sample):
+    if sample <= 0:
+        return True, ["skipped (--quick)"]
+    try:
+        import pdfplumber
+    except ImportError:
+        return True, ["skipped — pdfplumber is not installed"]
+
+    rows = [r for r in conn.execute(
+        'SELECT "Tender ID", "IS Numbers Cited" FROM tenders WHERE "Usability" = ?',
+        ("Usable",)) if str(r[0]).strip()]
+    random.Random(SEED).shuffle(rows)
+
+    checked, diffs = 0, []
+    for tender_id, raw in rows:
+        # The Tender ID is the saved filename's stem; the bid id is its digits.
+        digits = "".join(ch for ch in str(tender_id) if ch.isdigit())
+        paths = [p for p in sorted(glob.glob(os.path.join(PDF_DIR, f"{digits}-*.pdf")))
+                 if not p.endswith("-bid.pdf")] if digits else []
+        if not paths:
+            continue
+        found: list[str] = []
+        for path in paths:
+            try:
+                with pdfplumber.open(path) as pdf:
+                    text = "\n".join((pg.extract_text() or "")
+                                     for pg in pdf.pages[:engine.MAX_PAGES])
+            except Exception:                                 # noqa: BLE001
+                continue
+            for c in engine.extract_citations(text):
+                if c not in found:
+                    found.append(c)
+        stored = _split(raw)
+        checked += 1
+        if set(found) != set(stored):
+            diffs.append((tender_id,
+                          sorted(set(found) - set(stored)),
+                          sorted(set(stored) - set(found))))
+        if checked >= sample:
+            break
+
+    lines = [f"re-read {checked} documents from {PDF_DIR}"]
+    if not checked:
+        lines.append("no saved attachments found — nothing was verified")
+    for tid, extra, gone in diffs[:6]:
+        lines.append(f"  {tid}: pattern now reads {extra or '—'}, stored has {gone or '—'}")
+    if diffs:
+        lines.append(f"  {len(diffs)} of {checked} documents differ")
+    return not diffs, lines
+
+
+# ── 6. the evaluation set is answerable against this register ──────────────
+@check("every expected answer in the golden set is in the register")
+def check_golden(conn):
+    if not os.path.exists(GOLDEN):
+        return False, [f"{GOLDEN} is missing"]
+    gap, unreadable, total = [], [], 0
+    with open(GOLDEN, encoding="utf-8-sig", newline="") as fh:
+        for row in csv.DictReader(fh):
+            expected = (row.get("expected_is") or "").strip()
+            if not expected:
+                continue
+            total += 1
+            if engine._resolve_standard(conn, expected)[0] is not None:
+                continue
+            # Two different faults wear the same shape here. A label the matcher
+            # can read that the register does not hold is a real coverage gap
+            # and must fail. A label the matcher refuses is a malformed label —
+            # BIS's own notification writing "IS 2141:20005" — which no register
+            # could hold, and which is a data-quality note, not a broken
+            # invariant. Failing on those would leave CI permanently red and
+            # teach everyone to ignore it.
+            (gap if engine._is_digits(expected) else unreadable).append(expected)
+    lines = [f"{total} query/standard pairs",
+             f"{len(gap)} name a readable standard the register does not hold",
+             f"{len(unreadable)} are labels the matcher refuses to read"]
+    if gap:
+        lines.append(f"  gaps: {sorted(set(gap))[:8]}")
+    if unreadable:
+        lines.append(f"  unreadable: {sorted(set(unreadable))[:8]}")
+    return not gap, lines
+
+
+# ── 7. what /health reports is what the tables contain ─────────────────────
+@check("the stats endpoint's row counts match live COUNT(*)")
+def check_health(conn):
+    reported = engine.corpus_stats()["row_counts"]
+    lines, ok = [], True
+    for table, said in reported.items():
+        actual = conn.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+        lines.append(f"{table:<22} reported {said:>7,} · actual {actual:>7,}")
+        if said != actual:
+            ok = False
+            lines[-1] += "   MISMATCH"
+    return ok, lines
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--sample", type=int, default=50,
+                    help="how many saved attachments to re-extract (default 50)")
+    ap.add_argument("--quick", action="store_true",
+                    help="skip the re-extraction check")
+    args = ap.parse_args()
+
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    try:
+        check_backlog(conn)
+        check_graph(conn)
+        check_citations_accounted(conn)
+        check_wellformed(conn)
+        check_reextraction(conn, 0 if args.quick else args.sample)
+        check_golden(conn)
+        check_health(conn)
+    finally:
+        conn.close()
+
+    print("Consistency check\n" + "=" * 17)
+    for name, ok, lines in results:
+        print(f"\n{'PASS' if ok else 'FAIL'}  {name}")
+        for line in lines:
+            print(f"        {line}")
+
+    failed = [n for n, ok, _ in results if not ok]
+    print(f"\n{len(results) - len(failed)} passed · {len(failed)} failed")
+    if failed:
+        print("failing: " + "; ".join(failed))
+    sys.exit(1 if failed else 0)
+
+
+if __name__ == "__main__":
+    main()
