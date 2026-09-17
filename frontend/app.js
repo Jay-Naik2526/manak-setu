@@ -351,8 +351,16 @@ async function health() {
         ? h.bis_check.note
         : `Register status is as collected — ${h.bis_check.note}.`;
     }
+    // Rows and pairs are different counts of the same file, and printing only
+    // the larger one beside a screen that says 35,806 invited the reader to
+    // think one of them was wrong. Both, labelled.
     const cc = h.row_counts.co_citation;
-    if ($('#prov-cc')) $('#prov-cc').textContent = cc;
+    if ($('#prov-cc')) {
+      const pairs = S.stats && S.stats.graph ? S.stats.graph.edges : null;
+      $('#prov-cc').textContent = pairs
+        ? `${cc.toLocaleString()} rows (${pairs.toLocaleString()} pairs)`
+        : `${cc.toLocaleString()} rows`;
+    }
     const st = h.row_counts.standards;
     if ($('#prov-std')) $('#prov-std').textContent = st;
     // Provenance figures come from /health, never from numbers typed into the page.
@@ -364,8 +372,13 @@ async function health() {
       `${h.row_counts.coverage_gap_backlog} standards cited by real tenders but not yet held · tick to claim`;
     if ($('#std-meta')) $('#std-meta').textContent =
       `${st} records · source standards.bis.gov.in`;
-    if ($('#graph-meta')) $('#graph-meta').textContent =
-      `${cc.toLocaleString()} edges · thresholds 5+ co-citations / 40%+ confidence / source cited in 8+ tenders`;
+    // Not the thresholds — this ran before the graph loaded and announced
+    // "5+ co-citations / 40% / 8+ tenders", the values from two rebuilds ago,
+    // alongside the row count labelled as edges. The same typed-in string was
+    // fixed inside drawGraph and a second copy survived here, which is this
+    // project's whole failure mode in one line. drawGraph fills this from the
+    // graph that was actually built; until then it says nothing.
+    if ($('#graph-meta')) $('#graph-meta').textContent = 'loading the co-citation graph…';
     $$('[data-ct]').forEach(e => { e.textContent = h.row_counts[e.dataset.ct] ?? ''; });
     // Coverage figures (usable documents, dead-citation count) live in /stats.
     // Fetched here too so the tenders header and the footer are right on any
@@ -373,6 +386,12 @@ async function health() {
     api('/stats').then(s => {
       S.stats = s;
       $$('[data-cv]').forEach(e => { e.textContent = s.coverage[e.dataset.cv] ?? ''; });
+      // The pairs count only exists in /stats, so the footer's rows-and-pairs
+      // line can only be completed once it arrives.
+      if ($('#prov-cc') && s.graph) {
+        $('#prov-cc').textContent =
+          `${cc.toLocaleString()} rows (${s.graph.edges.toLocaleString()} pairs)`;
+      }
     }).catch(() => {});
   } catch (_) {
     $('#conn').innerHTML = `<span class="dot down"></span>backend offline`;
@@ -1246,7 +1265,13 @@ const DEMO = [
     view: 'overview', hold: 9000, spot: '#ov-cov',
     h: 'And what it does not',
     p: () => { const c = (S.stats || {}).coverage || {};
-      return `${c.pct || 99}% of the standards real tenders cite are in the register — ${c.matched || 483} of ${c.distinct_cited || 488}. It was 17% when we started. We collected the rest from the BIS catalogue rather than inventing them, and the last ${c.unmatched ?? 5} stay on the front page as a declared gap.`; },
+      // No stale defaults. These fell back to 483 of 488 with 5 in backlog —
+      // the figures from a 2,087-row register — so a failed /stats call would
+      // have narrated three wrong numbers to a room rather than none.
+      if (!c || c.matched == null) {
+        return 'The standards real tenders cite are checked against the register, and the ones we do not hold are listed as a declared gap rather than guessed at.';
+      }
+      return `${c.pct}% of the standards real tenders cite are in the register — ${c.matched} of ${c.distinct_cited}. It was 17% when we started. We collected the rest from the BIS catalogue rather than inventing them, and the last ${c.unmatched} stay on the front page as a declared gap.`; },
   },
   {
     view: 'draft', hold: 10000, spot: '#fw-gov',
@@ -1848,6 +1873,12 @@ async function loadCoverage() {
   const cv = S.stats.coverage, rc = S.stats.row_counts;
   const byStatus = Object.fromEntries(S.stats.standards_by_status.map(d => [d.key, d.count]));
 
+  const covMeta = $('#cov-meta');
+  if (covMeta) {
+    covMeta.textContent = `${cv.matched.toLocaleString()} of ${cv.distinct_cited.toLocaleString()} `
+      + `cited standards held · ${cv.unmatched} in backlog`;
+  }
+
   $('#cov-lead').innerHTML = `<div class="note warn">${ic('alert')}<div>
     <b>${cv.matched} of ${cv.distinct_cited}</b> cited IS numbers held (<b>${cv.pct}%</b>), across ${cv.usable_tenders} extractable documents.
     The other ${cv.unmatched} return <span class="mono">found: false</span>.</div></div>`;
@@ -1921,6 +1952,11 @@ async function loadBench(force) {
 
 function drawBench() {
   const b = S.bench;
+  const meta = $('#bm-meta');
+  if (meta) {
+    meta.textContent = `n=${b.evaluated} · ${b.positives_in_set} flagged dead, `
+      + `${b.negatives_sampled} sampled clean · ground truth is the flag stored at collection`;
+  }
   $('#bm-out').innerHTML = `
     <div class="note info">${ic('info')}<div>${esc(b.honest_summary)}</div></div>
     <div class="kpis">${[
