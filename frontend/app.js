@@ -143,10 +143,22 @@ function donut(data, { size = 138, thick = 22, val = '', lab = '' } = {}) {
   return `<svg class="dnut" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${segs}${mid}</svg>`;
 }
 
+/* A share needs a denominator big enough to carry it. This printed "2 · 40.0%"
+   for two dead citations out of five — a figure with one decimal place, implying
+   a precision that five documents cannot support, on a screen whose whole
+   argument is that every number carries its denominator. The project's own rule
+   is no percentage over a class smaller than about thirty, and the audit's
+   citation-health donut broke it on every small document.
+
+   Below the floor the counts stand alone, which is what they always were. */
+const PERCENT_FLOOR = 30;
+
 const legend = (data, total) => `<div class="legend">${data.map(d => `
   <div class="r"><span class="sw" style="background:${d.color}"></span>
     <span class="nm">${esc(d.key)}</span>
-    <span class="vv">${d.count}${total ? ` · ${(d.count / total * 100).toFixed(1)}%` : ''}</span>
+    <span class="vv">${d.count}${total >= PERCENT_FLOOR
+      ? ` · ${(d.count / total * 100).toFixed(1)}%`
+      : `<span class="dimmer"> of ${total}</span>`}</span>
   </div>`).join('')}</div>`;
 
 function bars(data, color) {
@@ -1212,8 +1224,27 @@ function renderAudit(d) {
   if (d.matched_standards) {
     const m = d.matched_standards;
     const tone = m.confidence === 'High' ? 'ok' : m.confidence === 'Medium' ? 'warn' : 'mute';
-    h += `<div class="card"><div class="hd"><h3>Clause → standard match</h3>
+    /* This matcher answers "which standard governs this clause". Handed a whole
+       tender it answers the same question about all of it at once, which is not
+       a question with an answer: a document buying cable, steel sheet, motors
+       and cement has four governing standards, and the ranked list it returns
+       is a blend of all four. On the run that prompted this, a cable-and-cement
+       tender came back with an installation code of practice, a shipboard cable
+       standard and a transition-joint standard — and IS 1554, already cited in
+       the text and correct, was not in the five.
+
+       The result is still useful as a search over the words supplied. It is not
+       a verdict on the document, so on multi-citation text it does not get
+       titled like one. */
+    const manyCites = all.length > 1;
+    h += `<div class="card"><div class="hd">
+      <h3>${manyCites ? 'Closest standards to this text' : 'Clause → standard match'}</h3>
       <span class="pill ${tone}">${esc(m.confidence)}</span></div>
+      ${manyCites ? `<div class="in" style="padding-bottom:0"><div class="note info">${ic('info')}
+        <div>This text cites <b>${all.length}</b> standards, so it is a document rather than a
+        single clause. These are the closest matches to the words as a whole — a search, not a
+        ruling on which standard governs the tender. Paste one clause at a time, or use the
+        Draft screen, to ask that question properly.</div></div></div>` : ''}
       ${m.message ? `<div class="in" style="padding-bottom:0"><div class="note warn">${ic('alert')}<div>${esc(m.message)}</div></div></div>` : ''}
       <div class="scroll"><table><thead><tr><th>IS Number</th><th>Title</th><th class="r">Similarity</th><th></th></tr></thead><tbody>
       ${m.matches.map(x => {
