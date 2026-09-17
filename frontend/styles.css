@@ -1509,12 +1509,35 @@ table td { font-size: 14.5px; }
 
    The bar is two rows now, so the sticky offset below it is computed rather
    than typed: --bar-h drives both. */
-.topnav { flex-wrap: wrap; height: auto; padding: 0 16px; row-gap: 0; }
-/* min-height on a wrapping flex container sizes the container, not its first
-   row, so the identity row collapsed to 34px while the bar still measured 52.
-   The row's own contents carry the height. */
-.brand, .nav-right { min-height: 52px; }
-.tabwrap { flex-basis: 100%; order: 3; border-top: 1px solid var(--nav-line); }
+/* The masthead is a grid, not a wrapping row. Identity sits top-left, the
+   sections run along the bottom, and the controls occupy a block on the right
+   that spans both rows — so the tools stay in one place the eye can return to
+   instead of being strung along the top edge. The block wraps onto a second
+   line of its own when it needs to, which is what buys the sections their
+   width back. */
+.topnav {
+  display: grid; height: auto; padding: 0 16px; row-gap: 0;
+  grid-template-columns: auto auto 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+}
+.brand { grid-column: 1; grid-row: 1; min-height: 52px; }
+.brand-sep { grid-column: 2; grid-row: 1; }
+/* The controls take two lines of their own on the right of the identity row,
+   rather than spanning both rows of the masthead. Spanning looked right and
+   measured wrong: the block is 320px, and taking that out of the sections row
+   left 912px for labels that need 987, so Evidence, Coverage and Benchmark
+   fell off a 1280px screen. On its own row the block costs height, which the
+   masthead has, instead of width, which the sections do not. */
+.nav-right {
+  grid-column: 4; grid-row: 1;
+  flex-wrap: wrap; justify-content: flex-end; align-content: center;
+  row-gap: 7px; padding: 9px 0 9px 16px; max-width: 340px;
+}
+.tabwrap {
+  grid-column: 1 / 5; grid-row: 2;
+  border-top: 1px solid var(--nav-line);
+}
 .tabs { height: 46px; }
 .tab { height: 46px; padding: 0 12px 10px; font-size: 14.5px; }
 .navgroup { padding-left: 16px; }
