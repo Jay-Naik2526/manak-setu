@@ -312,8 +312,14 @@
               <select id="g-fam"><option value="">All families</option></select>
             </div>
             <div class="grp">
-              <label class="f eyebrow">Min confidence · <span class="mono" id="g-cv">0.00</span></label>
-              <input type="range" id="g-conf" min="0" max="1" step="0.05" value="0">
+              <label class="f eyebrow" for="g-conf">Documents behind an edge · at least
+                <span class="mono" id="g-cv">1</span></label>
+              <input type="range" id="g-conf" min="1" max="12" step="1" value="1"
+                     aria-label="Minimum documents co-citing a pair">
+              <div class="xs dimmer" style="margin-top:4px">Raise this to keep only the
+                relationships several tenders agree on. Confidence is not the control here:
+                a pair cited together once, in a standard cited once, scores 1.00 — and
+                71% of these edges rest on a single document.</div>
             </div>
             <div class="grp">
               <label class="f eyebrow">Shortest path between</label>

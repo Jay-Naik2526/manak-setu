@@ -2409,16 +2409,32 @@ function tracePath() {
   toast(`${path.length - 1} hop(s): ${path.join(' → ')}`, 'info');
 }
 
+/* The slider filters on how many documents back an edge, not on confidence.
+   Confidence is a ratio — co-citations over the times the source was cited —
+   and once the graph's thresholds were lowered to admit standards cited once,
+   it saturated: 10,922 of 13,602 drawn edges score exactly 1.00, because a pair
+   seen together once in a standard seen once is 1 of 1. Dragging a confidence
+   slider to its maximum still left 1,834 of 1,858 nodes on screen, which is why
+   it stopped appearing to do anything.
+
+   Co-citation count does not have that failure mode, and it is the number an
+   officer would ask for anyway: 1,858 nodes at one document, 635 at two, 350 at
+   three, 168 at five. Confidence is still shown per edge in the drawer, where
+   it is read next to its denominator instead of on its own. */
 function gFilter() {
-  const fam = $('#g-fam').value, min = parseFloat($('#g-conf').value);
-  $('#g-cv').textContent = min.toFixed(2);
+  const fam = $('#g-fam').value;
+  const min = Math.max(1, parseInt($('#g-conf').value, 10) || 1);
+  $('#g-cv').textContent = String(min);
   const keep = new Set();
   G.e.forEach(e => {
-    e.hidden = e.confidence < min;
+    e.hidden = (e.count || 0) < min;
     if (!e.hidden) { keep.add(e.source); keep.add(e.target); }
   });
   G.n.forEach(n => {
-    n.hidden = (fam && n.product_family !== fam) || (min > 0 && !keep.has(n.id));
+    // At the floor every node stays, including any with no surviving edge;
+    // above it, a node with nothing left to connect to is not evidence of
+    // anything and goes with its edges.
+    n.hidden = (fam && n.product_family !== fam) || (min > 1 && !keep.has(n.id));
   });
   paint();
 }
