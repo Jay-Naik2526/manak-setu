@@ -1138,3 +1138,13 @@ blockquote.clause-suggest {
 @media (max-width: 760px) {
   .hix { grid-template-columns: 104px 1fr 72px; }
 }
+
+/* A focused row must be as obvious as a hovered one — the keyboard path
+   through the tables is the same path the mouse takes. Outline sits inside
+   the row because a table row clips an outward offset in some engines. */
+tr.hit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--surface-2);
+}
+tr.hit:focus { outline: none; }

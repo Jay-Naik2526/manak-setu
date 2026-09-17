@@ -1024,32 +1024,32 @@ function renderAudit(d) {
   const gone = all.filter(k => !d.dead_citations[k].found);
   const live = all.filter(k => d.dead_citations[k].found && !d.dead_citations[k].dead);
   const duty = all.filter(k => (d.certifications[k] || {}).found);
-  let h = documentXray($('#spec').value, citationStatus(d)) + renderFindings(S.audit);
+  /* Reading order is the officer's order: the verdict, then the counts behind
+     it, then where in their own document it happens, then the edits to make.
+     It used to open with the marked-up text, so the first thing on screen was
+     evidence for a conclusion that had not been stated yet. */
+  const f = renderFindings(S.audit);
+  let h = f.head;
 
   if (all.length) {
     h += `<div class="kpis" style="margin-top:16px">` + [
-      { label: 'Citations verified', value: all.length, sub: 'from this document', icon: 'scan' },
-      { label: 'Dead citations', value: dead.length, sub: dead.length ? 'corrigendum required' : 'none found', tone: dead.length ? 'bad' : 'ok', icon: 'alert' },
-      { label: 'Not in register', value: gone.length, sub: 'not held in register', tone: gone.length ? 'warn' : 'ok', icon: 'pie' },
+      { label: 'Citations checked', value: all.length,
+        sub: (S.docName || $('#spec').value.trim()) ? 'read from this document' : 'as entered', icon: 'scan' },
+      { label: 'Dead citations', value: dead.length, sub: dead.length ? 'withdrawn or superseded' : 'none withdrawn or superseded', tone: dead.length ? 'bad' : 'ok', icon: 'alert' },
+      { label: 'Not in the register', value: gone.length, sub: gone.length ? 'status cannot be checked' : 'every citation resolved', tone: gone.length ? 'warn' : 'ok', icon: 'pie' },
       { label: 'Certification duties', value: duty.length, sub: `${all.length - duty.length} with no rule on file`, tone: duty.length ? 'ok' : 'plain', icon: 'badge' },
     ].map(kpi).join('') + `</div>`;
   }
 
+  h += documentXray($('#spec').value, citationStatus(d)) + f.blocks;
+
+  /* The dead citations themselves are listed once, in "Replace these
+     citations" above, with the reason and the BIS record for each. This is the
+     action that list did not carry — not a second copy of the list. */
   if (dead.length) {
     h += `<div class="note bad">${ic('alert')}<div style="flex:1">
-      <b>${dead.length} dead citation${dead.length > 1 ? 's' : ''} in this document.</b>
-      <div style="margin-top:7px;display:flex;flex-direction:column;gap:5px">
-      ${dead.map(k => {
-        const x = d.dead_citations[k];
-        const has = x.replaced_by && x.replaced_by !== 'UNKNOWN';
-        return `<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-          <span class="mono strike" style="font-size:13px">${esc(k)}</span>
-          <span class="pill bad">${esc(x.status)}</span>
-          <span class="succ">${ic('arrow','sm')}${has
-            ? `<span class="mono jump" style="font-size:13px;color:var(--ok);font-weight:600" data-go="${esc(x.replaced_by)}">${esc(x.replaced_by)}</span>`
-            : `<span class="pill warn">no successor on file</span>`}</span>
-        </div>`;
-      }).join('')}</div>
+      <b>${dead.length} citation${dead.length > 1 ? 's' : ''} in this document name${dead.length > 1 ? '' : 's'} a standard BIS has withdrawn or superseded.</b>
+      <div class="xs" style="margin-top:4px">Each one is listed above with its successor and the BIS record it came from.</div>
       <button class="btn tiny" id="corr-btn" style="margin-top:9px">${ic('copy','sm')}Draft corrigendum note</button>
     </div></div>`;
   }
@@ -1074,15 +1074,15 @@ function renderAudit(d) {
     const seq = [...dead, ...gone, ...live];
     const pieces = [
       { key: 'Current', count: live.length, color: 'var(--ok)' },
-      { key: 'Superseded / withdrawn', count: dead.length, color: 'var(--bad)' },
-      { key: 'Not in register', count: gone.length, color: 'var(--ink-4)' },
+      { key: 'Dead — withdrawn or superseded', count: dead.length, color: 'var(--bad)' },
+      { key: 'Not in the register', count: gone.length, color: 'var(--ink-4)' },
     ];
     h += `<div class="grid c12">
       <div class="card"><div class="hd"><h3>Citation health</h3></div><div class="in">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">${donut(pieces, { val: all.length, lab: 'cited' })}
         <div style="flex:1;min-width:140px">${legend(pieces, all.length)}</div></div></div></div>
-      <div class="card"><div class="hd"><h3>Findings</h3><span class="note">most severe first</span></div>
-        <div class="scroll"><table><thead><tr><th>IS Number</th><th>Status</th><th>Superseded by</th><th>Certification</th><th>Co-cited</th><th></th></tr></thead><tbody>
+      <div class="card"><div class="hd"><h3>Every citation, as the register holds it</h3><span class="note">most severe first</span></div>
+        <div class="scroll"><table><thead><tr><th>IS Number</th><th>Status</th><th>Replaced by</th><th>Certification</th><th>Co-cited</th><th></th></tr></thead><tbody>
         ${seq.map(k => {
           const x = d.dead_citations[k], c = d.certifications[k] || {}, rel = d.related[k] || [];
           const st = x.found ? (x.dead ? `<span class="pill bad">${esc(x.status)}</span>` : '<span class="pill ok">Current</span>') : '<span class="pill mute">Not held</span>';
@@ -1092,7 +1092,7 @@ function renderAudit(d) {
             <td class="mono xs">${rel.length ? esc(rel.slice(0,2).map(r => r.target_is).join(', ')) + (rel.length > 2 ? ` +${rel.length-2}` : '') : '—'}</td>
             <td class="rowgo">${ic('arrow','sm')}</td></tr>`;
         }).join('')}</tbody></table></div>
-        ${gone.length ? `<div class="ft">${gone.length} not in register. Declared gap — see Coverage.</div>` : ''}
+        ${gone.length ? `<div class="ft">${gone.length} of these ${all.length} are not held in the register, so no status or certification duty can be reported for them. Declared as a collection gap — see Coverage.</div>` : ''}
       </div></div>`;
   }
 
@@ -1401,6 +1401,39 @@ function pagedTable(cfg) {
 
 
 
+/* Result rows are the screen's primary content, and until now only the mouse
+   could reach them. The keyboard gets the same path: the table is one tab stop
+   (a roving tabindex — one stop per row would make Tab useless across 27,687
+   standards), arrows walk the rows, Enter opens the drawer a click would open.
+   Called after every render because the rows are replaced wholesale; the
+   listener is attached once, to the tbody, which survives. */
+function rowKeys(tblSel) {
+  const tbody = $(`${tblSel} tbody`);
+  if (!tbody) return;
+  const list = $$(`${tblSel} tbody tr.hit`);
+  list.forEach((r, j) => { r.tabIndex = j === 0 ? 0 : -1; });
+  if (tbody.dataset.keys) return;
+  tbody.dataset.keys = '1';
+  tbody.addEventListener('keydown', e => {
+    const rows = $$(`${tblSel} tbody tr.hit`);
+    if (!rows.length) return;
+    const i = rows.indexOf(document.activeElement);
+    const to = j => {
+      e.preventDefault();
+      const k = Math.max(0, Math.min(rows.length - 1, j));
+      rows.forEach((r, m) => { r.tabIndex = m === k ? 0 : -1; });
+      rows[k].focus();
+      rows[k].scrollIntoView({ block: 'nearest' });
+    };
+    if (e.key === 'ArrowDown') return to(i < 0 ? 0 : i + 1);
+    if (e.key === 'ArrowUp') return to(i < 0 ? 0 : i - 1);
+    if (e.key === 'Home') return to(0);
+    if (e.key === 'End') return to(rows.length - 1);
+    if (e.key === 'Enter' && i >= 0) { e.preventDefault(); rows[i].click(); }
+  });
+}
+
+
 function sortable(tblSel, rows, key) {
   const s = sorts[key];
   if (!s) return rows;
@@ -1506,6 +1539,7 @@ function drawTenders(rows, total) {
       <td class="rowgo">${ic('arrow','sm')}</td></tr>`;
   }).join('') || `<tr><td colspan="6">${blank('No documents match', 'Try clearing a filter.')}</td></tr>`;
   $$('#td-tbl tbody tr[data-t]').forEach(tr => tr.addEventListener('click', () => openTender(tr.dataset.t)));
+  rowKeys('#td-tbl');
 }
 
 async function openTender(id) {
@@ -1590,6 +1624,7 @@ function drawStandards(rows, total) {
       <td class="rowgo">${ic('arrow','sm')}</td></tr>`).join('')
     || `<tr><td colspan="6">${blank('No standards match', 'Try a different search or clear the filters.')}</td></tr>`;
   $$('#st-tbl tbody tr[data-s]').forEach(tr => tr.addEventListener('click', () => openStandard(tr.dataset.s)));
+  rowKeys('#st-tbl');
 }
 
 async function openStandard(id) {
@@ -1668,6 +1703,7 @@ function drawCerts(rows, total) {
         c['Notification Reference'] === 'N/A' ? '<span class="dimmer">not recorded</span>' : esc(c['Notification Reference'])}</td>
     </tr>`).join('') || `<tr><td colspan="6">${blank('No rules match', 'Try a different search or clear the filters.')}</td></tr>`;
   $$('#ce-tbl tbody tr[data-s]').forEach(tr => tr.addEventListener('click', () => openStandard(tr.dataset.s)));
+  rowKeys('#ce-tbl');
 }
 
 /* ── coverage ──────────────────────────────────────────────────────────── */
@@ -1733,7 +1769,7 @@ function drawBacklog() {
       <td class="mono r">${b.tenders_citing}</td>
       <td class="mono jump" data-go="${esc(b.is_number)}">${esc(b.is_number)}</td>
       <td>${on ? '<span class="pill info">claimed</span>' : '<span class="pill mute">not held</span>'}</td></tr>`;
-  }).join('') || `<tr><td colspan="4">${blank('Nothing here', 'Adjust the filter.')}</td></tr>`;
+  }).join('') || `<tr><td colspan="4">${blank('No backlog entry matches', 'Clear the search, or switch the filter back to all entries.')}</td></tr>`;
 
   $$('#bk-tbl [data-b]').forEach(cb => cb.addEventListener('change', () => {
     const id = cb.dataset.b, i = S.claims.indexOf(id);
@@ -2530,8 +2566,13 @@ const VERDICT = {
   unreadable: { get t() { return t('verdict.unreadable'); }, c: 'unreadable' },
 };
 
+/* Returns the verdict and the edit blocks separately, because they belong at
+   opposite ends of the screen: the verdict is the answer and leads, the edits
+   are the work and follow the evidence. Returning one string forced them to be
+   adjacent, which is how the screen ended up listing the dead citations twice —
+   once here without their reasons, once again below with them. */
 function renderFindings(a) {
-  if (!a) return '';
+  if (!a) return { head: '', blocks: '' };
   const v = VERDICT[a.verdict] || VERDICT.review;
   let h = `<div class="verdict-bar ${v.c}">${ic(a.verdict === 'clean' ? 'check' : 'alert')}
     <div><div class="vt">${esc(v.t)}</div></div>
@@ -2542,7 +2583,9 @@ function renderFindings(a) {
   }
 
   const S = a.suggestions;
-  if (!S || !S.counts || !Object.values(S.counts).some(Boolean)) return h;
+  if (!S || !S.counts || !Object.values(S.counts).some(Boolean)) return { head: h, blocks: '' };
+  const head = h;
+  h = '';
 
   /* The audit is a list of edits to make to the tender, not a queue of things to
      approve. The officer changes their document; the document is the record. */
@@ -2577,13 +2620,20 @@ function renderFindings(a) {
       <div class="src"><span class="jump" data-ev="${esc(r.cite)}">see citing tenders</span></div>
     </div>`));
 
-  h += block('Add these certification clauses', 'badge', 'bad', S.add_clause.map(r => `
+  /* Two different statements, and the difference is whether we read the
+     document. With the text, we found no Standard Mark clause in it. Without
+     it, all we know is that the law requires one. */
+  const readDoc = S.add_clause.some(r => r.text_supplied);
+  h += block(readDoc ? 'Add these certification clauses' : 'These items must carry a certification clause',
+    'badge', readDoc ? 'bad' : 'warn', S.add_clause.map(r => `
     <div class="edit" data-finding="${esc(r.for)}">
       <div class="top">
         <span class="mono jump" data-go="${esc(r.for)}">${esc(r.for)}</span>
-        <span class="pill bad">${esc(r.scheme || 'mandatory')}</span>
+        <span class="pill ${r.text_supplied ? 'bad' : 'warn'}">${esc(r.scheme || 'mandatory')}</span>
       </div>
-      <div class="why">Mandatory certification applies and no Standard Mark clause was found.</div>
+      <div class="why">${r.text_supplied
+        ? 'Mandatory certification applies and no Standard Mark clause was found in the document.'
+        : 'Mandatory certification applies. No document text was supplied, so whether the tender already demands the Standard Mark could not be checked.'}</div>
       <blockquote class="clause-suggest">${esc(r.clause)}</blockquote>
       <button class="btn tiny" data-copy="${esc(r.clause)}">${ic('copy','sm')}Copy clause</button>
     </div>`));
@@ -2604,7 +2654,7 @@ function renderFindings(a) {
   }
 
   h += `<div class="note info">${ic('check')}<div>${esc(S.note)}</div></div>`;
-  return h;
+  return { head, blocks: h };
 }
 
 /* An override with no reason is the thing an auditor asks about a year later,

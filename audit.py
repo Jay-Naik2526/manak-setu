@@ -181,8 +181,17 @@ def primary_notification(reference: str | None) -> str:
 
 
 def _statutory_omission(conn, cited: list[str], text: str) -> list[dict]:
-    """Mandatory certification demanded by law, not asked for by the document."""
-    if MARK_RE.search(text or ""):
+    """Mandatory certification demanded by law, not asked for by the document.
+
+    Whether the tender is *missing* the clause can only be established by reading
+    the tender. When the officer supplies IS numbers with no document text there
+    is nothing to search, and saying "no clause in this document requires the
+    Standard Mark" would be a claim about a document we never read. The duty is
+    still real and still reported — as a duty to state, not an omission found —
+    and `text_supplied` is what the screen branches on.
+    """
+    supplied = bool((text or "").strip())
+    if supplied and MARK_RE.search(text):
         return []  # the tender already demands the mark; nothing is missing
 
     findings = []
@@ -195,25 +204,38 @@ def _statutory_omission(conn, cited: list[str], text: str) -> list[dict]:
         findings.append(
             {
                 "kind": "statutory_omission",
-                "severity": "high",
+                "severity": "high" if supplied else "medium",
+                "text_supplied": supplied,
                 "is_number": citation,
                 "resolved_as": rule["IS Number"],
                 "product": rule["Product Description"],
                 "scheme": rule["Scheme"],
                 "notification_reference": notification,
                 "notification_history": str(history or ""),
-                "headline": f"{citation} needs mandatory BIS certification — the tender never asks for it",
+                "headline": (
+                    f"{citation} needs mandatory BIS certification — the tender never asks for it"
+                    if supplied else
+                    f"{citation} carries a mandatory BIS certification duty"
+                ),
                 "detail": (
                     f"{rule['Product Description']} falls under mandatory BIS certification "
                     f"({rule['Scheme']}"
                     + (f", {notification}" if notification else "")
-                    + "). No clause in this document requires the BIS Standard Mark, a licence "
-                    "number, or certified material. As written, uncertified goods meet the "
-                    "specification."
+                    + ")."
+                    + (" No clause in this document requires the BIS Standard Mark, a licence "
+                       "number, or certified material. As written, uncertified goods meet the "
+                       "specification."
+                       if supplied else
+                       " No document text was supplied, so whether this tender already demands "
+                       "the Standard Mark could not be checked. The clause below is what the "
+                       "document has to contain.")
                 ),
                 "action": (
                     "Add a clause requiring the BIS Standard Mark and a valid licence number "
                     "for this item."
+                    if supplied else
+                    "Confirm the tender carries a Standard Mark clause for this item; the "
+                    "wording below is the one the notification requires."
                 ),
                 "evidence": {
                     "source": "certification rules",
@@ -565,6 +587,7 @@ def _suggestions(findings: list[dict]) -> dict:
                 "product": f.get("product"),
                 "scheme": f.get("scheme"),
                 "notification": f.get("notification_reference"),
+                "text_supplied": f.get("text_supplied", True),
                 "clause": (
                     f"The {f.get('product') or 'material'} supplied shall bear the BIS Standard "
                     f"Mark under {f.get('scheme')}"
@@ -612,7 +635,13 @@ def _summary(cited: list[str], findings: list[dict], high: int) -> str:
         parts.append(f"{n} citation{'s' if n > 1 else ''} no longer current")
     if "statutory_omission" in kinds:
         n = sum(1 for f in findings if f["kind"] == "statutory_omission")
-        parts.append(f"{n} mandatory-certification item{'s' if n > 1 else ''} with no Standard Mark clause")
+        read = any(f.get("text_supplied") for f in findings if f["kind"] == "statutory_omission")
+        parts.append(
+            f"{n} mandatory-certification item{'s' if n > 1 else ''} with no Standard Mark clause"
+            if read else
+            f"{n} mandatory-certification item{'s' if n > 1 else ''} whose Standard Mark clause "
+            "could not be checked without the document text"
+        )
     if "missing_connected" in kinds:
         n = sum(1 for f in findings if f["kind"] == "missing_connected")
         parts.append(f"{n} standard{'s' if n > 1 else ''} comparable tenders cite but this one omits")
