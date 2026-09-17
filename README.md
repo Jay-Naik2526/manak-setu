@@ -88,7 +88,8 @@ current analysis as a report).
 | `GET` | `/standards` · `/standard?is_number=` | All standards · one standard with cert + related |
 | `GET` | `/certifications` · `/tenders` · `/backlog` | Full tables |
 | `GET` | `/benchmark` | Re-runs the golden benchmark, returns the confusion matrix |
-| `GET` | `/health` | Row counts per table |
+| `GET` | `/health` | Row counts per table, and when BIS was last checked |
+| `POST` | `/report` | The audit as a standalone printable compliance report |
 
 ## `POST /analyze`
 

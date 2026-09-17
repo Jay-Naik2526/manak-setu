@@ -290,6 +290,37 @@ def recommend(req: RecommendRequest):
     return _recommend(req.spec_text.strip(), req.ui_language)
 
 
+class ReportRequest(BaseModel):
+    text: str = ""
+    cited: list[str] | None = None
+    document: str | None = None
+
+
+@app.post("/report")
+def compliance_report(req: ReportRequest):
+    """The audit as a document an officer can attach to a file noting.
+
+    Rendered from the same audit_tender() result the screen draws, so the two
+    cannot disagree — this is a second view of one audit, not a second audit.
+    Returns standalone print-ready HTML; the browser prints it to PDF."""
+    import report as report_module
+
+    if len(req.text or "") > MAX_TEXT_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Text exceeds {MAX_TEXT_CHARS:,} characters.",
+        )
+    cited = [c.strip() for c in (req.cited or []) if c and c.strip()] or None
+    if not (req.text or "").strip() and not cited:
+        raise HTTPException(
+            status_code=400, detail="Provide specification text or at least one IS number"
+        )
+    result = audit_tender(req.text or "", filename=req.document or "Pasted specification",
+                          cited=cited)
+    return Response(content=report_module.render(result, _bis_check()),
+                    media_type="text/html; charset=utf-8")
+
+
 @app.get("/graph")
 def graph(nodes: int | None = None, edges: int | None = None, min_count: int = 0,
           per_node: int | None = None):

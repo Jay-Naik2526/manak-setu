@@ -57,6 +57,28 @@ def section(title: str):
     print(f"\n{title}\n" + "-" * len(title))
 
 
+
+def _fetch_report(cited: list[str]) -> str:
+    """The report endpoint returns HTML, which `call` cannot parse as JSON."""
+    import urllib.request
+
+    data = json.dumps({"cited": cited, "document": "adversarial"}).encode()
+    req = urllib.request.Request(BASE + "/report", data=data,
+                                 headers={"Content-Type": "application/json"},
+                                 method="POST")
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def _plain(html_text: str) -> str:
+    """Visible text only — the CSS mentions colours, not standards."""
+    import html as _html
+    import re as _re
+
+    body = html_text.split("</style>", 1)[-1]
+    return _re.sub(r"\s+", " ", _html.unescape(_re.sub(r"<[^>]+>", " ", body)))
+
+
 def main():
     status, _ = call("GET", "/health")
     if status != 200:
@@ -224,6 +246,30 @@ def main():
 
     s, b = call("GET", "/peers?text=")
     check("/peers with empty text is rejected", s == 400, f"status {s}")
+
+    section("Compliance report")
+
+    text = _plain(_fetch_report(["IS 434 (Part 1)", "IS 1570", "IS 694", "IS 999999"]))
+    check("a report renders, names the supersession and its successor",
+          "IS 434 (Part 1)" in text and "Superseded" in text and "IS 9968" in text
+          and "not a certification of the tender" in text,
+          f"{len(text)} characters of visible text")
+
+    # The report reads the register's status per citation. It once reported
+    # IS 694 — current, with a live QCO — as "not in the register", because a
+    # certification finding carries no status field and an absent field was
+    # read as absence from the register.
+    text = _plain(_fetch_report(["IS 694"]))
+    check("a current standard with a certification duty is not called missing",
+          "IS 694" in text and "not in the register" not in text,
+          "IS 694 " + ("mislabelled" if "not in the register" in text else "reported as held"))
+
+    text = _plain(_fetch_report(["IS 999999"]))
+    check("a number the register does not hold is reported as unresolved",
+          "not in the register" in text, "")
+
+    s, b = call("POST", "/report", {"text": "", "cited": []})
+    check("a report with neither text nor citations is refused", s == 400, f"status {s}")
 
     # ---------------------------------------------------------------- summary
     print(f"\n{len(PASS)} passed · {len(FAIL)} failed")

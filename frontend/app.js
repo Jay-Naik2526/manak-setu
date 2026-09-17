@@ -2744,7 +2744,38 @@ async function boot() {
   $('#demo-next').onclick = () => { D.paused = false; demoGo(D.i + 1); };
   $('#demo-play').onclick = demoPause;
   $('#demo-exit').onclick = () => demoStop(false);
-  $('#an-print').onclick = () => window.print();
+  /* The Report button used to call window.print(), which printed the console
+     itself — navigation, filter controls and all. An officer attaching a
+     standards check to a file noting needs a document, so this asks the server
+     for one and opens it in its own window, where their browser's print dialog
+     turns it into a PDF. Same audit result the screen is showing; the report
+     cannot disagree with it. */
+  $('#an-print').onclick = async () => {
+    const btn = $('#an-print');
+    const spec = $('#spec').value.trim();
+    if (!S.chips.length && !spec) { toast('Run a verification first', 'bad'); return; }
+    btn.disabled = true;
+    try {
+      const res = await fetch(API + '/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: spec, cited: S.chips, document: S.docName || null }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
+      const html = await res.text();
+      // A blob URL rather than document.write: the report is a whole document
+      // with its own <style>, and writing into an opened window inherits this
+      // page's base URL and printing quirks.
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      const w = window.open(url, '_blank');
+      if (!w) { toast('Allow pop-ups to open the report', 'bad'); }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      toast(`Report failed: ${e.message}`, 'bad');
+    } finally {
+      btn.disabled = false;
+    }
+  };
   $$('#presets button').forEach(b => b.onclick = () => preset_(b.dataset.p));
 
   health();
