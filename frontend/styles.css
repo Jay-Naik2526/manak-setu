@@ -771,18 +771,12 @@ label.ck input { width: auto; height: auto; accent-color: var(--brand); }
 .hero-fig.hot .n { color: var(--accent); }
 @media (max-width: 700px) { .hero-in { padding: 22px 20px; } .hero-veil { background: linear-gradient(180deg, rgba(4,34,46,.9), rgba(4,34,46,.75)); } }
 
-/* ── Unit chart ──────────────────────────────────────────────────────────────
-   One cell per cited standard. 488 squares reads harder than a percentage.
-   ────────────────────────────────────────────────────────────────────────── */
-
-.units { display: grid; grid-template-columns: repeat(auto-fill, minmax(9px, 1fr)); gap: 3px; }
-.unit {
-  aspect-ratio: 1; border-radius: 1.5px; background: var(--surface-3);
-  transform: scale(.4); opacity: 0; transition: transform .3s, opacity .3s, background .3s;
-}
-.units.in .unit { transform: scale(1); opacity: 1; transition-delay: var(--d, 0ms); }
-.unit.held { background: var(--ok); }
-.unit:hover { outline: 1px solid var(--accent); outline-offset: 1px; }
+/* ── Unit chart, removed ─────────────────────────────────────
+   It was one cell per cited standard. At 488 that reads; at 1,986 the cells are
+   below the size where two of them can be told apart, so all it said was "a lot,
+   mostly green" — a percentage drawn the long way round. The ratio is one
+   number, and one number gets the dial in .gg below.
+   ─────────────────────────────────────────────────────────────────────── */
 
 /* ── Dead-citation reveal ────────────────────────────────────────────────── */
 
@@ -1637,3 +1631,147 @@ table td { font-size: 14.5px; }
   .ask { grid-template-columns: 30px 1fr; }
   .ask-s { grid-column: 2; justify-self: start; margin-top: 8px; }
 }
+
+/* ── Folds: the overview as four sections, not fourteen cards ───────────────
+   Fourteen cards of equal weight is a dashboard, and a dashboard makes the
+   reader work out what matters. These are named, numbered and ordered by how
+   much they are worth reading; the two that are supporting evidence start
+   closed, and every section remembers its own state.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.fold { border: var(--bw) solid var(--ink); background: var(--surface); margin-bottom: 14px; box-shadow: var(--sh-2); }
+.fold > summary {
+  display: flex; align-items: center; gap: 14px; padding: 15px 17px;
+  cursor: pointer; list-style: none; user-select: none; background: var(--surface-2);
+}
+.fold > summary::-webkit-details-marker { display: none; }
+.fold[open] > summary { border-bottom: var(--bw) solid var(--ink); }
+.fold > summary:hover { background: var(--surface-3); }
+.fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.fold-n {
+  font: 800 14px/1 'JetBrains Mono', monospace; color: var(--surface);
+  background: var(--brand); padding: 7px 8px; flex: none; font-variant-numeric: tabular-nums;
+}
+.fold-b { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fold-t { font: 800 19px/1.2 'Public Sans', sans-serif; letter-spacing: -.012em; color: var(--ink); text-wrap: balance; }
+.fold-h { font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
+.fold-c {
+  width: 22px; height: 22px; flex: none; fill: none; stroke: var(--ink-2);
+  stroke-width: 2.4; stroke-linecap: square; transition: transform .22s ease;
+}
+.fold[open] > summary .fold-c { transform: rotate(180deg); }
+.fold-in { padding: 15px 16px 1px; }
+.fold-in > .in.nopad { padding: 0 0 14px; }
+@media (prefers-reduced-motion: reduce) { .fold-c { transition: none; } }
+@media (max-width: 640px) {
+  .fold-t { font-size: 16px; }
+  .fold-h { display: none; }
+  .fold > summary { padding: 12px 13px; gap: 10px; }
+  .fold-in { padding: 12px 12px 1px; }
+}
+
+/* ── Gauge: one ratio ──────────────────────────────────────────────────────
+   A half-dial rather than a ring, so it cannot be read as a second copy of the
+   register-status donut sitting beside it.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.cov { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.cov-r { flex: 1; min-width: 172px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.cov-f .eyebrow { display: flex; align-items: center; gap: 6px; }
+.cov-sw { width: 9px; height: 9px; flex: none; }
+.cov-n { font-size: 20px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.gg { flex: none; max-width: 100%; height: auto; }
+.gg-t line { stroke: var(--line-hard); stroke-width: 1.5; }
+.gg-v { font: 900 34px/1 'Merriweather', serif; fill: var(--ink); font-variant-numeric: tabular-nums; }
+.gg-u { font-size: 17px; fill: var(--ink-3); }
+.gg-l { font: 700 9px/1 'Public Sans', sans-serif; fill: var(--ink-3); letter-spacing: .1em; text-transform: uppercase; }
+
+/* ── Stacked strip: one composition on one track ───────────────────────────*/
+
+.sbar { display: flex; height: 30px; border: 1px solid var(--ink); overflow: hidden; background: var(--surface-3); }
+.sseg { display: block; width: 0; height: 100%; transition: width .7s cubic-bezier(.2,.8,.3,1); }
+.sseg + .sseg { border-left: 1px solid var(--surface); }
+.skey { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 11px; font-size: 12px; color: var(--ink-2); }
+.skr { display: inline-flex; align-items: center; gap: 7px; }
+.skr i { width: 10px; height: 10px; flex: none; }
+.skr b { font: 600 12px/1 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* ── Area: a quantity across an ordered axis ───────────────────────────────*/
+
+.areawrap { --a-t: 12px; --a-h: 150px; position: relative; padding: var(--a-t) 6px 0 38px; }
+.areabox { position: relative; height: var(--a-h); }
+.area { display: block; width: 100%; height: 100%; overflow: visible; }
+.area-s { stroke-width: 2.2; stroke-linejoin: round; }
+.ax-g { stroke: var(--line-soft); }
+.area-p {
+  position: absolute; width: 9px; height: 9px; border-radius: 50%;
+  transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--surface);
+}
+.area-p:hover { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ay {
+  position: absolute; left: 0; transform: translateY(-50%);
+  font: 500 10px/1 'JetBrains Mono', monospace; color: var(--ink-3); font-variant-numeric: tabular-nums;
+}
+.ax {
+  display: flex; margin: 8px 0 0; padding-left: 0;
+  font: 500 10px/1 'JetBrains Mono', monospace; color: var(--ink-3);
+}
+.ax span { flex: 1; text-align: center; min-width: 0; }
+.ax span:first-child { text-align: left; }
+.ax span:last-child { text-align: right; }
+@media (max-width: 520px) { .ax span:nth-child(even) { visibility: hidden; } }
+
+/* ── Treemap: parts of a whole, drawn at their real share ──────────────────*/
+
+.tmap { position: relative; width: 100%; height: clamp(230px, 30vw, 330px); }
+.tm {
+  position: absolute; overflow: hidden; border: 2px solid var(--surface);
+  transition: opacity .15s; color: #fff;
+}
+.tmap:hover .tm { opacity: .5; }
+.tmap .tm:hover { opacity: 1; }
+.tm-in { display: block; padding: 7px 9px; }
+.tm-t {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font: 700 12.5px/1.25 'Public Sans', sans-serif; letter-spacing: -.005em;
+}
+.tm-n { display: block; margin-top: 3px; font: 600 11px/1 'JetBrains Mono', monospace; opacity: .84; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .tm { transition: none; } }
+
+/* ── Dot plot: a ranking on a shared axis ──────────────────────────────────
+   Length still carries the value, but the weight sits at the end of it, so ten
+   near-equal values stay ten distinguishable marks instead of one grey block.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.lol { display: flex; flex-direction: column; gap: 9px; }
+.lrow { display: grid; grid-template-columns: minmax(74px, 30%) 1fr auto; gap: 11px; align-items: center; font-size: 12px; }
+.lrow .ll { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
+.ltrack { position: relative; height: 12px; border-bottom: 1px dotted var(--line-hard); }
+.lstem { position: absolute; left: 0; top: 5px; height: 2px; opacity: .45; }
+.ldot { position: absolute; top: 1px; width: 11px; height: 11px; border-radius: 50%; transform: translateX(-50%); }
+.lrow:hover .ldot { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lrow .lv { font: 600 12px/1 'JetBrains Mono', monospace; color: var(--ink); min-width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Ranked list: a shortlist where the order is the finding ───────────────*/
+
+.rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rank li {
+  display: grid; grid-template-columns: auto minmax(84px, auto) 1fr auto; gap: 11px;
+  align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line-soft);
+}
+.rank li:last-child { border-bottom: 0; }
+.rk { font: 700 10px/1 'JetBrains Mono', monospace; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.rn { font-size: 12.5px; }
+.rbar { height: 7px; background: var(--surface-3); }
+.rbar i { display: block; height: 100%; }
+.rank .rv { font: 600 12px/1 'JetBrains Mono', monospace; color: var(--ink); min-width: 26px; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .rank li { grid-template-columns: auto 1fr auto; }
+  .rbar { display: none; }
+}
+
+/* Dark mode lightens the categorical ramp, so white label text on a treemap
+   tile stops carrying. The tiles are light there; the labels go dark. */
+[data-theme="dark"] .tm { color: #0B1A22; }
+[data-theme="dark"] .fold-n { color: #0B1A22; background: var(--pet-400); }
+[data-theme="dark"] .sseg + .sseg { border-left-color: var(--surface); }

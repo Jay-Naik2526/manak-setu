@@ -97,6 +97,7 @@
             <div class="meta">manak_setu.db · 5 tables · recomputed each load</div>
           </div>
           <div class="vh-act">
+            <button class="btn q" id="ov-fold">Expand all</button>
             <button class="btn q" id="ov-refresh"><svg class="i sm" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>Refresh</button>
           </div>
         </div>
@@ -127,36 +128,87 @@
              meet — which is stated rather than omitted. -->
         <section class="asks" id="ps-asks"></section>
 
-        <div class="grid c21">
-          <div class="card">
-            <div class="hd"><h3>Standards coverage of tender citations</h3><span class="hint">one cell = one cited standard</span></div>
-            <div class="in" id="ov-cov"></div>
+        <!-- Fourteen cards of equal weight is a dashboard, and a dashboard
+             asks the reader to work out what matters. These are four named
+             sections, ordered by how much they are worth reading, and the two
+             that are supporting evidence start closed. The open/closed state is
+             remembered per section. -->
+        <details class="fold" id="fold-health" open>
+          <summary>
+            <span class="fold-n">01</span>
+            <span class="fold-b"><span class="fold-t">Procurement standards health</span>
+              <span class="fold-h">What the tender corpus says about the standards government is buying against</span></span>
+            <svg class="fold-c" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="fold-in"><div class="in nopad" id="ov-health"></div></div>
+        </details>
+
+        <details class="fold" id="fold-cover" open>
+          <summary>
+            <span class="fold-n">02</span>
+            <span class="fold-b"><span class="fold-t">The register, and how much of procurement it covers</span>
+              <span class="fold-h">Every standard cited by a tender, against the standards actually held</span></span>
+            <svg class="fold-c" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="fold-in">
+            <div class="grid c2">
+              <div class="card">
+                <div class="hd"><h3>Coverage of tender citations</h3><span class="hint">distinct standards</span></div>
+                <div class="in" id="ov-cov"></div>
+              </div>
+              <div class="card">
+                <div class="hd"><h3>Register status</h3><span class="hint">as BIS publishes it</span></div>
+                <div class="in" id="ov-status"></div>
+              </div>
+            </div>
           </div>
-          <div class="card">
-            <div class="hd"><h3>Register status</h3></div>
-            <div class="in" id="ov-status"></div>
+        </details>
+
+        <details class="fold" id="fold-corpus">
+          <summary>
+            <span class="fold-n">03</span>
+            <span class="fold-b"><span class="fold-t">What the corpus is made of</span>
+              <span class="fold-h">How much of it could be read, and how old the register behind it is</span></span>
+            <svg class="fold-c" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="fold-in">
+            <div class="grid c2">
+              <div class="card">
+                <div class="hd"><h3>Document extractability</h3><span class="hint"><span data-ct="tenders">&mdash;</span> collected</span></div>
+                <div class="in" id="ov-usab"></div>
+              </div>
+              <div class="card">
+                <div class="hd"><h3>Register by publication decade</h3></div>
+                <div class="in" id="ov-decade"></div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="card" id="ov-health-card">
-          <div class="hd"><h3>Procurement standards health</h3>
-            <span class="hint">measured across the tender corpus</span></div>
-          <div class="in" id="ov-health"></div>
-        </div>
-        <div class="grid c2">
-          <div class="card">
-            <div class="hd"><h3>Document extractability</h3><span class="hint"><span data-ct="tenders">—</span> collected</span></div>
-            <div class="in" id="ov-usab"></div>
+        </details>
+
+        <details class="fold" id="fold-shape">
+          <summary>
+            <span class="fold-n">04</span>
+            <span class="fold-b"><span class="fold-t">Where the register concentrates</span>
+              <span class="fold-h">Which families it holds, which standards everything else hangs off, and what is missing</span></span>
+            <svg class="fold-c" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="fold-in">
+            <div class="card">
+              <div class="hd"><h3>Product families</h3><span class="hint">share of the register</span></div>
+              <div class="in" id="ov-fam"></div>
+            </div>
+            <div class="grid c2">
+              <div class="card">
+                <div class="hd"><h3>Most connected</h3><span class="hint">co-citation degree</span></div>
+                <div class="in" id="ov-deg"></div>
+              </div>
+              <div class="card">
+                <div class="hd"><h3>Highest-demand gaps</h3><span class="hint">cited, not held</span></div>
+                <div class="in" id="ov-gap"></div>
+              </div>
+            </div>
           </div>
-          <div class="card">
-            <div class="hd"><h3>Register by publication decade</h3></div>
-            <div class="in" id="ov-decade"></div>
-          </div>
-        </div>
-        <div class="grid c3">
-          <div class="card"><div class="hd"><h3>Product families</h3></div><div class="in" id="ov-fam"></div></div>
-          <div class="card"><div class="hd"><h3>Most connected</h3><span class="hint">degree</span></div><div class="in" id="ov-deg"></div></div>
-          <div class="card"><div class="hd"><h3>Highest-demand gaps</h3><span class="hint">cited, not held</span></div><div class="in" id="ov-gap"></div></div>
-        </div>
+        </details>
       </section>
 
       <!-- ══ DRAFT (forward flow) ══ -->

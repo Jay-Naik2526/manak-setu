@@ -183,6 +183,167 @@ function histo(data) {
     </div>`).join('')}</div>`;
 }
 
+/* ── chart forms ───────────────────────────────────────────────────────────
+   One form per question. The overview used to answer six different questions
+   with six copies of the same horizontal bar in the same eight-colour rotation,
+   which makes a page of charts read as wallpaper: if every shape is the same,
+   the shape is not carrying anything. So: a single ratio gets a gauge, a
+   composition gets one stacked strip, a series over time gets an area, a
+   part-of-whole with many parts gets a treemap, a ranking gets dots on a shared
+   axis, and a shortlist gets a numbered list. The form is the argument. */
+
+/* One ratio against its whole. Half-dial rather than a ring, so it cannot be
+   mistaken for the register-status donut sitting beside it. */
+function gauge(part, whole, { cap = '', color = 'var(--ok)' } = {}) {
+  const W = 268, H = 152, cx = W / 2, cy = 130, rO = 104, rI = 82;
+  const p = whole ? Math.max(0, Math.min(1, part / whole)) : 0;
+  const pct = p * 100;
+  const fill = p > 0.003
+    ? `<path d="${ring(cx, cy, rO, rI, -90, -90 + 180 * p)}" fill="${color}"/>` : '';
+  const ticks = [0, 25, 50, 75, 100].map(t => {
+    const a = -90 + 1.8 * t, o = polar(cx, cy, rO + 3, a), i = polar(cx, cy, rO + 9, a);
+    return `<line x1="${o.x.toFixed(1)}" y1="${o.y.toFixed(1)}" x2="${i.x.toFixed(1)}" y2="${i.y.toFixed(1)}"/>`;
+  }).join('');
+  return `<svg class="gg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img"
+    aria-label="${pct.toFixed(1)} percent of ${whole}">
+    <path d="${ring(cx, cy, rO, rI, -90, 90)}" fill="var(--surface-3)"/>${fill}
+    <g class="gg-t">${ticks}</g>
+    <text class="gg-v" x="${cx}" y="${cy - 34}" text-anchor="middle">${pct.toFixed(1)}<tspan class="gg-u">%</tspan></text>
+    <text class="gg-l" x="${cx}" y="${cy - 13}" text-anchor="middle">${esc(cap)}</text>
+  </svg>`;
+}
+
+/* A composition, drawn once across the full width instead of one bar per part.
+   Parts of a single whole belong on a single track — stacking them says so. */
+function stackBar(data) {
+  const total = data.reduce((s, d) => s + d.count, 0) || 1;
+  setTimeout(() => $$('.sseg[data-w]').forEach(e => { e.style.width = e.dataset.w + '%'; e.removeAttribute('data-w'); }), 30);
+  return `<div class="sbar">${data.map((d, i) => `<span class="sseg" data-w="${(d.count / total * 100).toFixed(2)}"
+      style="background:${d.color || KC[i % 8]}" title="${esc(d.key)}: ${d.count}"></span>`).join('')}</div>
+    <div class="skey">${data.map((d, i) => `<span class="skr">
+      <i style="background:${d.color || KC[i % 8]}"></i>${esc(d.key)}
+      <b>${d.count}</b>${total >= PERCENT_FLOOR ? `<span class="dimmer"> · ${(d.count / total * 100).toFixed(1)}%</span>` : ''}
+    </span>`).join('')}</div>`;
+}
+
+/* A quantity across an ordered axis. Decades are a sequence, and columns with
+   a gap between them deny that; an area with the points marked does not.
+
+   The marks are SVG stretched to the container (with a non-scaling stroke, so
+   the line keeps its weight); the axis labels and the points are real elements
+   positioned over it. An SVG scaled non-uniformly stretches its own text, and
+   at 1100px against a 560-unit viewBox the decade labels came out at double
+   width. Text that has to stay text does not go in a stretched viewBox. */
+function areaChart(data, { color = 'var(--k4)' } = {}) {
+  const n = data.length;
+  if (!n) return '';
+  const W = 100, H = 100;
+  const mx = Math.max(...data.map(d => d.count), 1);
+  const X = i => n === 1 ? W / 2 : i * W / (n - 1);
+  const Y = v => H - v / mx * H;
+  const line = data.map((d, i) => `${i ? 'L' : 'M'}${X(i).toFixed(2)} ${Y(d.count).toFixed(2)}`).join('');
+  return `<div class="areawrap">
+    <span class="ay" style="top:var(--a-t)">${mx.toLocaleString()}</span>
+    <span class="ay" style="top:calc(var(--a-t) + var(--a-h) / 2)">${Math.round(mx / 2).toLocaleString()}</span>
+    <div class="areabox">
+      <svg class="area" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="${color}" stop-opacity=".30"/>
+          <stop offset="1" stop-color="${color}" stop-opacity=".02"/></linearGradient></defs>
+        <line class="ax-g" x1="0" y1="0" x2="${W}" y2="0" vector-effect="non-scaling-stroke"/>
+        <line class="ax-g" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}" vector-effect="non-scaling-stroke"/>
+        <line class="ax-g" x1="0" y1="${H}" x2="${W}" y2="${H}" vector-effect="non-scaling-stroke"/>
+        <path d="${line}L${W} ${H}L0 ${H}Z" fill="url(#ag)"/>
+        <path class="area-s" d="${line}" fill="none" stroke="${color}" vector-effect="non-scaling-stroke"/>
+      </svg>
+      ${data.map((d, i) => `<span class="area-p" style="left:${X(i).toFixed(2)}%;top:${Y(d.count).toFixed(2)}%;background:${color}"
+        title="${esc(d.key)}: ${d.count}"></span>`).join('')}
+    </div>
+    <div class="ax">${data.map(d => `<span>${esc(d.key)}</span>`).join('')}</div>
+  </div>`;
+}
+
+/* Many parts of one whole, where the point is relative size rather than rank.
+   Squarified, so a family holding a tenth of the register looks like a tenth of
+   the register instead of a bar four pixels longer than its neighbour.
+
+   Laid out in percentages and drawn as elements rather than as SVG: an SVG
+   scaled to the container scales its text with it, which made the family names
+   render at twice their nominal size and clip inside their own tiles. Real
+   elements keep real type, wrap, and ellipsis. */
+function treemap(data) {
+  const items = data.filter(d => d.count > 0);
+  const total = items.reduce((s, d) => s + d.count, 0);
+  if (!total) return '';
+  const W = 100, H = 100;                       // percent of the box
+  const areas = items.map(d => d.count * W * H / total);
+  const out = [];
+  let x = 0, y = 0, w = W, h = H, i = 0;
+  while (i < areas.length && w > 0.01 && h > 0.01) {
+    const horiz = w >= h, side = horiz ? h : w;
+    let row = [], sum = 0, best = Infinity, j = i;
+    while (j < areas.length) {
+      const s2 = sum + areas[j], len = s2 / side;
+      const worst = Math.max(...[...row, areas[j]].map(v => {
+        const t = v / len;
+        return Math.max(len / t, t / len);
+      }));
+      if (row.length && worst > best) break;
+      row = [...row, areas[j]]; sum = s2; best = worst; j++;
+    }
+    const len = sum / side;
+    let off = 0;
+    row.forEach((v, k) => {
+      const t = v / len;
+      out.push(horiz ? { x, y: y + off, w: len, h: t, d: items[i + k] }
+                     : { x: x + off, y, w: t, h: len, d: items[i + k] });
+      off += t;
+    });
+    if (horiz) { x += len; w -= len; } else { y += len; h -= len; }
+    i = j;
+  }
+  /* A tile too small to hold its own name should not try: a clipped word is
+     worse than no word, and the title attribute still carries it. Percentages
+     against a nominal 1000x280 box, which is what the card gives it on a
+     desktop — close enough to decide whether two lines of 12px will fit. */
+  const fits = r => r.w * 10 > 66 && r.h * 2.8 > 30;
+  return `<div class="tmap">${out.map((r, k) => {
+    const share = r.d.count / total * 100;
+    return `<div class="tm" title="${esc(String(r.d.key))}: ${r.d.count} of ${total} (${share.toFixed(1)}%)"
+      style="left:${r.x.toFixed(3)}%;top:${r.y.toFixed(3)}%;width:${r.w.toFixed(3)}%;height:${r.h.toFixed(3)}%;background:${KC[k % 8]}">
+      ${fits(r) ? `<span class="tm-in">
+        <span class="tm-t">${esc(String(r.d.key))}</span>
+        <span class="tm-n">${r.d.count}</span>
+      </span>` : ''}</div>`;
+  }).join('')}</div>`;
+}
+
+/* A ranking. The length still encodes the value, but the weight sits at the
+   end of it rather than filling the row, so ten near-equal values stay ten
+   distinguishable marks instead of one grey block. */
+function lollipop(data, { color = 'var(--k1)' } = {}) {
+  const mx = Math.max(...data.map(d => d.count), 1);
+  return `<div class="lol">${data.map(d => {
+    const p = (d.count / mx * 100).toFixed(1);
+    return `<div class="lrow" title="${esc(d.key)}: ${d.count}">
+      <span class="ll mono">${esc(d.key)}</span>
+      <span class="ltrack"><span class="lstem" style="width:${p}%;background:${color}"></span>
+        <span class="ldot" style="left:${p}%;background:${color}"></span></span>
+      <span class="lv">${d.count}</span></div>`;
+  }).join('')}</div>`;
+}
+
+/* A shortlist, numbered. Ten rows where the ordering is the finding — which
+   standard is missing and most wanted — read better as a list than a chart. */
+function rankList(data, { color = 'var(--accent)', go = false } = {}) {
+  const mx = Math.max(...data.map(d => d.count), 1);
+  return `<ol class="rank">${data.map((d, i) => `<li>
+      <span class="rk">${String(i + 1).padStart(2, '0')}</span>
+      <span class="rn mono${go ? ' jump' : ''}"${go ? ` data-go="${esc(d.key)}"` : ''}>${esc(d.key)}</span>
+      <span class="rbar"><i style="width:${(d.count / mx * 100).toFixed(1)}%;background:${color}"></i></span>
+      <span class="rv">${d.count}</span></li>`).join('')}</ol>`;
+}
+
 function countUp(el, target, dec = 0) {
   // rAF is frozen in a background tab, so a figure loaded there would sit at 0
   // for good — the count-up is decoration, the number is not.
@@ -449,20 +610,44 @@ async function loadOverview(force) {
   try { S.stats = await api('/stats'); }
   catch (e) { $('#ov-cov').innerHTML = offline(e.message); return; }
   ready.add('overview');
+
+  /* The health tables and the backlog print IS numbers as .jump cells, and
+     nothing was listening to any of them — every one was inert. One delegated
+     handler on the view covers them all, and survives the innerHTML rewrites
+     that the per-element loops elsewhere have to be re-run after. */
+  const ov = $('#v-overview');
+  if (ov && !ov.dataset.wired) {
+    ov.dataset.wired = '1';
+    ov.addEventListener('click', e => {
+      const el = e.target.closest('[data-go]');
+      if (el) openStandard(el.dataset.go);
+    });
+  }
+
   const st = S.stats, cv = st.coverage;
   drawHealthIndex();
 
 
-  $('#ov-cov').innerHTML = unitChart(cv.matched, cv.distinct_cited) + `
-    <div style="display:flex;gap:22px;margin-top:14px;flex-wrap:wrap">
-      ${[['Held in register', cv.matched, 'var(--ok)'], ['Cited, not held', cv.unmatched, 'var(--surface-3)'],
-         ['Coverage', cv.pct + '%', 'transparent']]
-        .map(([l, v, c]) => `<div>
-          <div class="eyebrow" style="display:flex;align-items:center;gap:6px">
-            ${c !== 'transparent' ? `<span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>` : ''}${l}</div>
-          <div class="mono" style="font-size:15px;margin-top:3px">${v}</div></div>`).join('')}
+  /* This used to be 1,986 nine-pixel squares — a contribution grid. At that
+     count the cells are below the size at which a reader can tell two apart,
+     so the only thing it communicated was "a lot, mostly green", which is a
+     percentage drawn the long way round. The ratio is one number; a dial says
+     one number. */
+  $('#ov-cov').innerHTML = `<div class="cov">
+      ${gauge(cv.matched, cv.distinct_cited, { cap: 'of cited standards held' })}
+      <div class="cov-r">
+        ${[['Held in register', cv.matched, 'var(--ok)'],
+           ['Cited, not held', cv.unmatched, 'var(--surface-3)'],
+           ['Distinct standards cited', cv.distinct_cited, '']]
+          .map(([l, v, c]) => `<div class="cov-f">
+            <div class="eyebrow">${c ? `<span class="cov-sw" style="background:${c}"></span>` : ''}${l}</div>
+            <div class="cov-n mono">${v}</div></div>`).join('')}
+        <button class="btn tiny" data-view="coverage">See the backlog →</button>
+      </div>
     </div>
     <p class="xs dimmer" style="margin-top:12px">${esc(cv.denominator_note)}</p>`;
+  const covBtn = $('#ov-cov [data-view]');
+  if (covBtn) covBtn.addEventListener('click', () => go('coverage'));
 
   /* The headline is the finding, not the inventory. It needs the health index,
      which loads separately, so it fills in when that arrives and says something
@@ -486,12 +671,39 @@ async function loadOverview(force) {
       ${donut(sd, { val: tot, lab: 'standards' })}<div style="flex:1;min-width:150px">${legend(sd, tot)}</div></div>
     <p class="xs dimmer" style="margin-top:11px">Successor status on file for ${notCurrent} of ${tot}.</p>`;
 
-  $('#ov-usab').innerHTML = bars(st.tenders_by_usability, d => d.key === 'Usable' ? 'var(--ok)' : 'var(--ink-4)')
-    + `<p class="xs dimmer" style="margin-top:11px">Coverage and benchmark figures use <span class="mono">Usable</span> rows only.</p>`;
-  $('#ov-decade').innerHTML = histo(st.standards_by_decade);
-  $('#ov-fam').innerHTML = bars(st.standards_by_family);
-  $('#ov-deg').innerHTML = bars(st.graph.top_degree.map(d => ({ key: d.is_number, count: d.degree })), 'var(--k1)');
-  $('#ov-gap').innerHTML = bars(st.backlog_top.slice(0, 10).map(d => ({ key: d.is_number, count: d.tenders_citing })), 'var(--accent)');
+  /* Four questions, four forms. Extractability is a composition of one corpus,
+     so it is one stacked track. Decades are a sequence, so they are an area.
+     Families are parts of a whole where relative size is the point, so they are
+     a treemap. Degree is a ranking on a shared axis, so it is a dot plot. And
+     the backlog is a shortlist where the order is the finding, so it is a
+     numbered list — with the IS numbers clickable, which bars never were. */
+  /* The class that matters leads the strip — the API returns the corpus in its
+     own order, and "not extractable" arriving first put the biggest, greyest
+     block where the reader looks before they have met the legend. */
+  const USAB = { 'Usable': 'var(--ok)', 'Multi-scope': 'var(--k4)',
+                 'Extraction failed': 'var(--bad)', 'Not extractable': 'var(--k8)' };
+  const usabOrder = Object.keys(USAB);
+  $('#ov-usab').innerHTML = stackBar(
+      [...st.tenders_by_usability]
+        .sort((a, b) => usabOrder.indexOf(a.key) - usabOrder.indexOf(b.key))
+        .map(d => ({ ...d, color: USAB[d.key] || 'var(--ink-4)' })))
+    + `<p class="xs dimmer" style="margin-top:11px">Coverage and benchmark figures use <span class="mono">Usable</span> rows only.
+       Not extractable means a scanned or image-only attachment, reported as such rather than counted as clean.</p>`;
+
+  /* An area asserts an axis, and "Unknown" is not a point on the decade axis.
+     Leaving it on the end drew a cliff at the right-hand edge that says nothing
+     about publication years. It is stated underneath instead. */
+  const decades = st.standards_by_decade.filter(d => /^\d/.test(d.key));
+  const noDecade = st.standards_by_decade.find(d => !/^\d/.test(d.key));
+  $('#ov-decade').innerHTML = areaChart(decades)
+    + `<p class="xs dimmer" style="margin-top:9px">Year of publication as BIS prints it on the title; an edition
+       carries the year of that edition, not of the first issue.${noDecade
+         ? ` ${noDecade.count} standards carry no year on the title and are not on the axis.` : ''}</p>`;
+  $('#ov-fam').innerHTML = treemap(st.standards_by_family)
+    + `<p class="xs dimmer" style="margin-top:9px">Area is share of the register.</p>`;
+  $('#ov-deg').innerHTML = lollipop(st.graph.top_degree.map(d => ({ key: d.is_number, count: d.degree })));
+  $('#ov-gap').innerHTML = rankList(
+    st.backlog_top.slice(0, 10).map(d => ({ key: d.is_number, count: d.tenders_citing })), { go: true });
 }
 
 /* Hero graph: the same co-citation data as the graph tab, laid out once and
@@ -653,21 +865,6 @@ async function heroGraph() {
     }).join('') + `</g><g class="hn-g">` +
     n.map(d => `<circle class="hn ${hot.has(d.id) ? 'hot' : ''}" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${d.r.toFixed(1)}"/>`)
       .join('') + `</g>`;
-}
-
-/* One cell per distinct cited standard. Counts come from /stats, never
-   from a figure typed in here. */
-function unitChart(held, total) {
-  /* The stagger used to be one setTimeout per cell — 488 timers, each waking the
-     main thread to toggle a class and start its own transition. It is now a
-     single class flip on the container, with the delay carried by CSS. */
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const box = $('.units');
-    if (box) box.classList.add('in');
-  }));
-  return `<div class="units">${Array.from({ length: total }, (_, i) =>
-    `<span class="unit ${i < held ? 'held' : ''}" style="--d:${(i * 1.4).toFixed(0)}ms"
-      title="${i < held ? 'held in register' : 'cited, not held'}"></span>`).join('')}</div>`;
 }
 
 /* What sits in the answer column before there is an answer.
@@ -3221,6 +3418,33 @@ async function boot() {
   document.addEventListener('keydown', trapFocus);
   $('#dw-pin').onclick = () => togglePin($('#dw-title').textContent);
   $('#ov-refresh').onclick = () => loadOverview(true);
+
+  /* The overview's sections remember whether they were open. Someone who works
+     out of the corpus section should not have to reopen it on every visit, and
+     someone who only ever reads the headline should not have to scroll past
+     four charts they closed yesterday. */
+  const folds = $$('#v-overview .fold');
+  const foldKey = f => 'manak.fold.' + f.id;
+  folds.forEach(f => {
+    const saved = localStorage.getItem(foldKey(f));
+    if (saved !== null) f.open = saved === '1';
+    f.addEventListener('toggle', () => {
+      localStorage.setItem(foldKey(f), f.open ? '1' : '0');
+      syncFoldBtn();
+    });
+  });
+  const foldBtn = $('#ov-fold');
+  function syncFoldBtn() {
+    if (!foldBtn) return;
+    foldBtn.textContent = folds.every(f => f.open) ? 'Collapse all' : 'Expand all';
+  }
+  if (foldBtn) {
+    foldBtn.onclick = () => {
+      const open = !folds.every(f => f.open);
+      folds.forEach(f => { f.open = open; });
+    };
+  }
+  syncFoldBtn();
   $('#bm-run').onclick = () => loadBench(true);
 
   $('#drop').onclick = () => $('#file').click();
