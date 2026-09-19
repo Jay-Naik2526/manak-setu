@@ -1580,3 +1580,60 @@ table td { font-size: 14.5px; }
 .tab .ct { font-size: 11px; }
 
 .note { border-left-width: 5px; border-radius: 0; }
+
+/* ── The finding, and the statement it answers ─────────────────────────────
+   The hero headline is now a number with a denominator rather than a count of
+   what we hold, so it is set at display scale and the figure is the loudest
+   thing on the page. */
+.hero-h .big {
+  font-size: clamp(56px, 7vw, 92px); line-height: .92; display: inline-block;
+  letter-spacing: -.035em; color: var(--accent);
+}
+.hero-h .of {
+  font-family: 'JetBrains Mono', monospace; font-weight: 500;
+  font-size: clamp(15px, 1.5vw, 20px); letter-spacing: 0; opacity: .72;
+  margin-left: 8px;
+}
+.hero-h em { font-style: normal; color: var(--accent); }
+
+/* The six expected features. A numbered list because the statement is a list
+   and the order is its order — the one structural device here that carries
+   information rather than decoration. */
+.asks { margin-top: 18px; }
+.asks-hd { margin-bottom: 12px; }
+.asks-hd h2 {
+  font-family: 'Public Sans', sans-serif; font-weight: 800;
+  font-size: clamp(20px, 2.2vw, 28px); letter-spacing: -.02em; margin-top: 3px;
+}
+.asks-grid { display: grid; gap: 0; border-top: var(--bw) solid var(--ink); }
+.ask {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 14px;
+  align-items: start; text-align: left; width: 100%;
+  padding: 14px 10px; background: none; border: 0;
+  border-bottom: 1px solid var(--line); cursor: pointer; color: inherit;
+  font: inherit; transition: background var(--t-fast);
+}
+.ask:hover { background: var(--surface-2); }
+.ask-n {
+  font: 800 15px/1.2 'JetBrains Mono', monospace; color: var(--ink-4);
+  font-variant-numeric: tabular-nums; padding-top: 1px;
+}
+.ask-b { display: block; min-width: 0; }
+.ask-t { display: block; font-weight: 700; font-size: 14.5px; line-height: 1.35; }
+.ask-h {
+  display: block; margin-top: 4px; font-size: 12.5px; line-height: 1.5;
+  color: var(--ink-2); max-width: 82ch;
+}
+.ask-s {
+  font: 700 9.5px/1 'JetBrains Mono', monospace; letter-spacing: .1em;
+  text-transform: uppercase; padding: 5px 8px; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.ask-s.met { color: var(--ok); border-color: var(--ok); }
+/* "Partly" is a claim about us, so it is marked as plainly as the others. */
+.ask-s.partial { color: var(--accent); border-color: var(--accent); }
+
+@media (max-width: 720px) {
+  .ask { grid-template-columns: 30px 1fr; }
+  .ask-s { grid-column: 2; justify-self: start; margin-top: 8px; }
+}
