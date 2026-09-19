@@ -1375,7 +1375,13 @@ const DEMO = [
     view: 'overview', hold: 9000, spot: '#hero',
     h: 'What the console holds',
     p: () => { const r = (S.stats || {}).row_counts || {}; const g = (S.stats || {}).graph || {};
-      return `${(r.standards || 2087).toLocaleString()} Indian Standards, ${r.tenders || 220} real government tenders, ${(g.edges || 3336).toLocaleString()} co-citation edges, ${r.certification_rules || 737} certification rules. Every figure is recomputed from the database on load — nothing on this page is typed in.`; },
+      // No stale defaults. These fell back to 2,087 standards, 220 tenders and
+      // 3,336 edges — the figures from three collection rounds ago — so a failed
+      // /stats call would have narrated them to a room as current.
+      if (!r.standards) {
+        return 'Every figure on this page is recomputed from the database on load — nothing here is typed in.';
+      }
+      return `${r.standards.toLocaleString()} Indian Standards, ${r.tenders.toLocaleString()} real government tenders, ${(g.edges || 0).toLocaleString()} co-citation pairs, ${r.certification_rules} certification rules. Every figure is recomputed from the database on load — nothing on this page is typed in.`; },
   },
   {
     view: 'overview', hold: 9000, spot: '#ov-cov',
@@ -1417,7 +1423,10 @@ const DEMO = [
     view: 'graph', hold: 10000, spot: '#gwrap',
     h: 'Where "related" comes from',
     p: () => { const g = (S.stats || {}).graph || {};
-      return `${g.nodes || 193} standards joined by ${(g.edges || 3336).toLocaleString()} edges, each edge a count of two standards appearing in the same published tender. Colour is BIS department. The clusters are procurement practice, not a layout choice.`; },
+      if (!g.nodes) {
+        return 'Each edge is a count of two standards appearing in the same published tender. Colour is BIS department, and the clusters are procurement practice rather than a layout choice.';
+      }
+      return `${g.nodes.toLocaleString()} standards joined by ${g.edges.toLocaleString()} related pairs, each pair a count of two standards appearing in the same published tender. Colour is BIS department. The clusters are procurement practice, not a layout choice.`; },
     run: async () => { await wait(1200); },
   },
   {
@@ -1944,7 +1953,8 @@ async function openStandard(id) {
         <div class="t"><span class="mono jump" data-go="${esc(r.target_is)}">${esc(r.target_is)}</span>
           <span class="pill mute">conf ${r.confidence}</span><span class="pill mute">lift ${r.lift}</span></div>
         <div class="s">${esc(r.evidence_statement)}</div></div>`).join('')
-      : `<p class="xs dimmer">No edges. Below graph thresholds: 5 citing tenders, 3 co-citations, confidence 0.25.</p>`}`;
+      : `<p class="xs dimmer">No related pairs recorded for this standard at the graph's
+          current evidence thresholds — see the Graph screen, which prints them.</p>`}`;
   $$('#dw-body [data-go]').forEach(el => el.addEventListener('click', () => openStandard(el.dataset.go)));
 }
 
