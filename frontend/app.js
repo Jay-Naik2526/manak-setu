@@ -2536,22 +2536,73 @@ async function drawPeers(query) {
    and the count stays printed at the end — a share on its own hides whether it
    was measured over eleven documents or five hundred. */
 
+/* Two dots on one absolute axis: where the corpus sits, and where the part of
+   it citing a dead standard sits. The gap between them is the finding, and it
+   is the thing the eye actually measures.
+
+   It was a bar inside a bar. Nested bars ask the reader to compare a length to
+   a length that starts at the same place, which is the one comparison the eye
+   is worst at, and they force a colour decision that reads as decoration: a red
+   block overlapping a blue one says nothing about which is the whole. The axis
+   is absolute counts, deliberately — the project's own rule bars a percentage
+   over a denominator under about thirty, and the smallest ministry here has
+   twenty-six documents. */
+function dumbbell(rows, o) {
+  const mx = Math.max(...rows.map(r => r[o.whole]), 1);
+  const cW = o.cWhole || 'var(--k8)', cP = o.cPart || 'var(--bad)';
+  return `<div class="db">
+    <div class="db-key">
+      <span><i style="background:${cP}"></i>${esc(o.partLabel)}</span>
+      <span><i style="background:${cW}"></i>${esc(o.wholeLabel)}</span>
+    </div>
+    ${rows.map(r => {
+      const name = String(r[o.label]);
+      const pw = r[o.whole] / mx * 100, pp = r[o.part] / mx * 100;
+      return `<div class="db-r" title="${esc(name)}: ${r[o.part]} of ${r[o.whole]}">
+        <span class="db-l">${esc(name)}</span>
+        <span class="db-t">
+          <span class="db-line" style="left:${pp.toFixed(2)}%;width:${Math.max(0, pw - pp).toFixed(2)}%"></span>
+          <span class="db-d" style="left:${pw.toFixed(2)}%;background:${cW}"></span>
+          <span class="db-d" style="left:${pp.toFixed(2)}%;background:${cP}"></span>
+        </span>
+        <span class="db-n"><b>${r[o.part]}</b> of ${r[o.whole]}</span>
+      </div>`;
+    }).join('')}
+    <div class="db-ax"><span>0</span><span>${mx.toLocaleString()}<em> documents</em></span></div>
+  </div>`;
+}
+
+/* One square per document. At nineteen and below, a count drawn as countable
+   marks is read rather than estimated — and these are small enough to count.
+   A bar of length nineteen against a bar of length eleven is two lengths; this
+   is nineteen tenders and eleven tenders. */
+function dotArray(rows, { color = 'var(--accent)', cap = 60 } = {}) {
+  return `<div class="dotarr">${rows.map(r => `
+    <div class="da-r" title="${esc(String(r.key))}: ${r.count}">
+      <span class="da-l">${esc(String(r.key))}</span>
+      <span class="da-c">${Array.from({ length: Math.min(r.count, cap) }, () =>
+        `<i style="background:${color}"></i>`).join('')}${r.count > cap
+          ? `<b class="da-more">+${r.count - cap}</b>` : ''}</span>
+      <span class="da-n">${r.count}</span>
+    </div>`).join('')}</div>`;
+}
+
 function healthBars(d) {
   const fams = (d.by_family || []).filter(f => f.documents >= 20).slice(0, 8);
-  const years = (d.by_year || []).filter(y => y.documents >= 10);
+  /* The note under this card already said documents with no year are not
+     shown, and an "unknown" column was standing right there contradicting it.
+     A year axis takes years. */
+  const allYears = (d.by_year || []).filter(y => y.documents >= 10);
+  const years = allYears.filter(y => /^\d{4}$/.test(String(y.year)));
+  const noYear = allYears.find(y => !/^\d{4}$/.test(String(y.year)));
   const mins = ((d.buyers || {}).ministry || []).slice(0, 8);
   if (!fams.length && !years.length && !mins.length) return '';
-  const widest = Math.max(...fams.map(f => f.documents), 1);
 
-  const famRow = (f, i) => {
-    const share = f.documents ? f.with_dead_citation / f.documents : 0;
-    return `<div class="hix" style="animation-delay:${i * 40}ms">
-      <div class="hb-label" title="${esc(f.family)}">${esc(String(f.family).slice(0, 34))}</div>
-      <div class="hb-track"><div class="hb-total" style="width:${(f.documents / widest * 100).toFixed(1)}%">
-        <div class="hb-dead" style="width:${(share * 100).toFixed(1)}%"></div></div></div>
-      <div class="hb-n"><b>${f.with_dead_citation}</b> of ${f.documents}</div>
-    </div>`;
-  };
+  /* Three colours, three meanings, and they hold across every chart in this
+     card: slate is the corpus, red is a citation BIS has withdrawn, amber is a
+     compulsory mark the specification never asks for. Nothing here is coloured
+     because a rotation reached that index. */
+  const C_CORPUS = 'var(--k8)', C_DEAD = 'var(--bad)', C_MARK = 'var(--accent)';
 
   const tallest = Math.max(...years.map(y => y.documents), 1);
   const yearCol = (y, i) => {
@@ -2579,18 +2630,15 @@ function healthBars(d) {
     <div class="hd"><span class="eyebrow">Compulsory certification</span>
       <h3>Tenders that never ask for the mark</h3></div>
     <div class="in">
-      <p style="font-size:15px;line-height:1.55;margin:0 0 10px">
+      <p style="font-size:15px;line-height:1.55;margin:0 0 13px">
         <b class="mono" style="font-size:22px;color:var(--bad)">${gap.no_standard_mark_clause}</b>
         of the <b class="mono">${gap.scanned}</b> documents that cite a product under
         compulsory BIS certification, and whose text could be read, demand the Standard Mark
         nowhere at all. As written, uncertified goods meet those specifications.</p>
-      ${(gap.top_families || []).length ? `<div class="hbars">
-        ${gap.top_families.map((r, i) => `<div class="hix" style="animation-delay:${i * 40}ms">
-          <div class="hb-label" title="${esc(r.family)}">${esc(String(r.family).slice(0, 34))}</div>
-          <div class="hb-track"><div class="hb-total" style="width:${(r.documents / Math.max(...gap.top_families.map(x => x.documents), 1) * 100).toFixed(1)}%">
-            <div class="hb-dead" style="width:100%"></div></div></div>
-          <div class="hb-n"><b>${r.documents}</b></div>
-        </div>`).join('')}</div>` : ''}
+      ${(gap.top_families || []).length
+        ? dotArray(gap.top_families.map(r => ({ key: r.family, count: r.documents })), { color: C_MARK })
+          + `<p class="xs dimmer" style="margin-top:9px">One square is one tender document.</p>`
+        : ''}
       <p class="xs dimmer" style="margin-top:10px">
         ${gap.documents_citing_a_compulsory_item} of ${gap.of_documents} machine-readable
         documents cite such a product at all; ${gap.not_scanned} of those had no readable
@@ -2599,16 +2647,6 @@ function healthBars(d) {
     </div></div>` : '';
 
   const buyers = d.buyers || {};
-  const widestMin = Math.max(...mins.map(m => m.documents), 1);
-  const minRow = (m, i) => {
-    const share = m.documents ? m.with_dead_citation / m.documents : 0;
-    return `<div class="hix" style="animation-delay:${i * 40}ms">
-      <div class="hb-label" title="${esc(m.name)}">${esc(String(m.name).slice(0, 34))}</div>
-      <div class="hb-track"><div class="hb-total" style="width:${(m.documents / widestMin * 100).toFixed(1)}%">
-        <div class="hb-dead" style="width:${(share * 100).toFixed(1)}%"></div></div></div>
-      <div class="hb-n"><b>${m.with_dead_citation}</b> of ${m.documents}</div>
-    </div>`;
-  };
 
   /* The buyer is the reason this screen exists for the Department of Consumer
      Affairs rather than for a standards librarian: it names which parts of
@@ -2616,8 +2654,11 @@ function healthBars(d) {
   const ministryCard = mins.length ? `<div class="card" style="margin-top:14px">
     <div class="hd"><h3>By buying ministry</h3>
       <span class="hint">read from the GeM bid form</span></div>
-    <div class="in"><div class="hbars">${mins.map(minRow).join('')}</div>
-    <table style="margin-top:12px"><thead><tr><th>Ministry or state</th>
+    <div class="in">${dumbbell(mins, {
+      label: 'name', whole: 'documents', part: 'with_dead_citation',
+      wholeLabel: 'documents read', partLabel: 'cite a dead standard',
+      cWhole: C_CORPUS, cPart: C_DEAD })}
+    <table style="margin-top:14px"><thead><tr><th>Ministry or state</th>
       <th class="r">Documents</th><th class="r">Cite a dead standard</th>
       <th>Most-cited dead standard</th></tr></thead><tbody>
       ${mins.map(m => `<tr><td>${esc(m.name)}</td>
@@ -2636,17 +2677,23 @@ function healthBars(d) {
 
   return gapCard + ministryCard + `<div class="grid c2" style="margin-top:14px">
     ${fams.length ? `<div class="card"><div class="hd"><h3>By product family</h3>
-      <span class="hint">bar length = documents read</span></div>
-      <div class="in"><div class="hbars">${fams.map(famRow).join('')}</div>
+      <span class="hint">documents read</span></div>
+      <div class="in">${dumbbell(fams, {
+        label: 'family', whole: 'documents', part: 'with_dead_citation',
+        wholeLabel: 'documents read', partLabel: 'cite a dead standard',
+        cWhole: C_CORPUS, cPart: C_DEAD })}
       <p class="xs dimmer" style="margin-top:9px">Product families with at least 20
         machine-readable documents in this corpus — the kind of thing being bought, derived from
-        the citations themselves. The darker part of each bar is the documents citing a
+        the citations themselves. The distance between the two dots is the documents that cite a
         withdrawn or superseded standard.</p></div></div>` : ''}
     ${years.length ? `<div class="card"><div class="hd"><h3>By year the bid was floated</h3>
       <span class="hint">from the GeM bid number</span></div>
       <div class="in"><div class="ycols">${years.map(yearCol).join('')}</div>
       <p class="xs dimmer" style="margin-top:9px">Years with at least 10 documents. The year comes
-        from the bid number itself; documents whose identifier carries no year are not shown.</p>
+        from the bid number itself. The red foot of each column is the documents citing a dead
+        standard.${noYear ? ` A further ${noYear.documents} documents carry no year in their
+        identifier and are not on the axis; ${noYear.with_dead_citation} of those cite a dead
+        standard.` : ''}</p>
       </div></div>` : ''}
   </div>`;
 }

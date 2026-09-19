@@ -1212,32 +1212,56 @@ blockquote.clause-suggest {
 
 
 /* ── health index charts ─────────────────────────────────────────────────────
-   Bar length is the number of documents, the darker segment is how many of
-   them cite a dead standard, and the count stays printed beside it — a share
-   alone hides whether it was measured over eleven documents or five hundred. */
+   Two dots on one absolute axis: slate is the documents read, red is the ones
+   citing a standard BIS has withdrawn, and the distance between them is the
+   finding. It was a bar inside a bar, which asks the eye to compare two lengths
+   sharing a start — the comparison it is worst at. The counts stay printed
+   beside the row: a share alone hides whether it was measured over eleven
+   documents or five hundred. */
 
-.hbars { display: flex; flex-direction: column; gap: 9px; }
-.hix { display: grid; grid-template-columns: 148px 1fr 86px; gap: 10px; align-items: center;
+.db { display: flex; flex-direction: column; gap: 10px; }
+.db-key { display: flex; gap: 18px; font-size: 11px; color: var(--ink-2); margin-bottom: 2px; }
+.db-key span { display: inline-flex; align-items: center; gap: 6px; }
+.db-key i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.db-r { display: grid; grid-template-columns: 148px 1fr 92px; gap: 12px; align-items: center;
         opacity: 0; animation: barIn var(--t-base) var(--ease-out) forwards; }
-.hb-label { font-size: 11.5px; color: var(--ink-2); overflow: hidden;
-            text-overflow: ellipsis; white-space: nowrap; }
-.hb-track { height: 16px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
-.hb-total { height: 100%; background: var(--pet-400); border-radius: 3px; position: relative;
-            transform-origin: left center; animation: barGrow var(--t-reveal) var(--ease-out) both;
-            animation-delay: inherit; }
-.hb-dead { height: 100%; background: var(--bad); border-radius: 3px 0 0 3px; }
-.hb-n { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: var(--ink-3);
+.db-l { font-size: 11.5px; color: var(--ink-2); overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap; }
+.db-t { position: relative; height: 13px; }
+.db-t::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 6px;
+  border-top: 1px dotted var(--line-hard);
+}
+.db-line { position: absolute; top: 5.5px; height: 2px; background: var(--ink-4); }
+.db-d { position: absolute; top: 1px; width: 11px; height: 11px; border-radius: 50%;
+        transform: translateX(-50%); box-shadow: 0 0 0 2px var(--surface); }
+.db-r:hover .db-d { outline: 2px solid var(--accent); outline-offset: 1px; }
+.db-n { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; color: var(--ink-3);
         font-variant-numeric: tabular-nums; text-align: right; }
-.hb-n b { color: var(--bad); font-weight: 600; }
+.db-n b { color: var(--bad); font-weight: 600; }
+.db-ax { display: flex; justify-content: space-between; margin-left: 160px; margin-right: 104px;
+         font: 500 10px 'JetBrains Mono', monospace; color: var(--ink-4); }
+.db-ax em { font-style: normal; }
+
+/* One square per document. */
+.dotarr { display: flex; flex-direction: column; gap: 7px; }
+.da-r { display: grid; grid-template-columns: 148px 1fr 34px; gap: 12px; align-items: center; }
+.da-l { font-size: 11.5px; color: var(--ink-2); overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap; }
+.da-c { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.da-c i { display: block; width: 11px; height: 11px; flex: none; }
+.da-more { font: 600 10px 'JetBrains Mono', monospace; color: var(--ink-3); margin-left: 4px; }
+.da-n { font: 600 11px 'JetBrains Mono', monospace; color: var(--ink);
+        font-variant-numeric: tabular-nums; text-align: right; }
 
 .ycols { display: flex; align-items: flex-end; gap: 12px; height: 150px; padding-top: 6px; }
 .ycol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;
         opacity: 0; animation: barIn var(--t-base) var(--ease-out) forwards; }
-.yc-bar { width: 100%; max-width: 46px; background: var(--pet-400); border-radius: 3px 3px 0 0;
+.yc-bar { width: 100%; max-width: 46px; background: var(--k8); border-radius: 0;
           display: flex; align-items: flex-end; margin-top: auto;
           transform-origin: bottom center; animation: colGrow var(--t-reveal) var(--ease-out) both;
           animation-delay: inherit; }
-.yc-dead { width: 100%; background: var(--bad); border-radius: 3px 3px 0 0; }
+.yc-dead { width: 100%; background: var(--bad); }
 .yc-lb { font-size: 10.5px; color: var(--ink-2); margin-top: 6px; }
 .yc-n { font: 500 9.5px 'JetBrains Mono', monospace; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 
@@ -1246,12 +1270,15 @@ blockquote.clause-suggest {
 @keyframes colGrow { from { transform: scaleY(0); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .hix, .ycol { animation: none; opacity: 1; }
-  .hb-total, .yc-bar { animation: none; transform: none; }
+  .db-r, .ycol { animation: none; opacity: 1; }
+  .yc-bar { animation: none; transform: none; }
 }
 
 @media (max-width: 760px) {
-  .hix { grid-template-columns: 104px 1fr 72px; }
+  .db-r, .da-r { grid-template-columns: 104px 1fr 72px; }
+  .db-ax { margin-left: 116px; margin-right: 84px; }
+  .db-ax em { display: none; }
+  .da-r { grid-template-columns: 104px 1fr 30px; }
 }
 
 /* A focused row must be as obvious as a hovered one — the keyboard path
