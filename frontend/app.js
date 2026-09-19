@@ -2519,6 +2519,20 @@ async function drawPipelines() {
    withdrawn, that shows too, because a common practice being wrong is worth
    seeing. */
 
+/* ── precedent ─────────────────────────────────────────────────────────────
+   The one answer here that is not derived from the register.
+
+   An officer does not write a specification from a blank page. They open the
+   last tender for the same item and copy its clause, which is how the job is
+   done and is right most of the time. It is also the exact mechanism by which
+   a standard BIS withdrew in 2007 is still being bought against in 2026: one
+   officer copies a clause, the next copies that tender, and nobody re-checks a
+   sentence that has worked a hundred times.
+
+   So this is not a tally of what peers cited. It is the pile of documents the
+   officer was about to copy from, with the bad ones marked and linked, at the
+   moment before they copy one. Every other answer on this screen tells them
+   what BIS publishes. This one tells them what government actually did. */
 async function drawPeers(query) {
   const el = $('#fw-peers');
   if (!el) return;
@@ -2529,26 +2543,62 @@ async function drawPeers(query) {
   catch (_) { return; }
   if (!d.found || !d.citations.length) return;
 
+  const bad = d.repeating_a_dead_citation || 0;
+  const n = d.matched_documents;
+
+  /* The lede is the warning or its absence, in the officer's words, before any
+     table. "13 of 30" is a fact about their own next hour of work. */
+  const lede = bad
+    ? `<p class="prec-lede"><b class="prec-n">${bad}</b> of the <b>${n}</b> comparable
+         government bids in this corpus cite a standard BIS has already withdrawn or
+         replaced. <em>Those are the documents most likely to be copied next.</em></p>`
+    : `<p class="prec-lede">All <b>${n}</b> comparable government bids in this corpus cite
+         standards the register still calls current. Nothing here to avoid copying.</p>`;
+
+  const repeats = (d.repeats || []).length ? `
+    <div class="prec-list">
+      ${d.repeats.map(r => `<div class="prec-doc">
+        <div class="prec-head">
+          <span class="mono prec-id">${esc(r.tender_id)}</span>
+          ${r.buyer ? `<span class="prec-buyer">${esc(r.buyer)}</span>` : ''}
+          ${r.link ? `<a class="prec-src" href="${esc(r.link)}" target="_blank" rel="noopener"
+              title="the published document this was read from">open the original ${ic('ext','sm')}</a>` : ''}
+        </div>
+        <div class="prec-cat">${esc(r.category)}</div>
+        <div class="prec-chips">${r.dead.map(x =>
+          `<span class="chip static jump prec-dead" data-go="${esc(x)}">${esc(x)}</span>`).join('')}</div>
+      </div>`).join('')}
+    </div>` : '';
+
   el.innerHTML = `
-    <div class="card" id="fw-peer-card" style="margin-top:14px">
-      <div class="hd"><span class="eyebrow">What other buyers cited</span>
-        <h3></h3><span class="pill mute">${d.matched_documents} comparable bids</span></div>
+    <div class="card prec ${bad ? 'hot' : ''}" id="fw-peer-card" style="margin-top:14px">
+      <div class="hd"><span class="eyebrow">Precedent</span>
+        <h3>How this was bought before</h3>
+        <span class="pill mute">${n} comparable bids</span></div>
       <div class="in">
+        ${lede}
+        ${repeats}
+        ${d.buyers && d.buyers.length ? `<p class="xs dimmer" style="margin-top:11px">
+          Bought by: ${d.buyers.map(b => esc(b)).join(' \u00b7 ')}.</p>` : ''}
+        <div class="sect" style="margin-top:15px"><h3>What all ${n} of them cited</h3><span class="ln"></span></div>
         <div class="tbl"><div class="scroll"><table>
           <thead><tr><th>IS</th><th>Title</th><th>Status</th>
             <th style="text-align:right">Bids citing it</th></tr></thead>
-          <tbody>${d.citations.map(c => `<tr>
+          <tbody>${d.citations.map(c => `<tr class="${
+            c.status === 'Withdrawn' || c.status === 'Superseded' ? 'prec-row-dead' : ''}">
             <td class="mono ${c.in_register ? 'jump' : ''}"${c.in_register
               ? ` data-go="${esc(c.is_number)}"` : ''}>${esc(c.is_number)}</td>
-            <td class="std-title">${esc(String(c.title || '—').slice(0, 62))}</td>
+            <td class="std-title">${esc(String(c.title || '\u2014').slice(0, 62))}</td>
             <td>${c.status ? statusPill(c.status) : '<span class="pill mute">not in register</span>'}</td>
             <td class="mono" style="text-align:right">${c.documents}
               <span class="dimmer">of ${c.of}</span></td></tr>`).join('')}
           </tbody></table></div></div>
-        <p class="xs dimmer" style="margin-top:9px">${esc(d.note)}</p>
-        <p class="xs dimmer">Similar bids include: ${d.examples.map(e => esc(e)).join(' · ')}</p>
+        <p class="xs dimmer" style="margin-top:9px">${esc(d.note)}
+          Matched on the item category the buyer themselves wrote on the bid.</p>
       </div>
     </div>`;
+  $$('#fw-peer-card [data-go]').forEach(b =>
+    b.addEventListener('click', () => openStandard(b.dataset.go)));
 }
 
 /* ── procurement standards health ──────────────────────────────────────────

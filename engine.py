@@ -1024,7 +1024,15 @@ def peer_citations(text: str, documents: int = 30, limit: int = 12) -> dict:
     # and listing them separately splits its count three ways.
     conn = _get_conn()
     try:
+        dead_set, current_set = _dead_sets(conn)
         tally: dict[str, dict] = {}
+        # Which of the comparable bids are repeating a dead citation, and which
+        # dead standard each one repeated. This is the whole point of the peer
+        # group: an officer does not write a specification from a blank page,
+        # they open the last tender for the same item and copy its clause. That
+        # is how a withdrawn standard survives a decade — and it is the one
+        # moment where naming the bad precedent actually prevents the mistake.
+        repeats: list[dict] = []
         for row in matched:
             seen = set()
             for citation in {c.strip() for c in str(row["cited"] or "").split(";") if c.strip()}:
@@ -1042,15 +1050,33 @@ def peer_citations(text: str, documents: int = 30, limit: int = 12) -> dict:
                     "of": len(matched),
                 })
                 entry["documents"] += 1
-        out = sorted(tally.values(), key=lambda e: (-e["documents"], e["is_number"]))[:limit]
+            bad = dead_citations_in(row["cited"], dead_set, current_set)
+            if bad:
+                repeats.append({
+                    "tender_id": row["tender_id"],
+                    "buyer": row["buyer"] or None,
+                    "category": row["category"][:110],
+                    "link": row["link"] if row["link"] and row["link"] != "N/A" else None,
+                    "dead": sorted(bad)[:6],
+                })
+        # Dead first, then by how widely it is cited. Sorting purely by count
+        # buries the finding under six correct standards nobody needs warning
+        # about — the officer is looking at this list to find the trap in it.
+        rank = {"Withdrawn": 0, "Superseded": 0}
+        out = sorted(tally.values(),
+                     key=lambda e: (rank.get(e["status"], 1), -e["documents"], e["is_number"]))[:limit]
     finally:
         conn.close()
 
+    repeats.sort(key=lambda r: -len(r["dead"]))
     return {
         "found": True,
         "matched_documents": len(matched),
         "examples": [r["category"][:110] for r in matched[:4]],
         "citations": out,
+        "repeating_a_dead_citation": len(repeats),
+        "repeats": repeats[:8],
+        "buyers": sorted({r["buyer"] for r in matched if r["buyer"]})[:6],
         "note": (
             f"Counted across {len(matched)} bid documents in this corpus whose item "
             "category is textually similar to the query. A tally of what buyers "
@@ -1081,9 +1107,17 @@ def _peer_index() -> dict:
     conn = _get_conn()
     try:
         rows = [
-            {"category": str(r["Item Category"]), "cited": r["IS Numbers Cited"]}
+            # The document's own identity travels with it. The tally alone says
+            # "five of thirty bids cite a superseded standard", which an officer
+            # has no way to act on or to check. Naming the five, with the buyer
+            # and the link to the published document, turns a claim into
+            # evidence they can open in another tab.
+            {"category": str(r["Item Category"]), "cited": r["IS Numbers Cited"],
+             "tender_id": r["Tender ID"], "buyer": r["Ministry"],
+             "link": r["Source Link"]}
             for r in conn.execute(
-                'SELECT "Item Category", "IS Numbers Cited" FROM tenders '
+                'SELECT "Item Category", "IS Numbers Cited", "Tender ID", '
+                '"Ministry", "Source Link" FROM tenders '
                 'WHERE "Usability" = ? AND TRIM(COALESCE("Item Category", "")) <> ""',
                 ("Usable",),
             )
