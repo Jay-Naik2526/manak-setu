@@ -680,15 +680,19 @@ async function loadOverview(force) {
   /* The class that matters leads the strip — the API returns the corpus in its
      own order, and "not extractable" arriving first put the biggest, greyest
      block where the reader looks before they have met the legend. */
-  const USAB = { 'Usable': 'var(--ok)', 'Multi-scope': 'var(--k4)',
+  const USAB = { 'Usable': 'var(--ok)', 'Read by OCR': 'var(--k1)', 'Multi-scope': 'var(--k4)',
                  'Extraction failed': 'var(--bad)', 'Not extractable': 'var(--k8)' };
   const usabOrder = Object.keys(USAB);
   $('#ov-usab').innerHTML = stackBar(
       [...st.tenders_by_usability]
         .sort((a, b) => usabOrder.indexOf(a.key) - usabOrder.indexOf(b.key))
         .map(d => ({ ...d, color: USAB[d.key] || 'var(--ink-4)' })))
-    + `<p class="xs dimmer" style="margin-top:11px">Coverage and benchmark figures use <span class="mono">Usable</span> rows only.
-       Not extractable means a scanned or image-only attachment, reported as such rather than counted as clean.</p>`;
+    + `<p class="xs dimmer" style="margin-top:11px">Coverage, the graph and the benchmark use
+       <span class="mono">Usable</span> rows only — the ones with a text layer.
+       <span class="mono">Read by OCR</span> is a scan whose text was recognised on this machine and whose
+       citations the register could confirm; it is kept as its own class rather than merged in, because a
+       recognised designation is weaker evidence than a read one.
+       <span class="mono">Not extractable</span> is a scan that could not be read even then.</p>`;
 
   /* An area asserts an axis, and "Unknown" is not a point on the decade axis.
      Leaving it on the end drew a cliff at the right-hand edge that says nothing
@@ -747,6 +751,7 @@ async function drawAsks() {
   if (!el) return;
   const st = S.stats || {};
   const rc = st.row_counts || {};
+  const ocrRead = (st.tenders_by_usability || []).find(r => r.key === 'Read by OCR');
   let pl = null;
   try { pl = S.pipelines || (S.pipelines = await api('/pipelines')); } catch (_) {}
   const best = pl && (pl.pipelines || []).find(p => p.pipeline === pl.default && p.measured);
@@ -758,7 +763,9 @@ async function drawAsks() {
      the page and the first one a domain judge would catch. */
   const rows = [
     ['Accept a description, a specification, or a tender document',
-     'Paste text, upload a PDF or .docx, or enter IS numbers. Scans are detected and reported, never passed off as clean.',
+     `Paste text, upload a PDF or .docx, or enter IS numbers. A scan with no text layer is read by OCR on the machine
+      itself — ${ocrRead ? `${ocrRead.count.toLocaleString()} of the collected documents were recovered that way` : 'no service call, no upload'} — and a
+      recognised designation is kept only where the register can confirm it.`,
      'draft', 'met'],
     ['Recommend by semantic understanding, not keyword matching',
      best ? `Dense embeddings and BM25 fused, then a cross-encoder. Ranks the expected standard first on ${best.rank_1} of ${best.queries} BIS-labelled queries.`
@@ -2057,7 +2064,11 @@ async function loadTenders() {
       { label: 'Cite a dead standard', value: st.coverage.any_outdated,
         sub: `of ${usable.toLocaleString()} readable · checked against the register now`,
         tone: 'bad', icon: 'alert' },
-      { label: 'Not extractable', value: (byUse['Not extractable'] || 0), sub: 'scans and image-only PDFs', icon: 'target' },
+      (byUse['Read by OCR'] || 0)
+        ? { label: 'Read by OCR', value: byUse['Read by OCR'],
+            sub: 'scans recognised on this machine', icon: 'target' }
+        : { label: 'Not extractable', value: (byUse['Not extractable'] || 0),
+            sub: 'scans and image-only PDFs', icon: 'target' },
     ].map(kpi).join('');
     runCounts();
   } catch (_) { /* the table still works without the headline figures */ }
@@ -2106,7 +2117,9 @@ function drawTenders(rows, total) {
       ? `<span class="pill bad" title="checked against the register on this load">yes${n > 1 ? ` · ${n}` : ''}</span>`
       : od === 'No'
         ? '<span class="pill ok" title="none of the cited standards is withdrawn or superseded">no</span>'
-        : '<span class="pill mute" title="a scan or image-only PDF: no text was read, so there is no citation to check">no text read</span>';
+        : t.Usability === 'Read by OCR'
+          ? '<span class="pill mute" title="the scan was read and names no standard the register can confirm">none cited</span>'
+          : '<span class="pill mute" title="a scan this machine could not read: no text, so there is no citation to check">no text read</span>';
     return `<tr class="hit" data-t="${esc(t['Tender ID'])}">
       <td style="max-width:330px">
         <div>${esc(t.Title || t['Tender ID'])}${t.title_derived === false
@@ -2115,7 +2128,8 @@ function drawTenders(rows, total) {
       <td class="dim">${esc(t['Product Family'])}</td>
       <td class="mono r">${esc(t.Count)}</td>
       <td>${pill}</td>
-      <td><span class="pill ${t.Usability === 'Usable' ? 'info' : 'mute'}">${esc(t.Usability)}</span></td>
+      <td><span class="pill ${t.Usability === 'Usable' ? 'info'
+        : t.Usability === 'Read by OCR' ? 'warn' : 'mute'}">${esc(t.Usability)}</span></td>
       <td class="rowgo">${ic('arrow','sm')}</td></tr>`;
   }).join('') || `<tr><td colspan="6">${blank('No documents match', 'Try clearing a filter.')}</td></tr>`;
   $$('#td-tbl tbody tr[data-t]').forEach(tr => tr.addEventListener('click', () => openTender(tr.dataset.t)));

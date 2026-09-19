@@ -12,7 +12,7 @@ Existing rows simply carry them empty.
 
 After a merge with --write, the derived tables are stale until rebuilt:
 
-    python rebuild_graph.py          # co-citation edges over usable tenders
+    python rebuild_graph.py --min-co 1 --min-confidence 0.05 --min-source 1
     python rebuild_backlog.py        # cited-but-not-held standards
     python load_db.py                # reload manak_setu.db
 
@@ -22,6 +22,7 @@ After a merge with --write, the derived tables are stale until rebuilt:
 
 import argparse
 import collections
+import json
 
 import pandas as pd
 
@@ -54,7 +55,7 @@ COLLECTOR_OWNED = [
 ]
 
 
-def refresh(master, new, write: bool) -> int:
+def refresh(master, new, write: bool, provided: set[str] | None = None) -> int:
     """Carry corrections on rows the master already holds.
 
     The merge is additive on purpose: the rule is that nothing overwrites a row
@@ -72,13 +73,26 @@ def refresh(master, new, write: bool) -> int:
     if key not in master.columns or key not in new.columns:
         print("no GeM Bid Id column on both sides — nothing to refresh")
         return 0
+    # Only the columns the collected file actually carried. main() pads `new`
+    # with every EXTRA_COLUMN so the additive path has a uniform frame, and a
+    # refresh that trusted `src.columns` therefore read those pads as data: a
+    # dry run of the OCR collection offered to blank Item Category, Ministry,
+    # Department, Organisation, Office and Demands Standard Mark on all 3,659
+    # rows it touched, because the OCR collector does not read the bid form and
+    # never claimed to. A collector corrects what it derived. Silence is not a
+    # value.
+    owned = [c for c in COLLECTOR_OWNED if provided is None or c in provided]
+    skipped = [c for c in COLLECTOR_OWNED if c not in owned]
+    if skipped:
+        print(f"refresh  : {len(skipped)} collector column(s) absent from the "
+              f"collected file and left alone — {', '.join(skipped)}")
     src = new.dropna(subset=[key]).drop_duplicates(subset=[key]).set_index(key)
     fields = collections.Counter()
     rows = set()
     for i, bid in master[key].items():
         if pd.isna(bid) or bid not in src.index:
             continue
-        for col in COLLECTOR_OWNED:
+        for col in owned:
             if col not in src.columns:
                 continue
             before, after = master.at[i, col], src.at[bid, col]
@@ -107,7 +121,19 @@ def main():
 
     master = pd.read_csv(MASTER, encoding="utf-8-sig")
     new = pd.read_csv(args.collected, encoding="utf-8-sig")
-    for col in EXTRA_COLUMNS:
+    # What the collector actually wrote, before the padding below.
+    provided = set(new.columns)
+    # A collector that only corrects rows the master already holds carries no
+    # new source links — collect_tender_ocr.py re-reads attachments that were
+    # downloaded from links already recorded. The additive path below still
+    # runs and still adds nothing, because every one of those tender ids is
+    # already in the master.
+    if "Source Link" not in new.columns:
+        new["Source Link"] = ""
+    # Pad both frames so the additive path has a uniform shape. `provided`
+    # above is what decides whether a column is data or padding, so this can
+    # safely fill in anything a partial collector left out.
+    for col in MASTER_COLUMNS + EXTRA_COLUMNS:
         if col not in master.columns:
             master[col] = ""
         if col not in new.columns:
@@ -129,7 +155,7 @@ def main():
     for fam, n in keep["Product Family"].value_counts().head(12).items():
         print(f"  {n:>4}  {fam}")
 
-    touched = refresh(master, new, args.write) if args.refresh else 0
+    touched = refresh(master, new, args.write, provided) if args.refresh else 0
 
     if not args.write:
         print("\ndry run — nothing written. Re-run with --write to merge.")
@@ -145,7 +171,24 @@ def main():
     # a backlog listing eight citations no longer in the corpus survived a
     # full rebuild. load_db runs first, and again at the end to pick up the
     # files the rebuilds wrote.
-    print("now run: python load_db.py --allow-shrink && python rebuild_graph.py "
+    # rebuild_graph.py's built-in defaults are stricter than the thresholds this
+    # corpus was actually built at. Running it bare rebuilt the graph at
+    # min-co 2 / min-confidence 0.2 and cut it from 1,858 nodes to 635 — a
+    # silent two-thirds loss in a file nobody reads, discovered only because the
+    # layout printed its node count. The chain carries the thresholds, read from
+    # data/graph_meta.json so this line cannot drift from the graph on disk.
+    meta = {}
+    try:
+        with open("data/graph_meta.json", encoding="utf-8") as fh:
+            meta = json.load(fh)
+    except (OSError, ValueError):
+        pass
+    flags = ""
+    if meta:
+        flags = (f" --min-co {meta.get('min_co_citations', 1)}"
+                 f" --min-confidence {meta.get('min_confidence', 0.05)}"
+                 f" --min-source {meta.get('min_source_tenders', 1)}")
+    print(f"now run: python load_db.py --allow-shrink && python rebuild_graph.py{flags} "
           "&& python rebuild_backlog.py && python load_db.py --allow-shrink "
           "&& python graph_layout.py && python health_index.py --write")
 

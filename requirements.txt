@@ -23,3 +23,11 @@ rank-bm25>=0.2.2
 pdfplumber>=0.11
 python-docx>=1.1
 pypdf>=5.0
+
+# Reading the scans. macOS Vision does the recognition — it ships with the OS,
+# so there is no model download, no API key and no page ever leaving the
+# machine. Darwin-only by construction: ocr.available() returns False
+# everywhere else and collect_tender_ocr.py stops rather than guessing, so the
+# app still installs and runs on Linux without these.
+pyobjc-framework-Vision>=10.0; sys_platform == "darwin"
+pyobjc-framework-Quartz>=10.0; sys_platform == "darwin"
