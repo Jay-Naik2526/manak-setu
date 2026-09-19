@@ -1324,13 +1324,13 @@ async function preset_(kind) {
   let page = null;
   try { page = await api('/tenders?' + params); } catch (_) { return; }
   const row = kind === 'outdated'
-    ? (page.rows || []).find(t => t['Any Outdated'] === 'Yes')
+    ? (page.rows || []).find(t => t['Dead Now'] === 'Yes')
     : (page.rows || []).find(t => (t['IS Numbers Cited'] || '').split(';').length > 4);
   if (!row) { box.innerHTML = `<div class="note warn" style="margin:11px 0 0">${ic('alert')}<div>No matching document in the corpus.</div></div>`; return; }
   const cites = (row['IS Numbers Cited'] || '').split(';').map(s => s.trim()).filter(Boolean);
   S.chips = []; addChips(cites); $('#spec').value = '';
   box.innerHTML = `<div class="note ${kind === 'outdated' ? 'warn' : 'ok'}" style="margin:11px 0 0">
-    ${ic(kind === 'outdated' ? 'alert' : 'check')}<div><b>${esc(row['Tender ID'])}</b> · ${esc(row['Product Family'])} · ${cites.length} recorded citations. ${kind === 'outdated' ? 'Corpus flags this document as containing dead citations.' : ''}</div></div>`;
+    ${ic(kind === 'outdated' ? 'alert' : 'check')}<div><b>${esc(row['Tender ID'])}</b> · ${esc(row['Product Family'])} · ${cites.length} recorded citations. ${kind === 'outdated' ? 'Checked against the register just now: this document cites a standard BIS has withdrawn.' : ''}</div></div>`;
 }
 
 async function runAudit() {
@@ -2080,7 +2080,7 @@ function drawTenders(rows, total) {
   // "Dead cites" has no column in the tenders table to filter on server-side,
   // so it narrows the page that arrived. The count says which set it describes
   // rather than implying it searched the corpus.
-  const shown = o ? rows.filter(t => t['Any Outdated'] === o) : rows;
+  const shown = o ? rows.filter(t => t['Dead Now'] === o) : rows;
   $('#td-n').textContent = o
     ? `${shown.length.toLocaleString()} of the ${rows.length.toLocaleString()} loaded (corpus: ${total.toLocaleString()})`
     : rows.length === total
@@ -2092,8 +2092,21 @@ function drawTenders(rows, total) {
   ], () => tenderTable.reload());
 
   $('#td-tbl tbody').innerHTML = shown.map(t => {
-    const od = t['Any Outdated'];
-    const pill = od === 'Yes' ? '<span class="pill bad">yes</span>' : od === 'No' ? '<span class="pill ok">no</span>' : '<span class="pill mute">unchecked</span>';
+    /* This column printed "Any Outdated", the flag written when each document
+       was collected. It said "unchecked" on 3,790 of 4,917 rows, which is a
+       question mark where the register has an answer — and where it did speak,
+       it spoke for a register that was a thirteenth of its current size.
+
+       The server now decides it per row against the live register. "No text
+       read" is not a question mark either: a scanned attachment yields no
+       citations, so there is nothing to check, and saying so is the honest
+       statement rather than an open verdict the corpus will never close. */
+    const od = t['Dead Now'], n = t['Dead Now Count'] || 0;
+    const pill = od === 'Yes'
+      ? `<span class="pill bad" title="checked against the register on this load">yes${n > 1 ? ` · ${n}` : ''}</span>`
+      : od === 'No'
+        ? '<span class="pill ok" title="none of the cited standards is withdrawn or superseded">no</span>'
+        : '<span class="pill mute" title="a scan or image-only PDF: no text was read, so there is no citation to check">no text read</span>';
     return `<tr class="hit" data-t="${esc(t['Tender ID'])}">
       <td style="max-width:330px">
         <div>${esc(t.Title || t['Tender ID'])}${t.title_derived === false
@@ -3774,7 +3787,10 @@ async function loadEvidence(isNumber) {
         <td class="xs">${esc(t.document_type || '—')}</td>
         <td>${t.usability === 'Usable' ? '<span class="pill ok">Usable</span>' : `<span class="pill mute">${esc(t.usability || '—')}</span>`}</td>
         <td class="mono r">${esc(t.citation_count)}</td>
-        <td>${t.any_outdated === 'Yes' ? '<span class="pill bad">Yes</span>' : '<span class="dimmer">—</span>'}</td>
+        <td>${t.dead_now === 'Yes'
+          ? '<span class="pill bad" title="checked against the register on this load">yes</span>'
+          : t.dead_now === 'No' ? '<span class="pill ok">no</span>'
+          : '<span class="dimmer" title="a scan or image-only PDF: no text was read">no text read</span>'}</td>
         <td>${t.source_link && t.source_link !== 'N/A' ? `<a href="${esc(t.source_link)}" target="_blank" rel="noopener">open</a>` : ''}</td>
       </tr>`).join('')}</tbody></table></div>
       <div class="ft">Citations were extracted literally from each document's text. A tender appears here only if its own words contain this IS number.</div>

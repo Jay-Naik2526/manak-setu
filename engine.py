@@ -582,11 +582,33 @@ def list_tenders(q: str = "", usability: str = "", family: str = "",
             f'({",".join("?" * len(page["rows"]))})',
             [r["Tender ID"] for r in page["rows"]],
         )} if page["rows"] else {}
+        # The table used to print "Any Outdated", the flag written when the
+        # document was collected. That flag is a historical record the benchmark
+        # depends on — it is deliberately not updated — so on this screen it read
+        # "Not checked" for 3,790 of 4,917 rows and stated a stale Yes/No for the
+        # rest. A corpus screen should say what the register says now.
+        #
+        # So the verdict is computed here, per row, against the live register.
+        # Where no text was ever read there are no citations to check, and the
+        # row says that rather than pretending the question is open.
+        dead, current = _dead_sets(conn)
         for row in page["rows"]:
             source = raw.get(row["Tender ID"])
             title, derived = _tender_title(source) if source is not None else (row["Tender ID"], False)
             row["Title"] = title
             row["title_derived"] = derived
+            # Read from the source row, not the page row: the page has been
+            # through _display, which renders an empty field as the string
+            # "N/A" — and "N/A" split on ";" is one non-empty citation.
+            cited = str((source["IS Numbers Cited"] if source is not None
+                         else row.get("IS Numbers Cited")) or "")
+            if not [c for c in cited.split(";") if c.strip()]:
+                row["Dead Now"] = "No citations"
+                row["Dead Now Count"] = 0
+            else:
+                hits = dead_citations_in(cited, dead, current)
+                row["Dead Now"] = "Yes" if hits else "No"
+                row["Dead Now Count"] = len(hits)
         return page
     finally:
         conn.close()
@@ -648,6 +670,41 @@ def _count_by(conn, table: str, column: str) -> list[dict]:
     return [{"key": r["k"] if r["k"] is not None else "N/A", "count": r["n"]} for r in rows]
 
 
+def _dead_sets(conn) -> tuple[set, set]:
+    """The two sets every live dead-citation answer is decided against: bases
+    BIS has withdrawn or superseded, and bases it still publishes as Current.
+
+    One copy, because this is the fact the whole console turns on. It used to be
+    inlined in the health index while the Tenders table read a flag written at
+    collection time — which is the same defect in a different costume, and it is
+    what had one screen saying 275 and another 422.
+    """
+    dead = {
+        r["IS Base"] for r in conn.execute(
+            'SELECT "IS Base" FROM standards WHERE "Status" IN ("Withdrawn", "Superseded")'
+        ) if r["IS Base"]
+    }
+    current = {
+        r["IS Base"] for r in conn.execute(
+            'SELECT "IS Base" FROM standards WHERE "Status" = "Current"'
+        ) if r["IS Base"]
+    }
+    return dead, current
+
+
+def dead_citations_in(cited: str, dead: set, current: set) -> list[str]:
+    """Which of a document's cited standards the register now calls dead.
+
+    A base with a Current edition is not dead: one withdrawn part of IS 1554
+    does not make every citation of IS 1554 outdated.
+    """
+    hits = []
+    for citation in {c.strip() for c in str(cited or "").split(";") if c.strip()}:
+        if _is_base(citation) in dead and _is_base(citation) not in current:
+            hits.append(citation)
+    return sorted(hits)
+
+
 def dead_citation_documents(conn=None) -> int:
     """Machine-readable documents citing a standard BIS has withdrawn or
     superseded, counted against the register as it is now.
@@ -662,27 +719,13 @@ def dead_citation_documents(conn=None) -> int:
     close = conn is None
     conn = conn or _get_conn()
     try:
-        dead = {
-            r["IS Base"] for r in conn.execute(
-                'SELECT "IS Base" FROM standards WHERE "Status" IN ("Withdrawn", "Superseded")'
-            ) if r["IS Base"]
-        }
-        current = {
-            r["IS Base"] for r in conn.execute(
-                'SELECT "IS Base" FROM standards WHERE "Status" = "Current"'
-            ) if r["IS Base"]
-        }
+        dead, current = _dead_sets(conn)
         count = 0
         for (cited,) in conn.execute(
             'SELECT "IS Numbers Cited" FROM tenders WHERE "Usability" = ?', ("Usable",)
         ):
-            for citation in {c.strip() for c in str(cited or "").split(";") if c.strip()}:
-                base = _is_base(citation)
-                # A base with a Current edition is not dead: one withdrawn part
-                # of IS 1554 does not make every citation of IS 1554 outdated.
-                if base in dead and base not in current:
-                    count += 1
-                    break
+            if dead_citations_in(cited, dead, current):
+                count += 1
         return count
     finally:
         if close:

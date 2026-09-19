@@ -347,7 +347,7 @@
             <!-- Placeholders are dashes, not old figures: these are replaced from
                  /health and /stats on load, and a stale numeral shown for even a
                  moment is a number someone can screenshot. -->
-            <div class="meta"><span data-ct="tenders">—</span> documents · <span data-cv="usable_tenders">—</span> machine-readable · <span data-cv="any_outdated">—</span> with recorded dead citations</div>
+            <div class="meta"><span data-ct="tenders">—</span> documents · <span data-cv="usable_tenders">—</span> machine-readable · <span data-cv="any_outdated">—</span> citing a standard BIS has withdrawn</div>
           </div>
         </div>
         <div class="kpis" id="td-kpis"></div>
@@ -358,9 +358,9 @@
             <select id="td-fam"><option value="">Family: any</option></select>
             <select id="td-out">
               <option value="">Dead citations: any</option>
-              <option value="Yes">Recorded: yes</option>
-              <option value="No">Recorded: no</option>
-              <option value="Not checked">Not checked</option>
+              <option value="Yes">Cites a dead standard</option>
+              <option value="No">Cites none that are dead</option>
+              <option value="No citations">No text read</option>
             </select>
           </div>
           <div class="status"><span id="td-n"></span><span class="fchips" id="td-chips"></span></div>
@@ -370,7 +370,8 @@
                 <th class="sortable" data-k="Tender ID">Document <span class="sarr">↕</span></th>
                 <th class="sortable" data-k="Product Family">Family <span class="sarr">↕</span></th>
                 <th class="sortable r" data-k="Count">Cited <span class="sarr">↕</span></th>
-                <th>Dead cites</th><th>Extractable</th><th></th>
+                <th title="checked against the register on this page load, not a flag stored at collection">Dead cites</th>
+                <th>Extractable</th><th></th>
               </tr></thead>
               <tbody></tbody>
             </table>

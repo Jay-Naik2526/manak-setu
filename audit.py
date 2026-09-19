@@ -832,6 +832,13 @@ def corpus_evidence(is_number: str, limit: int = 25) -> dict:
     try:
         digits = _digits(is_number)
         rows = conn.execute("SELECT * FROM tenders").fetchall()
+        # The "Dead refs" column here read the flag stored at collection time,
+        # which is a historical record the benchmark depends on and is stale by
+        # construction. One matcher, one answer: the same sets the health index
+        # and the Tenders table decide against.
+        from engine import _dead_sets, dead_citations_in
+
+        dead_set, current_set = _dead_sets(conn)
         citing = []
         for r in rows:
             cited = [c.strip() for c in str(r["IS Numbers Cited"] or "").split(";") if c.strip()]
@@ -850,6 +857,10 @@ def corpus_evidence(is_number: str, limit: int = 25) -> dict:
                     "usability": r["Usability"],
                     "citation_count": r["Count"],
                     "any_outdated": r["Any Outdated"],
+                    "dead_now": (
+                        "Yes" if dead_citations_in(r["IS Numbers Cited"], dead_set, current_set)
+                        else ("No" if cited else "No citations")
+                    ),
                     "source_link": r["Source Link"],
                 }
             )
